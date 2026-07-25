@@ -1,0 +1,103 @@
+# phoenix_kit_bookings — agent notes
+
+Universal booking module for PhoenixKit. Read the workspace `../AGENTS.md`
+first for ecosystem-wide conventions; this file covers only what is
+specific to this module.
+
+## Architecture
+
+```
+Schemas.Service            one bookable offer; the WHOLE booking shape is per-service
+Schemas.AvailabilityRule   weekly rule | date override | block-out (maps 1:1 to lib Availability)
+Schemas.Booking            timed pair OR date pair (DB CHECK bookings_time_shape), exclusive ends
+Engine                     adapter onto phoenix_live_calendar's booking layer (minute units)
+Engine.DayEngine           the date-granular path the lib doesn't cover (day/night services)
+Services / Bookings        contexts; Bookings.create_booking is the race-proof choke point
+Policy                     ALL admin authorization + self-service rules (LVs never call
+                           Services/Bookings mutations directly for admin actions)
+Web.Admin.*                ServicesLive, ServiceFormLive, BookingsLive, SettingsLive (tabs-driven routes)
+Web.Public.*               BookingFlow (shared logic+markup) + BookLive (routed) +
+                           BookingWidgetLive (live_render embeddable) + ServicesLive + ManageLive
+Migrations.Schema          module-owned versioned migration (stats/legal protocol)
+```
+
+## Load-bearing decisions
+
+- **One booking model, three shapes.** Universal products (Checkfront /
+  Planyo / Mews — see `dev_docs/research/`) store one record type and
+  drive behavior from per-resource config. A booking row is EITHER
+  `starts_at/ends_at` (UTC, minute services) OR `starts_on/ends_on`
+  (DATE, day/night services) under a CHECK — the `phoenix_kit_calendar`
+  V141 convention. Check-in/out clock times are service ATTRIBUTES and
+  never enter availability math.
+- **The rules engine is `phoenix_live_calendar`'s** (`BookingConfig`,
+  `Availability`, `Constraints.validate_booking`, `TimeSlots.bookable_slots`)
+  — do not rebuild it. `Engine` maps rows onto lib structs. Two adapter
+  subtleties:
+  - `overlap: seats > 1` on mapped events — with one seat the event must
+    BLOCK (`validate_no_overlap` rejects only `overlap: false`); with
+    pooled seats events must pass overlap and be COUNTED by capacity.
+  - Events are pre-expanded by the service buffers because the lib
+    buffers only the REQUEST; expanded-vs-expanded means consecutive
+    bookings need `buffer_after + buffer_before` of gap. The conflict
+    query window (`Bookings.conflict_window/2`) pads each side by BOTH
+    buffers for the same reason — shrinking it reintroduces a real bug
+    (a booking just outside the raw range escaped the reload).
+- **Unbounded duration** (`max_duration: nil` + `flexible_duration`) maps
+  to a large sentinel (`@unbounded_minutes`) because the lib treats nil
+  as "same as duration". Candidate upstream tweak in the lib.
+- **Race-proofing**: `create_booking` re-validates inside a transaction
+  holding `FOR UPDATE` on the service row. The pure `Engine.validate_request`
+  call in the public flow is advisory UX only.
+- **Time frame**: minute-unit math runs in the SITE offset frame (core's
+  offset-hours `"time_zone"` setting; v1 services are physical venues —
+  the Cal.com `lockTimeZoneToggleOnBookingPage` behavior). Storage is
+  true UTC via `Engine.frame_to_utc/utc_to_frame`. Day/night uses bare
+  dates, no tz math ever.
+- **Permission orientation** (core's sub-implies-base forces it): base
+  `bookings` = admin area scoped to OWNED services (`owner_uuid`;
+  nil = site service); sub `bookings.manage_all` = everything + settings.
+  Self-service settings: `bookings_user_services_enabled` (default OFF)
+  and `bookings_max_services_per_user` (`0` = unlimited).
+- **Embeddable LVs must not export `handle_params/3`** (the
+  `phoenix_kit_projects` lesson) — hence the BookLive/BookingWidgetLive
+  split with all logic in `BookingFlow`.
+- **Manage tokens**: `Phoenix.Token` signed against the HOST endpoint —
+  resolution order in `Bookings.token_endpoint/0` is explicit
+  `config :phoenix_kit, endpoint:` (tests) → core's
+  `Config.get_parent_endpoint/0` (host apps) → `PhoenixKitWeb.Endpoint`.
+  Core's own endpoint is compiled but not running in a host; signing
+  against it crashes on the ETS lookup (found in browser verification).
+
+## Migrations
+
+Module-owned (`migration_module/0` protocol, like `phoenix_kit_stats` /
+`phoenix_kit_legal`): `Migrations.Schema` with `current_version/0`,
+`migrated_version_runtime/1`, idempotent `up/1`/`down/1` with `:prefix`
+support. `mix phoenix_kit.update` applies it in host apps; tests run it via
+`Test.SchemaMigration` + `Ecto.Migrator` (see `test_helper.exs`). While
+v0.1.0 is unreleased, edit V1 in place (workspace convention).
+
+## Testing
+
+- `mix test.setup && mix test` — 74 tests. Engine/DayEngine tests are pure
+  (no DB); contexts + LVs are `:integration` (auto-excluded without DB).
+- `test_helper.exs` enables the module setting BEFORE sandbox mode —
+  `Scope.can?/2` gates on module enablement, so Policy checks would
+  otherwise fail closed suite-wide.
+- `LiveCase.fake_scope/1` defaults to a site-wide admin
+  (`["bookings", "bookings.manage_all"]`); pass `permissions: ["bookings"]`
+  for an own-services-only user.
+- Public LVs render through `LayoutWrapper.app_layout`; tests point
+  `config :phoenix_kit, layout:` at `Test.Layouts.public` because the
+  fallback (core's root layout) needs core's endpoint started.
+
+## Known gaps / v2 candidates (deliberate v1 cuts)
+
+Recorded in `dev_docs/research/2026-07-24-booking-module-research.md` §2–3:
+named bookable units (specific room assignment — pooled quantity only for
+now), per-date pricing + payments (billing integration), confirmation/
+reminder emails + ICS, external calendar sync, slot-hold-with-TTL during
+checkout, waitlists, recurring bookings, staff-as-provider linkage,
+cancellation policy windows (guest cancel is currently allowed until the
+booking starts), viewer-timezone slot display for virtual services.
