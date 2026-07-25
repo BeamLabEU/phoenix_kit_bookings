@@ -28,7 +28,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
   import Phoenix.LiveView
 
-  alias PhoenixKitBookings.{Bookings, Engine, Errors, Paths, Services}
+  alias PhoenixKitBookings.{Bookings, Engine, Errors, Paths, Pricing, Services}
   alias PhoenixKitBookings.Schemas.{Booking, Service}
   alias PhoenixKitBookings.Web.Format
 
@@ -47,6 +47,10 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
       end
     end
 
+    # Unit-tracked services derive capacity from their active unit count;
+    # the copy keeps every downstream seats read consistent.
+    service = %{service | seats: Services.effective_seats(service)}
+
     socket
     |> assign(
       service: service,
@@ -56,10 +60,22 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
       selected_range: nil,
       booking: nil,
       flow_error: nil,
+      flow_error_reason: nil,
+      hold_uuid: nil,
+      waitlist_done: false,
       current_user: user,
       customer_form: customer_form(user, prefill)
     )
     |> refresh_pick()
+  end
+
+  @doc """
+  Releases the visitor's hold when their LiveView goes away — both public
+  LVs call this from `terminate/2`.
+  """
+  def on_terminate(socket) do
+    Bookings.release_hold(socket.assigns[:hold_uuid])
+    :ok
   end
 
   defp customer_form(user, prefill) do
@@ -89,9 +105,10 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     pad = (service.buffer_before + service.buffer_after) * 60
 
     active =
-      Bookings.list_active_overlapping(
+      Bookings.list_occupancy(
         service.uuid,
-        {DateTime.add(day_start, -pad, :second), DateTime.add(day_end, pad, :second)}
+        {DateTime.add(day_start, -pad, :second), DateTime.add(day_end, pad, :second)},
+        exclude_hold: socket.assigns[:hold_uuid]
       )
 
     slots =
@@ -107,7 +124,11 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   def refresh_pick(%{assigns: %{service: %Service{} = service}} = socket) do
     from = Engine.today()
     until = Date.add(from, service.max_advance || 60)
-    active = Bookings.list_active_overlapping(service.uuid, {:dates, from, until})
+
+    active =
+      Bookings.list_occupancy(service.uuid, {:dates, from, until},
+        exclude_hold: socket.assigns[:hold_uuid]
+      )
 
     assign(socket,
       slots: [],
@@ -165,7 +186,31 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   end
 
   def handle_event("back", _params, socket) do
-    {:noreply, assign(socket, step: :pick, flow_error: nil)}
+    Bookings.release_hold(socket.assigns[:hold_uuid])
+
+    {:noreply,
+     socket
+     |> assign(step: :pick, flow_error: nil, flow_error_reason: nil, hold_uuid: nil)
+     |> refresh_pick()}
+  end
+
+  def handle_event("join_waitlist", %{"waitlist" => params}, socket) do
+    service = socket.assigns.service
+
+    attrs = %{
+      "date" => params["date"],
+      "customer_name" => params["customer_name"],
+      "customer_email" => params["customer_email"]
+    }
+
+    case Bookings.join_waitlist(service, attrs) do
+      {:ok, _entry} ->
+        {:noreply, assign(socket, waitlist_done: true)}
+
+      {:error, _changeset} ->
+        {:noreply,
+         assign(socket, flow_error: Errors.message(:invalid_waitlist), flow_error_reason: nil)}
+    end
   end
 
   def handle_event("validate_details", %{"booking" => params}, socket) do
@@ -178,37 +223,75 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
     case Bookings.create_booking(service, range, params,
            user_uuid: user && user.uuid,
-           source: "public"
+           source: "public",
+           hold_uuid: socket.assigns[:hold_uuid]
          ) do
       {:ok, booking} ->
-        {:noreply, assign(socket, booking: booking, step: :done, flow_error: nil)}
+        {:noreply, assign(socket, booking: booking, step: :done, flow_error: nil, hold_uuid: nil)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, customer_form: to_form(changeset))}
 
       {:error, reason, _message} ->
         # Race lost or rules changed — back to the picker with fresh data.
+        Bookings.release_hold(socket.assigns[:hold_uuid])
+
         {:noreply,
          socket
-         |> assign(step: :pick, flow_error: Errors.message(reason))
+         |> assign(
+           step: :pick,
+           flow_error: Errors.message(reason),
+           flow_error_reason: reason,
+           hold_uuid: nil
+         )
          |> refresh_pick()}
     end
   end
 
   defp advisory_advance(socket, range) do
     %{service: service, rules: rules} = socket.assigns
-    active = Bookings.list_active_overlapping(service.uuid, conflict_probe(service, range))
+
+    active =
+      Bookings.list_occupancy(service.uuid, conflict_probe(service, range),
+        exclude_hold: socket.assigns[:hold_uuid]
+      )
 
     case Engine.validate_request(service, rules, range, active) do
       :ok ->
         if service.signup_policy == "login_required" and is_nil(socket.assigns.current_user) do
-          {:noreply, assign(socket, flow_error: Errors.message(:login_required))}
+          {:noreply,
+           assign(socket,
+             flow_error: Errors.message(:login_required),
+             flow_error_reason: :login_required
+           )}
         else
-          {:noreply, assign(socket, selected_range: range, step: :details, flow_error: nil)}
+          {:noreply,
+           socket
+           |> take_hold(range)
+           |> assign(
+             selected_range: range,
+             step: :details,
+             flow_error: nil,
+             flow_error_reason: nil
+           )}
         end
 
       {:error, reason, _} ->
-        {:noreply, socket |> assign(flow_error: Errors.message(reason)) |> refresh_pick()}
+        {:noreply,
+         socket
+         |> assign(flow_error: Errors.message(reason), flow_error_reason: reason)
+         |> refresh_pick()}
+    end
+  end
+
+  # Reserve the picked range while the visitor types (best-effort — a
+  # failed hold never blocks the flow; the locked create still decides).
+  defp take_hold(socket, range) do
+    Bookings.release_hold(socket.assigns[:hold_uuid])
+
+    case Bookings.create_hold(socket.assigns.service, range) do
+      {:ok, hold} -> assign(socket, hold_uuid: hold.uuid)
+      _ -> assign(socket, hold_uuid: nil)
     end
   end
 
@@ -246,6 +329,8 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   attr(:customer_form, :any, required: true)
   attr(:booking, :any, required: true)
   attr(:flow_error, :any, required: true)
+  attr(:flow_error_reason, :any, default: nil)
+  attr(:waitlist_done, :boolean, default: false)
   attr(:current_user, :any, required: true)
 
   def flow(assigns) do
@@ -257,6 +342,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
           {@service.description}
         </p>
         <p class="text-xs text-base-content/50 mt-1">{Format.mode_summary(@service)}</p>
+        <p :if={Pricing.tag(@service)} class="text-sm font-medium mt-1">{Pricing.tag(@service)}</p>
         <p :if={@service.checkin_time} class="text-xs text-base-content/50">
           Check-in {Calendar.strftime(@service.checkin_time, "%H:%M")}
           <span :if={@service.checkout_time}>
@@ -276,6 +362,12 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
             day_capacity={@day_capacity}
             current_user={@current_user}
           />
+          <.waitlist_panel
+            :if={show_waitlist?(assigns)}
+            pick_date={@pick_date}
+            customer_form={@customer_form}
+            waitlist_done={@waitlist_done}
+          />
         <% :details -> %>
           <.details
             service={@service}
@@ -286,6 +378,69 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
         <% :done -> %>
           <.done service={@service} booking={@booking} />
       <% end %>
+    </div>
+    """
+  end
+
+  # The waitlist offer appears when the picker came up empty (no free
+  # slots on the chosen date) or the last attempt failed on capacity.
+  defp show_waitlist?(%{waitlist_done: true}), do: true
+
+  defp show_waitlist?(%{flow_error_reason: reason}) when reason in [:at_capacity, :overlap],
+    do: true
+
+  defp show_waitlist?(%{
+         service: %Service{time_unit: "minutes", flexible_duration: false},
+         slots: slots
+       }),
+       do: Enum.all?(slots, fn {_s, _e, status} -> status != :available end) and slots != []
+
+  defp show_waitlist?(_assigns), do: false
+
+  defp waitlist_panel(assigns) do
+    ~H"""
+    <div class="border-t border-base-200 pt-3">
+      <div :if={@waitlist_done} class="alert alert-success text-sm">
+        You're on the waitlist — we'll email you the moment a spot opens up.
+      </div>
+      <form :if={!@waitlist_done} phx-submit="join_waitlist" class="flex flex-col gap-2">
+        <p class="text-sm text-base-content/70">
+          Fully booked? Join the waitlist and get an email when a spot frees up.
+        </p>
+        <div class="flex flex-wrap items-end gap-2">
+          <label class="form-control">
+            <span class="label-text text-xs">Date</span>
+            <input
+              type="date"
+              name="waitlist[date]"
+              value={Date.to_iso8601(@pick_date)}
+              class="input input-bordered input-sm"
+              required
+            />
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs">Name</span>
+            <input
+              type="text"
+              name="waitlist[customer_name]"
+              value={@customer_form[:customer_name].value}
+              class="input input-bordered input-sm"
+              required
+            />
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs">Email</span>
+            <input
+              type="email"
+              name="waitlist[customer_email]"
+              value={@customer_form[:customer_email].value}
+              class="input input-bordered input-sm"
+              required
+            />
+          </label>
+          <button type="submit" class="btn btn-sm">Join waitlist</button>
+        </div>
+      </form>
     </div>
     """
   end
@@ -417,6 +572,9 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
           field={@customer_form[:notes]}
           label="Notes (optional)"
         />
+        <p :if={Pricing.total(@service, @selected_range)} class="text-sm font-medium">
+          Total: {Pricing.format(Pricing.total(@service, @selected_range), @service.currency)}
+        </p>
         <div class="flex gap-2">
           <button type="submit" class="btn btn-primary">
             {if @service.require_approval, do: "Request booking", else: "Confirm booking"}
@@ -439,8 +597,13 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
           Request received for {Format.format_range(@booking)}. You'll hear back once it's approved.
         </span>
       </div>
+      <p :if={unit_line(@booking)} class="text-sm">{unit_line(@booking)}</p>
+      <p :if={@booking.total_price} class="text-sm font-medium">
+        Total: {Pricing.format(@booking.total_price, @booking.currency)}
+      </p>
       <div class="text-sm">
-        Manage or cancel this booking any time:
+        Manage or cancel this booking any time (a confirmation email with a
+        calendar invite is on its way):
         <a
           href={Paths.public_manage(Bookings.manage_token(@booking))}
           class="link link-primary break-all"
@@ -450,6 +613,15 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
       </div>
     </div>
     """
+  end
+
+  defp unit_line(%Booking{unit_uuid: nil}), do: nil
+
+  defp unit_line(%Booking{unit_uuid: unit_uuid}) do
+    case Services.unit_name(unit_uuid) do
+      nil -> nil
+      name -> "Assigned: #{name}"
+    end
   end
 
   defp available_slots(slots),

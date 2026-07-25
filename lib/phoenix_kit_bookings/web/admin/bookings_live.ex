@@ -54,9 +54,21 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
     count_opts =
       if Policy.manage_all?(scope), do: [], else: [service_uuids: Enum.map(visible, & &1.uuid)]
 
+    bookings = Bookings.list_bookings(opts)
+
+    unit_names =
+      bookings
+      |> Enum.map(& &1.unit_uuid)
+      |> Enum.reject(&is_nil/1)
+      |> case do
+        [] -> %{}
+        uuids -> PhoenixKitBookings.Services.unit_names(uuids)
+      end
+
     assign(socket,
-      bookings: Bookings.list_bookings(opts),
+      bookings: bookings,
       services: services,
+      unit_names: unit_names,
       counts: Bookings.count_by_status(count_opts)
     )
   end
@@ -137,7 +149,15 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
           <tbody>
             <tr :for={booking <- @bookings} id={"booking-#{booking.uuid}"}>
               <td class="text-sm whitespace-nowrap">{Format.format_range(booking)}</td>
-              <td class="text-sm">{service_name(@services, booking.service_uuid)}</td>
+              <td class="text-sm">
+                {service_name(@services, booking.service_uuid)}
+                <div :if={@unit_names[booking.unit_uuid]} class="text-xs text-base-content/50">
+                  {@unit_names[booking.unit_uuid]}
+                </div>
+                <div :if={booking.total_price} class="text-xs text-base-content/50">
+                  {PhoenixKitBookings.Pricing.format(booking.total_price, booking.currency)}
+                </div>
+              </td>
               <td class="text-sm">
                 <div>{booking.customer_name}</div>
                 <div class="text-xs text-base-content/50">{booking.customer_email}</div>

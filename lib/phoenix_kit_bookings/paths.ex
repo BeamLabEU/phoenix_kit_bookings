@@ -18,6 +18,7 @@ defmodule PhoenixKitBookings.Paths do
 
   def public_index, do: Routes.path("/bookings")
   def public_book(slug), do: Routes.path("/book/#{slug}")
+  def public_book_url(slug), do: Routes.url("/book/#{slug}")
   def public_manage(token), do: Routes.path("/bookings/manage/#{token}")
   def public_manage_url(token), do: Routes.url("/bookings/manage/#{token}")
 end

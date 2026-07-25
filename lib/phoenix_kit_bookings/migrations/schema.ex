@@ -84,6 +84,12 @@ defmodule PhoenixKitBookings.Migrations.Schema do
       signup_policy VARCHAR(20) NOT NULL DEFAULT 'anyone',
       require_approval BOOLEAN NOT NULL DEFAULT FALSE,
       owner_uuid UUID REFERENCES #{prefix_str}phoenix_kit_users(uuid) ON DELETE SET NULL,
+      cancel_notice INTEGER NOT NULL DEFAULT 0,
+      provider_uuid UUID,
+      price NUMERIC(12,2),
+      price_per VARCHAR(10) NOT NULL DEFAULT 'booking',
+      currency VARCHAR(10) NOT NULL DEFAULT 'EUR',
+      reminder_minutes INTEGER,
       settings JSONB NOT NULL DEFAULT '{}',
       inserted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -91,7 +97,8 @@ defmodule PhoenixKitBookings.Migrations.Schema do
       CONSTRAINT bookings_service_status CHECK (status IN ('active', 'inactive', 'trashed')),
       CONSTRAINT bookings_service_signup_policy CHECK (signup_policy IN ('anyone', 'login_required')),
       CONSTRAINT bookings_service_seats_positive CHECK (seats >= 1),
-      CONSTRAINT bookings_service_duration_positive CHECK (duration >= 1)
+      CONSTRAINT bookings_service_duration_positive CHECK (duration >= 1),
+      CONSTRAINT bookings_service_price_per CHECK (price_per IN ('booking', 'hour', 'day', 'night'))
     )
     """)
 
@@ -130,6 +137,65 @@ defmodule PhoenixKitBookings.Migrations.Schema do
     """)
 
     execute("""
+    CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_units (
+      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
+      name VARCHAR(120) NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      inserted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """)
+
+    execute("""
+    CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_units_service_index
+    ON #{prefix_str}phoenix_kit_bookings_units (service_uuid)
+    """)
+
+    execute("""
+    CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_holds (
+      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
+      starts_at TIMESTAMPTZ,
+      ends_at TIMESTAMPTZ,
+      starts_on DATE,
+      ends_on DATE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      inserted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT bookings_hold_time_shape CHECK (
+        (starts_at IS NOT NULL AND ends_at IS NOT NULL AND starts_on IS NULL AND ends_on IS NULL)
+        OR
+        (starts_at IS NULL AND ends_at IS NULL AND starts_on IS NOT NULL AND ends_on IS NOT NULL)
+      )
+    )
+    """)
+
+    execute("""
+    CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_holds_service_expires_index
+    ON #{prefix_str}phoenix_kit_bookings_holds (service_uuid, expires_at)
+    """)
+
+    execute("""
+    CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_waitlist (
+      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
+      date DATE NOT NULL,
+      customer_name VARCHAR(255) NOT NULL,
+      customer_email VARCHAR(255) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'open',
+      inserted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT bookings_waitlist_status CHECK (status IN ('open', 'notified', 'removed'))
+    )
+    """)
+
+    execute("""
+    CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_waitlist_service_date_index
+    ON #{prefix_str}phoenix_kit_bookings_waitlist (service_uuid, date, status)
+    """)
+
+    execute("""
     CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_bookings (
       uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
       service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
@@ -143,6 +209,9 @@ defmodule PhoenixKitBookings.Migrations.Schema do
       customer_phone VARCHAR(50),
       notes TEXT,
       user_uuid UUID REFERENCES #{prefix_str}phoenix_kit_users(uuid) ON DELETE SET NULL,
+      unit_uuid UUID REFERENCES #{prefix_str}phoenix_kit_bookings_units(uuid) ON DELETE SET NULL,
+      total_price NUMERIC(12,2),
+      currency VARCHAR(10),
       source VARCHAR(20) NOT NULL DEFAULT 'public',
       cancelled_at TIMESTAMPTZ,
       cancel_reason TEXT,
@@ -196,6 +265,9 @@ defmodule PhoenixKitBookings.Migrations.Schema do
   def down(opts \\ []) do
     prefix_str = prefix_str(normalize_prefix(opts))
     execute("DROP TABLE IF EXISTS #{prefix_str}phoenix_kit_bookings_bookings CASCADE")
+    execute("DROP TABLE IF EXISTS #{prefix_str}phoenix_kit_bookings_waitlist CASCADE")
+    execute("DROP TABLE IF EXISTS #{prefix_str}phoenix_kit_bookings_holds CASCADE")
+    execute("DROP TABLE IF EXISTS #{prefix_str}phoenix_kit_bookings_units CASCADE")
     execute("DROP TABLE IF EXISTS #{prefix_str}phoenix_kit_bookings_availability_rules CASCADE")
     execute("DROP TABLE IF EXISTS #{prefix_str}phoenix_kit_bookings_services CASCADE")
   end

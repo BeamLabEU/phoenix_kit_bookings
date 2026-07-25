@@ -36,6 +36,7 @@ defmodule PhoenixKitBookings.Schemas.Service do
   @statuses ~w(active inactive trashed)
   @time_units ~w(minutes day night)
   @signup_policies ~w(anyone login_required)
+  @price_pers ~w(booking hour day night)
 
   @primary_key {:uuid, UUIDv7, autogenerate: true}
   @foreign_key_type UUIDv7
@@ -68,6 +69,21 @@ defmodule PhoenixKitBookings.Schemas.Service do
     # self-service feature). NEVER cast from attrs — stamped by
     # `Services.create_service/2` via `opts[:owner_uuid]`.
     field(:owner_uuid, UUIDv7)
+
+    # Minutes before start until which a customer may self-cancel
+    # (0 = cancellable right up to the start).
+    field(:cancel_notice, :integer, default: 0)
+    # Loose reference to a staff person (no FK — staff is optional).
+    # Minute-unit bookings of the SAME provider block each other across
+    # services. Cast normally — it's admin form input, not ownership.
+    field(:provider_uuid, UUIDv7)
+    # nil price = free/unpriced. Total = price × price_per units.
+    field(:price, :decimal)
+    field(:price_per, :string, default: "booking")
+    field(:currency, :string, default: "EUR")
+    # nil = no reminder email; else minutes before start.
+    field(:reminder_minutes, :integer)
+
     field(:settings, :map, default: %{})
 
     has_many(:availability_rules, PhoenixKitBookings.Schemas.AvailabilityRule,
@@ -83,6 +99,7 @@ defmodule PhoenixKitBookings.Schemas.Service do
   def statuses, do: @statuses
   def time_units, do: @time_units
   def signup_policies, do: @signup_policies
+  def price_pers, do: @price_pers
 
   @doc false
   def changeset(service, attrs) do
@@ -107,7 +124,13 @@ defmodule PhoenixKitBookings.Schemas.Service do
       :checkin_time,
       :checkout_time,
       :signup_policy,
-      :require_approval
+      :require_approval,
+      :cancel_notice,
+      :provider_uuid,
+      :price,
+      :price_per,
+      :currency,
+      :reminder_minutes
     ])
     |> maybe_generate_slug()
     |> validate_required([:name, :slug, :time_unit, :duration, :seats, :signup_policy])
@@ -129,6 +152,11 @@ defmodule PhoenixKitBookings.Schemas.Service do
     |> validate_number(:seats, greater_than: 0)
     |> validate_number(:min_stay, greater_than: 0)
     |> validate_number(:max_stay, greater_than: 0)
+    |> validate_number(:cancel_notice, greater_than_or_equal_to: 0)
+    |> validate_number(:reminder_minutes, greater_than: 0)
+    |> validate_number(:price, greater_than_or_equal_to: 0)
+    |> validate_inclusion(:price_per, @price_pers)
+    |> validate_length(:currency, max: 10)
     |> validate_duration_bounds()
     |> validate_stay_bounds()
     |> unique_constraint(:slug, name: :phoenix_kit_bookings_services_slug_index)

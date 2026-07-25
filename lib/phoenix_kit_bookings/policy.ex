@@ -148,6 +148,20 @@ defmodule PhoenixKitBookings.Policy do
     authorized(scope, service, fn -> Services.add_rule(service, attrs, actor_opts(scope)) end)
   end
 
+  def add_unit(scope, %Service{} = service, attrs) do
+    authorized(scope, service, fn -> Services.add_unit(service, attrs, actor_opts(scope)) end)
+  end
+
+  def set_unit_active(scope, %Service{} = service, unit, active?) do
+    authorized(scope, service, fn ->
+      Services.set_unit_active(unit, active?, actor_opts(scope))
+    end)
+  end
+
+  def delete_unit(scope, %Service{} = service, unit) do
+    authorized(scope, service, fn -> Services.delete_unit(unit, actor_opts(scope)) end)
+  end
+
   def delete_rule(scope, %Service{} = service, rule) do
     authorized(scope, service, fn -> Services.delete_rule(rule, actor_opts(scope)) end)
   end

@@ -33,13 +33,33 @@ one admin, one public surface, and one `bookings` table.
 - **Embeddable widget** — `PhoenixKitBookings.Web.Public.BookingWidgetLive`
   mounts on any host page via `live_render/3` (see its moduledoc for the
   session contract).
+- **Named units** — optionally name the individual rooms/chairs/courts;
+  capacity becomes the active-unit count and every booking is
+  auto-assigned a free unit (pooled counting stays the default — the
+  Booqable `trackable` dichotomy, per service).
+- **Slot holds** — advancing to the details form reserves the picked
+  range for 5 minutes (Cal.com `SelectedSlots` pattern); rivals see it
+  taken, expiry is lazy, the locked create still decides.
+- **Providers** — attach a staff person to a service; their bookings
+  block each other ACROSS services (a therapist can't be double-booked
+  between "Massage" and "Consultation").
+- **Pricing** — per-service price per booking/hour/day/night; totals are
+  computed and stored on each booking and shown everywhere. Payment
+  collection (billing checkout) is deliberately not wired yet.
+- **Emails** — confirmation (with `.ics` calendar attachment + manage
+  link), approval, cancellation, and Oban-scheduled reminder emails, all
+  best-effort via core's mailer.
+- **Waitlist** — full dates offer a join form; a cancellation emails
+  every open entry for the freed dates (notify-all, first-to-book).
+- **Cancellation windows** — per-service `cancel_notice` gates guest
+  self-cancellation; admins are never blocked.
 - **Ownership + permissions** — base `bookings` permission scopes the
   admin area to services the user OWNS; `bookings.manage_all` is
   site-wide. Owner-controlled self-service settings: whether users may
   create their own services and how many (`0` = unlimited).
 - **Admin** — Reservations (filter tabs, approval queue, cancel), Services
-  (mode-aware form, availability rules editor, soft-delete trash), and a
-  Settings page for the self-service policy.
+  (mode-aware form, availability rules + named-units editors, soft-delete
+  trash), and a Settings page for the self-service policy.
 
 ## Installation
 

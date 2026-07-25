@@ -48,6 +48,9 @@ defmodule PhoenixKitBookings.Schemas.Booking do
     field(:notes, :string)
 
     field(:user_uuid, UUIDv7)
+    field(:unit_uuid, UUIDv7)
+    field(:total_price, :decimal)
+    field(:currency, :string)
     field(:source, :string, default: "public")
     field(:cancelled_at, :utc_datetime)
     field(:cancel_reason, :string)

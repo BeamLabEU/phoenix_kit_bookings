@@ -112,12 +112,13 @@ defmodule PhoenixKitBookings.Engine do
         opts
       ) do
     now = Keyword.get(opts, :now, DateTime.utc_now())
+    extra_events = Keyword.get(opts, :extra_events, [])
 
     Constraints.validate_booking(
       utc_to_frame(starts_at),
       utc_to_frame(ends_at),
       booking_config(service),
-      bookings_to_events(active_bookings, service),
+      bookings_to_events(active_bookings, service) ++ extra_events,
       now: utc_to_frame(now),
       availabilities: lib_availability(rules)
     )
@@ -193,6 +194,26 @@ defmodule PhoenixKitBookings.Engine do
         start: booking.starts_at |> utc_to_frame() |> DateTime.add(-before_s, :second),
         end: booking.ends_at |> utc_to_frame() |> DateTime.add(after_s, :second),
         overlap: pooled,
+        status: :confirmed
+      }
+    end)
+  end
+
+  @doc """
+  Maps timed bookings onto ABSOLUTELY blocking events (`overlap: false`,
+  no buffer expansion) — provider cross-service conflicts: a person can't
+  be in two places regardless of the current service's seat pool.
+  """
+  def blocking_events(bookings) do
+    bookings
+    |> Enum.filter(&(Booking.active?(&1) and not is_nil(&1.starts_at)))
+    |> Enum.map(fn booking ->
+      %Event{
+        id: booking.uuid,
+        title: "",
+        start: utc_to_frame(booking.starts_at),
+        end: utc_to_frame(booking.ends_at),
+        overlap: false,
         status: :confirmed
       }
     end)

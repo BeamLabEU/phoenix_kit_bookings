@@ -43,6 +43,12 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
   def handle_info(message, socket), do: BookingFlow.handle_info(message, socket)
 
   @impl true
+  def terminate(_reason, socket) do
+    if socket.assigns[:service], do: BookingFlow.on_terminate(socket)
+    :ok
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <PhoenixKitWeb.Components.LayoutWrapper.app_layout
@@ -69,6 +75,8 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
               customer_form={@customer_form}
               booking={@booking}
               flow_error={@flow_error}
+              flow_error_reason={@flow_error_reason}
+              waitlist_done={@waitlist_done}
               current_user={@current_user}
             />
           </div>

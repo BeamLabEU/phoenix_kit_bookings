@@ -33,6 +33,9 @@ config :phoenix_kit_bookings, PhoenixKitBookings.Test.Endpoint,
   url: [host: "localhost"],
   render_errors: [formats: [html: PhoenixKitBookings.Test.Layouts]]
 
+# Capture Notifier emails in the test process (Swoosh test adapter).
+config :phoenix_kit, PhoenixKit.Mailer, adapter: Swoosh.Adapters.Test
+
 config :phoenix, :json_library, Jason
 
 config :logger, level: :warning

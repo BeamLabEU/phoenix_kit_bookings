@@ -11,7 +11,7 @@ defmodule PhoenixKitBookings.Services do
   import Ecto.Query
 
   alias PhoenixKitBookings.Activity
-  alias PhoenixKitBookings.Schemas.{AvailabilityRule, Service}
+  alias PhoenixKitBookings.Schemas.{AvailabilityRule, Service, Unit}
 
   @services_topic "phoenix_kit_bookings:services"
 
@@ -182,6 +182,87 @@ defmodule PhoenixKitBookings.Services do
       resource_uuid: rule.service_uuid
     )
     |> tap_broadcast_service(rule.service_uuid)
+  end
+
+  # ── Named units ──────────────────────────────────────────────────────
+
+  @doc "All units of a service, active first, then by name."
+  def list_units(service_uuid) do
+    from(u in Unit,
+      where: u.service_uuid == ^service_uuid,
+      order_by: [desc: u.active, asc: u.name]
+    )
+    |> repo().all()
+  end
+
+  @doc "Active units only — the capacity-defining set."
+  def list_active_units(service_uuid) do
+    from(u in Unit,
+      where: u.service_uuid == ^service_uuid and u.active == true,
+      order_by: [asc: u.name]
+    )
+    |> repo().all()
+  end
+
+  @doc """
+  The service's effective capacity: the active-unit count when any units
+  exist (unit-tracked service), else the pooled `seats`.
+  """
+  def effective_seats(%Service{} = service) do
+    case length(list_active_units(service.uuid)) do
+      0 -> service.seats
+      count -> count
+    end
+  end
+
+  @doc "A unit's display name; nil for a deleted/unknown unit."
+  def unit_name(nil), do: nil
+
+  def unit_name(unit_uuid) do
+    from(u in Unit, where: u.uuid == ^unit_uuid, select: u.name) |> repo().one()
+  rescue
+    Ecto.Query.CastError -> nil
+  end
+
+  @doc "Unit names keyed by uuid — batch lookup for admin lists."
+  def unit_names(uuids) when is_list(uuids) do
+    from(u in Unit, where: u.uuid in ^uuids, select: {u.uuid, u.name})
+    |> repo().all()
+    |> Map.new()
+  end
+
+  def add_unit(%Service{} = service, attrs, opts \\ []) do
+    %Unit{}
+    |> Unit.changeset(attrs)
+    |> Ecto.Changeset.put_change(:service_uuid, service.uuid)
+    |> repo().insert()
+    |> tap_log("bookings.unit_added", opts,
+      resource_type: "bookings_service",
+      resource_uuid: service.uuid
+    )
+    |> tap_broadcast_service(service.uuid)
+  end
+
+  def set_unit_active(%Unit{} = unit, active?, opts \\ []) when is_boolean(active?) do
+    unit
+    |> Ecto.Changeset.change(active: active?)
+    |> repo().update()
+    |> tap_log("bookings.unit_updated", opts,
+      resource_type: "bookings_service",
+      resource_uuid: unit.service_uuid
+    )
+    |> tap_broadcast_service(unit.service_uuid)
+  end
+
+  @doc "Deletes a unit; its past bookings keep history via ON DELETE SET NULL."
+  def delete_unit(%Unit{} = unit, opts \\ []) do
+    unit
+    |> repo().delete()
+    |> tap_log("bookings.unit_removed", opts,
+      resource_type: "bookings_service",
+      resource_uuid: unit.service_uuid
+    )
+    |> tap_broadcast_service(unit.service_uuid)
   end
 
   # ── Plumbing ─────────────────────────────────────────────────────────

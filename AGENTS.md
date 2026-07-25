@@ -92,12 +92,46 @@ v0.1.0 is unreleased, edit V1 in place (workspace convention).
   `config :phoenix_kit, layout:` at `Test.Layouts.public` because the
   fallback (core's root layout) needs core's endpoint started.
 
-## Known gaps / v2 candidates (deliberate v1 cuts)
+## v1.5 additions (2026-07-25, "do everything" pass)
 
-Recorded in `dev_docs/research/2026-07-24-booking-module-research.md` §2–3:
-named bookable units (specific room assignment — pooled quantity only for
-now), per-date pricing + payments (billing integration), confirmation/
-reminder emails + ICS, external calendar sync, slot-hold-with-TTL during
-checkout, waitlists, recurring bookings, staff-as-provider linkage,
-cancellation policy windows (guest cancel is currently allowed until the
-booking starts), viewer-timezone slot display for virtual services.
+- **Named units** (`Schemas.Unit`): capacity = active-unit count when any
+  exist; `pick_unit` auto-assigns first-free-by-name inside the locked
+  create. Legacy nil-unit bookings consume capacity without a unit — safe.
+- **Holds** (`Schemas.Hold`): separate table, same either/or time CHECK;
+  mapped to pseudo-bookings by `Bookings.list_occupancy/3` so EVERY
+  capacity read (picker, advisory, locked create) sees them; expired rows
+  are ignored + lazily pruned; the flow's own hold is excluded via
+  `exclude_hold` and consumed at create. Public LVs release on
+  `terminate/2` / Back.
+- **Providers**: `service.provider_uuid` (loose staff ref). Cross-service
+  conflicts via `provider_blocking_events` (absolute blocks, no buffer
+  expansion) + `lock_service_tree` (locks ALL the provider's services in
+  uuid order — deadlock-safe). Admin select reads
+  `phoenix_kit_staff_people` SCHEMALESSLY (to_regclass guard) — never a
+  compile-time staff reference.
+- **Pricing** (`Pricing`): totals stamped on bookings inside the create;
+  `price_per` shape mismatches degrade to flat price. NO payment
+  collection — billing checkout is a decision for Max (pay-at-booking vs
+  deposit vs invoice), not a default.
+- **Emails** (`Notifier` + `ICS` + `Workers.ReminderWorker`): all sends
+  best-effort (rescue+log — mail failure never fails the operation);
+  reminder jobs re-check state at fire time so cancellations need no job
+  bookkeeping; tests assert via Swoosh.Adapters.Test (config/test.exs) —
+  note assert_email_sent pops IN ORDER, consume the confirmation first.
+- **Waitlist** (`Schemas.WaitlistEntry`): notify-all-first-to-book on the
+  freed dates of a cancellation; join idempotent per email+date.
+- **Cancellation windows**: `cancel_notice` minutes;
+  `Bookings.cancellable_by_customer?/2` gates ManageLive (re-checked
+  server-side on the event, not just button-hiding).
+
+## Known gaps / next decisions (deliberately NOT built)
+
+- **Payment collection** — needs Max's UX call (pay-at-booking vs deposit
+  vs invoice-later); prices/totals are already recorded so billing can
+  plug into `create_booking`'s success path.
+- **External calendar sync** (Google/Outlook OAuth) — needs provider
+  credentials; the `.ics` attachment covers the import case.
+- **Recurring bookings** — data-model choice (series table vs rrule)
+  worth boss review first.
+- Viewer-timezone slot display for virtual services; per-date (seasonal)
+  pricing rules; named-unit selection BY the customer (auto-assign only).

@@ -8,7 +8,7 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
 
   use PhoenixKitWeb, :live_view
 
-  alias PhoenixKitBookings.{Bookings, Engine, Errors, Services}
+  alias PhoenixKitBookings.{Bookings, Errors, Pricing, Services}
   alias PhoenixKitBookings.Web.Format
 
   @impl true
@@ -32,31 +32,30 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
 
   @impl true
   def handle_event("cancel", _params, socket) do
-    case Bookings.cancel_booking(socket.assigns.booking, reason: "guest self-service") do
-      {:ok, booking} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, gettext("Your booking is cancelled."))
-         |> assign(booking: booking)}
+    %{booking: booking, service: service} = socket.assigns
 
-      {:error, reason, _} ->
-        {:noreply, put_flash(socket, :error, Errors.message(reason))}
+    # Re-check the window server-side — the button hides, but hiding is UI.
+    if service && Bookings.cancellable_by_customer?(booking, service) do
+      case Bookings.cancel_booking(booking, reason: "guest self-service") do
+        {:ok, cancelled} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, gettext("Your booking is cancelled."))
+           |> assign(booking: cancelled)}
+
+        {:error, reason, _} ->
+          {:noreply, put_flash(socket, :error, Errors.message(reason))}
+      end
+    else
+      {:noreply, put_flash(socket, :error, Errors.message(:cancel_window_passed))}
     end
   end
 
-  defp cancellable?(nil), do: false
+  defp cancellable?(nil, _service), do: false
+  defp cancellable?(_booking, nil), do: false
 
-  defp cancellable?(booking) do
-    booking.status in ["pending", "confirmed"] and upcoming?(booking)
-  end
-
-  defp upcoming?(%{starts_at: %DateTime{} = starts_at}),
-    do: DateTime.compare(starts_at, DateTime.utc_now()) == :gt
-
-  defp upcoming?(%{starts_on: %Date{} = starts_on}),
-    do: Date.compare(starts_on, Engine.today()) != :lt
-
-  defp upcoming?(_), do: false
+  defp cancellable?(booking, service),
+    do: Bookings.cancellable_by_customer?(booking, service)
 
   @impl true
   def render(assigns) do
@@ -85,7 +84,13 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
               <div class="text-base-content/60">{@booking.customer_name} · {@booking.customer_email}</div>
             </div>
 
-            <div :if={cancellable?(@booking)} class="card-actions mt-2">
+            <p :if={@booking.unit_uuid && Services.unit_name(@booking.unit_uuid)} class="text-sm">
+              {gettext("Assigned:")} {Services.unit_name(@booking.unit_uuid)}
+            </p>
+            <p :if={@booking.total_price} class="text-sm font-medium">
+              {gettext("Total:")} {Pricing.format(@booking.total_price, @booking.currency)}
+            </p>
+            <div :if={cancellable?(@booking, @service)} class="card-actions mt-2">
               <button
                 class="btn btn-error btn-sm"
                 phx-click="cancel"

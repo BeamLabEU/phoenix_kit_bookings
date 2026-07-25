@@ -58,10 +58,51 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
   end
 
   defp load_rules(%{assigns: %{service: %Service{uuid: nil}}} = socket),
-    do: assign(socket, rules: [])
+    do: assign(socket, rules: [], units: [])
 
-  defp load_rules(%{assigns: %{service: service}} = socket),
-    do: assign(socket, rules: Services.list_rules(service.uuid))
+  defp load_rules(%{assigns: %{service: service}} = socket) do
+    socket
+    |> assign(rules: Services.list_rules(service.uuid))
+    |> load_units()
+  end
+
+  defp load_units(%{assigns: %{service: %Service{uuid: nil}}} = socket),
+    do: assign(socket, units: [])
+
+  defp load_units(%{assigns: %{service: service}} = socket),
+    do: assign(socket, units: Services.list_units(service.uuid))
+
+  # Staff is an optional module — read its people SCHEMALESSLY from the
+  # sibling table when it exists (the `phoenix_kit_calendar` cross-module
+  # pattern: no compile-time reference, graceful absence).
+  defp provider_options do
+    repo = PhoenixKit.RepoHelper.repo()
+
+    case repo.query("SELECT to_regclass('phoenix_kit_staff_people')", []) do
+      {:ok, %{rows: [[nil]]}} ->
+        []
+
+      {:ok, _} ->
+        import Ecto.Query, only: [from: 2]
+
+        from(p in "phoenix_kit_staff_people",
+          where: p.status == "active",
+          order_by: [asc: p.name],
+          select: {p.name, type(p.uuid, :string)}
+        )
+        |> repo.all()
+        |> Enum.map(fn {name, uuid} ->
+          {name || "Person #{String.slice(uuid, 0, 8)}", uuid}
+        end)
+
+      _ ->
+        []
+    end
+  rescue
+    _ -> []
+  catch
+    :exit, _ -> []
+  end
 
   @impl true
   def handle_event("validate", %{"service" => params}, socket) do
@@ -86,6 +127,38 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
       {:error, changeset} ->
         {:noreply, put_flash(socket, :error, rule_error(changeset))}
+    end
+  end
+
+  def handle_event("add_unit", %{"unit" => params}, socket) do
+    case Policy.add_unit(scope(socket), socket.assigns.service, params) do
+      {:ok, _unit} ->
+        {:noreply, socket |> put_flash(:info, gettext("Unit added.")) |> load_units()}
+
+      {:error, :not_allowed} ->
+        {:noreply, put_flash(socket, :error, gettext("You can't edit that service."))}
+
+      {:error, changeset} ->
+        {:noreply, put_flash(socket, :error, rule_error(changeset))}
+    end
+  end
+
+  def handle_event("toggle_unit", %{"uuid" => uuid}, socket) do
+    with %{} = unit <- Enum.find(socket.assigns.units, &(&1.uuid == uuid)),
+         {:ok, _} <-
+           Policy.set_unit_active(scope(socket), socket.assigns.service, unit, !unit.active) do
+      {:noreply, socket |> put_flash(:info, gettext("Unit updated.")) |> load_units()}
+    else
+      _ -> {:noreply, put_flash(socket, :error, gettext("Could not update that unit."))}
+    end
+  end
+
+  def handle_event("delete_unit", %{"uuid" => uuid}, socket) do
+    with %{} = unit <- Enum.find(socket.assigns.units, &(&1.uuid == uuid)),
+         {:ok, _} <- Policy.delete_unit(scope(socket), socket.assigns.service, unit) do
+      {:noreply, socket |> put_flash(:info, gettext("Unit deleted.")) |> load_units()}
+    else
+      _ -> {:noreply, put_flash(socket, :error, gettext("Could not delete that unit."))}
     end
   end
 
@@ -294,6 +367,53 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
               field={@form[:require_approval]}
               label={gettext("Require approval — new bookings wait as pending (RSVP)")}
             />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <.input
+                field={@form[:cancel_notice]}
+                type="number"
+                label={gettext("Customers may cancel until (minutes before start, 0 = anytime)")}
+              />
+              <.input
+                field={@form[:reminder_minutes]}
+                type="number"
+                label={gettext("Reminder email (minutes before start, blank = none)")}
+              />
+            </div>
+            <.select
+              :if={provider_options() != []}
+              field={@form[:provider_uuid]}
+              label={gettext("Provider (staff person — their bookings block each other across services)")}
+              prompt={gettext("No provider")}
+              options={provider_options()}
+            />
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-lg">
+          <div class="card-body gap-4">
+            <h3 class="card-title text-base">{gettext("Pricing")}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <.input
+                field={@form[:price]}
+                type="number"
+                step="0.01"
+                label={gettext("Price (blank = unpriced)")}
+              />
+              <.select
+                field={@form[:price_per]}
+                label={gettext("Per")}
+                options={[
+                  {gettext("Booking (flat)"), "booking"},
+                  {gettext("Hour"), "hour"},
+                  {gettext("Day"), "day"},
+                  {gettext("Night"), "night"}
+                ]}
+              />
+              <.input field={@form[:currency]} type="text" label={gettext("Currency")} />
+            </div>
+            <p class="text-xs text-base-content/50">
+              {gettext("Totals are computed and stored on each booking. Payment collection is not wired yet — bookings record what is owed.")}
+            </p>
           </div>
         </div>
 
@@ -380,6 +500,55 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
               </label>
               <button type="submit" class="btn btn-sm btn-primary">{gettext("Add rule")}</button>
             </div>
+          </form>
+        </div>
+      </div>
+
+      <div :if={@action == :edit} class="card bg-base-100 shadow-lg">
+        <div class="card-body gap-4">
+          <h3 class="card-title text-base">{gettext("Named units")}</h3>
+          <p class="text-sm text-base-content/60">
+            {gettext("Optional: name the individual rooms/chairs/courts. With units, capacity becomes the active-unit count and every booking is auto-assigned a free unit. Without units, the plain capacity number pools.")}
+          </p>
+
+          <table :if={@units != []} class="table table-sm">
+            <tbody>
+              <tr :for={unit <- @units} id={"unit-#{unit.uuid}"}>
+                <td class="text-sm">{unit.name}</td>
+                <td>
+                  <span class={if unit.active, do: "badge badge-success", else: "badge badge-ghost"}>
+                    {if unit.active, do: gettext("Active"), else: gettext("Inactive")}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="join">
+                    <button
+                      class="btn btn-xs join-item"
+                      phx-click="toggle_unit"
+                      phx-value-uuid={unit.uuid}
+                    >
+                      {if unit.active, do: gettext("Deactivate"), else: gettext("Activate")}
+                    </button>
+                    <button
+                      class="btn btn-xs btn-ghost join-item"
+                      phx-click="delete_unit"
+                      phx-value-uuid={unit.uuid}
+                      data-confirm={gettext("Delete this unit? Past bookings keep their history.")}
+                    >
+                      {gettext("Delete")}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <form phx-submit="add_unit" class="flex items-end gap-2">
+            <label class="form-control">
+              <span class="label-text text-xs">{gettext("Unit name (e.g. Room 101)")}</span>
+              <input type="text" name="unit[name]" class="input input-bordered input-sm" required />
+            </label>
+            <button type="submit" class="btn btn-sm btn-primary">{gettext("Add unit")}</button>
           </form>
         </div>
       </div>

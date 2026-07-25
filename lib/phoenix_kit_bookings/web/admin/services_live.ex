@@ -47,6 +47,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
     assign(socket,
       services: services,
       counts: counts,
+      waitlist_counts: PhoenixKitBookings.Bookings.waitlist_counts(),
       can_create: Policy.can_create?(scope)
     )
   end
@@ -173,7 +174,12 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
                 </.link>
                 <div class="text-xs text-base-content/50">/{service.slug}</div>
               </td>
-              <td class="text-sm">{Format.mode_summary(service)}</td>
+              <td class="text-sm">
+                {Format.mode_summary(service)}
+                <div :if={@waitlist_counts[service.uuid]} class="text-xs text-warning">
+                  {gettext("%{count} on waitlist", count: @waitlist_counts[service.uuid])}
+                </div>
+              </td>
               <td class="text-sm">
                 {signup_label(service)}
               </td>
