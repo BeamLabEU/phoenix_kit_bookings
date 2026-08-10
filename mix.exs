@@ -81,7 +81,10 @@ defmodule PhoenixKitBookings.MixProject do
   defp deps do
     [
       # PhoenixKit provides the Module behaviour, Settings, Scope, and Activity.
-      pk_dep(:phoenix_kit, "~> 1.7.189"),
+      # Two-segment `~> 2.0` on purpose: `~> 2.0.x` would expand to
+      # `< 2.1.0` and make this module unsatisfiable alongside a newer core
+      # minor. Guarded by test/core_pin_conformance_test.exs.
+      pk_dep(:phoenix_kit, "~> 2.0"),
 
       # The booking rules engine (BookingConfig / Availability / Constraints /
       # TimeSlots) and calendar UI components.
