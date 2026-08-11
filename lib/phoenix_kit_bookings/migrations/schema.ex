@@ -58,10 +58,11 @@ defmodule PhoenixKitBookings.Migrations.Schema do
   def up(opts \\ []) do
     prefix = normalize_prefix(opts)
     prefix_str = prefix_str(prefix)
+    uuid_default = uuid_v7_call(prefix)
 
     execute("""
     CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_services (
-      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      uuid UUID PRIMARY KEY DEFAULT #{uuid_default},
       name VARCHAR(255) NOT NULL,
       slug VARCHAR(160) NOT NULL,
       description TEXT,
@@ -119,7 +120,7 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
     execute("""
     CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_availability_rules (
-      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      uuid UUID PRIMARY KEY DEFAULT #{uuid_default},
       service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
       days_of_week INTEGER[],
       date DATE,
@@ -138,7 +139,7 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
     execute("""
     CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_units (
-      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      uuid UUID PRIMARY KEY DEFAULT #{uuid_default},
       service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
       name VARCHAR(120) NOT NULL,
       active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -154,7 +155,7 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
     execute("""
     CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_holds (
-      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      uuid UUID PRIMARY KEY DEFAULT #{uuid_default},
       service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
       starts_at TIMESTAMPTZ,
       ends_at TIMESTAMPTZ,
@@ -178,7 +179,7 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
     execute("""
     CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_waitlist (
-      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      uuid UUID PRIMARY KEY DEFAULT #{uuid_default},
       service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
       date DATE NOT NULL,
       customer_name VARCHAR(255) NOT NULL,
@@ -197,7 +198,7 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
     execute("""
     CREATE TABLE IF NOT EXISTS #{prefix_str}phoenix_kit_bookings_bookings (
-      uuid UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+      uuid UUID PRIMARY KEY DEFAULT #{uuid_default},
       service_uuid UUID NOT NULL REFERENCES #{prefix_str}phoenix_kit_bookings_services(uuid) ON DELETE CASCADE,
       status VARCHAR(20) NOT NULL DEFAULT 'confirmed',
       starts_at TIMESTAMPTZ,
@@ -274,10 +275,34 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
   # Core passes a keyword list (`prefix: "public", version: 1`);
   # the legacy mechanism used a map (`%{prefix: "public"}`). Support both.
-  defp normalize_prefix(opts) when is_list(opts), do: opts[:prefix] || "public"
-  defp normalize_prefix(%{prefix: prefix}), do: prefix || "public"
+  defp normalize_prefix(opts) when is_list(opts), do: validate!(opts[:prefix] || "public")
+  defp normalize_prefix(%{prefix: prefix}), do: validate!(prefix || "public")
   defp normalize_prefix(_), do: "public"
+
+  # The prefix is interpolated straight into DDL, so it has to be an
+  # identifier and nothing else. Core validates its own (`--prefix` →
+  # `Helpers.validate_prefix!/1`); a module that skips the check is the one
+  # place a crafted prefix reaches the database unescaped.
+  defp validate!(prefix) when is_binary(prefix) do
+    if prefix =~ ~r/^[a-zA-Z_][a-zA-Z0-9_]*$/ do
+      prefix
+    else
+      raise ArgumentError, "invalid schema prefix: #{inspect(prefix)}"
+    end
+  end
+
+  defp validate!(prefix), do: raise(ArgumentError, "invalid schema prefix: #{inspect(prefix)}")
 
   defp prefix_str(prefix) when prefix in [nil, "public"], do: ""
   defp prefix_str(prefix), do: "#{prefix}."
+
+  # Always schema-qualified, `public` included.
+  #
+  # Core installs the generator function into whichever schema it migrated
+  # into, so on a named-schema install a BARE call resolves through
+  # `search_path` — which does not carry that schema — and the CREATE TABLE
+  # fails. Qualifying costs nothing on a public install and is the only
+  # thing that works on a prefixed one. Same rule core states for its own
+  # chain (`Helpers.uuid_v7_call/1`).
+  defp uuid_v7_call(prefix), do: "#{prefix}.uuid_generate_v7()"
 end
