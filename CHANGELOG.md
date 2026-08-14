@@ -4,6 +4,36 @@ All notable changes to **PhoenixKitBookings** are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.1.2 - 2026-08-14
+
+### Changed
+
+- **⚠️ Requires `phoenix_kit ~> 2.4`.** `Service.changeset/2` now calls
+  `PhoenixKit.Utils.Slug.put_slug/3`, which core did not ship until 2.4.0.
+  The pin was raised from `~> 2.0` because that range admits cores where
+  the function does not exist — and the failure would land in the
+  **consumer's** app as an `UndefinedFunctionError` on every save touching
+  `:name`, never in this repo's own run, since the workspace always
+  resolves the newest core. Still two-segment, so every later 2.x
+  satisfies it.
+
+  `core_pin_conformance_test.exs` moved with it, and now guards both
+  directions: too narrow (a three-segment pin collapsing to one minor)
+  and too wide (a core lacking the function this module calls).
+
+### Fixed
+
+- **A Cyrillic or Greek service name could not be created.** The local
+  slugifier was ASCII-only (`[^a-z0-9]` after downcase), so those names
+  produced `""` and then failed this schema's own slug format
+  validation. Core romanizes instead (#2).
+
+- **Two services named alike hit a raw unique-constraint error.** Nothing
+  probed `phoenix_kit_bookings_services_slug_index`. Slugs are now
+  suffixed `-2`, `-3` … until free, and `max_length: 160` keeps the
+  suffix inside the column — the old `String.slice(0, 160)` could
+  overflow once a suffix was added (#2).
+
 ## 0.1.1 - 2026-08-11
 
 ### Changed

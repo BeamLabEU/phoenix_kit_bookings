@@ -14,12 +14,25 @@ defmodule PhoenixKitBookings.CorePinConformanceTest do
 
   Core 1.7 is deliberately excluded: core 2.0.0 squashed the migration chain to
   a V135 floor and this module is verified only against that baseline.
+
+  **The floor moved to 2.4 on 2026-08-14** and core 2.0–2.3 are now rejected on
+  purpose. `Service.changeset/2` calls `PhoenixKit.Utils.Slug.put_slug/3`,
+  which core did not ship until 2.4.0 — so admitting 2.0.x would let a host
+  resolve a core where every save touching `:name` raises
+  `UndefinedFunctionError`. That is the *same class* of consumer-only breakage
+  this test exists to catch, just from the opposite direction: too wide rather
+  than too narrow.
+
+  Raising the floor is NOT the trap described above. `~> 2.4` is two-segment,
+  so it still admits every later core minor; the forbidden shape is the
+  three-segment `~> 2.4.0`, which would pin to a single minor and is still
+  rejected by the `@must_admit` entries below.
   """
 
-  @must_admit ["2.0.0", "2.0.7", "2.1.0", "2.9.4"]
-  @must_reject ["1.7.189", "1.7.236", "1.9.4", "3.0.0"]
+  @must_admit ["2.4.0", "2.4.7", "2.5.0", "2.9.4"]
+  @must_reject ["1.7.189", "1.7.236", "2.0.0", "2.3.0", "3.0.0"]
 
-  test "the :phoenix_kit requirement admits every core 2.x and nothing else" do
+  test "the :phoenix_kit requirement admits every core 2.4+ and nothing else" do
     requirement = core_requirement()
 
     assert match?({:ok, _parsed}, Version.parse_requirement(requirement)),
@@ -29,7 +42,7 @@ defmodule PhoenixKitBookings.CorePinConformanceTest do
       assert Version.match?(version, requirement),
              "`:phoenix_kit` requirement #{inspect(requirement)} rejects core #{version}. " <>
                "A pin that excludes a core minor breaks `mix deps.get` for every host " <>
-               "running this module alongside that core. Keep it a two-segment `~> 2.0`."
+               "running this module alongside that core. Keep it a two-segment `~> 2.4`."
     end
 
     for version <- @must_reject do

@@ -65,19 +65,21 @@ one admin, one public surface, and one `bookings` table.
 
 ```elixir
 # mix.exs of your PhoenixKit host app
-{:phoenix_kit_bookings, "~> 0.1.0"}
+{:phoenix_kit_bookings, "~> 0.1.2"}
 ```
 
-Run `mix deps.get`, then `mix phoenix_kit.update` — the module owns its
-versioned migration (`PhoenixKitBookings.Migrations.Schema`, discovered via
-`migration_module/0`), so no core upgrade is needed. Enable **Bookings** on
-the admin Modules page.
+Requires [`phoenix_kit`](https://hex.pm/packages/phoenix_kit) `~> 2.4`
+(this release calls `PhoenixKit.Utils.Slug.put_slug/3`, added in core
+2.4.0). Run `mix deps.get`, then `mix phoenix_kit.update` — the module
+owns its versioned migration (`PhoenixKitBookings.Migrations.Schema`,
+discovered via `migration_module/0`). Enable **Bookings** on the admin
+Modules page.
 
 ## Development
 
 ```bash
 mix test.setup   # createdb phoenix_kit_bookings_test + migrations
-mix test         # 74 tests; :integration auto-excluded without a DB
+mix test         # 105 tests; :integration auto-excluded without a DB
 mix precommit    # compile --warnings-as-errors, credo --strict, dialyzer
 ```
 

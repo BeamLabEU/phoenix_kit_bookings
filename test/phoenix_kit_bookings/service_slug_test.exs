@@ -39,12 +39,69 @@ defmodule PhoenixKitBookings.ServiceSlugTest do
       assert slug =~ ~r/^[a-z0-9][a-z0-9-]*$/
     end
 
+    test "a Greek name yields a valid, format-passing slug" do
+      cs =
+        changeset(%{
+          "name" => "Μασάζ πλάτης",
+          "time_unit" => "minutes",
+          "duration" => 60,
+          "seats" => 1
+        })
+
+      assert cs.valid?
+
+      slug = Changeset.get_change(cs, :slug)
+      assert is_binary(slug) and slug != ""
+      assert slug =~ ~r/^[a-z0-9][a-z0-9-]*$/
+    end
+
+    test "an explicit slug wins over the generated one" do
+      cs =
+        changeset(%{
+          "name" => "Deep Tissue",
+          "slug" => "custom-massage",
+          "time_unit" => "minutes",
+          "duration" => 60,
+          "seats" => 1
+        })
+
+      assert cs.valid?
+      assert Changeset.get_change(cs, :slug) == "custom-massage"
+    end
+
+    test "an unromanizable name does not write a blank slug" do
+      # Core's slugify falls back to "" for unromanizable scripts, and
+      # put_slug then leaves the changeset alone rather than storing a
+      # blank for the next save to fight over. The admin form's required
+      # slug is what the operator then fills in by hand.
+      cs =
+        changeset(%{
+          "name" => "日本語",
+          "time_unit" => "minutes",
+          "duration" => 60,
+          "seats" => 1
+        })
+
+      assert Changeset.get_change(cs, :slug) == nil
+      refute cs.valid?
+      assert %{slug: _} = errors_on(cs)
+    end
+
     test "an existing slug survives a rename — get_field semantics preserved" do
       existing = %Service{name: "Old", slug: "old"}
       cs = Service.changeset(existing, %{"name" => "Brand New Name"})
 
       assert Changeset.get_change(cs, :slug) == nil
       assert Changeset.get_field(cs, :slug) == "old"
+    end
+
+    test "a persisted romanized service is reachable by its generated slug" do
+      service = slot_service_fixture(%{"name" => "Массаж спины"})
+
+      assert service.slug =~ ~r/^[a-z0-9][a-z0-9-]*$/
+
+      assert PhoenixKitBookings.Services.get_active_service_by_slug(service.slug).uuid ==
+               service.uuid
     end
   end
 
@@ -62,9 +119,9 @@ defmodule PhoenixKitBookings.ServiceSlugTest do
       first = slot_service_fixture(%{"name" => long})
       second = slot_service_fixture(%{"name" => long})
 
-      assert String.length(first.slug) <= 160
+      assert String.length(first.slug) == 160
       assert String.ends_with?(second.slug, "-2")
-      assert String.length(second.slug) <= 160
+      assert String.length(second.slug) == 160
     end
   end
 end

@@ -1,7 +1,7 @@
 defmodule PhoenixKitBookings.MixProject do
   use Mix.Project
 
-  @version "0.1.1"
+  @version "0.1.2"
   @source_url "https://github.com/BeamLabEU/phoenix_kit_bookings"
 
   def project do
@@ -80,11 +80,16 @@ defmodule PhoenixKitBookings.MixProject do
 
   defp deps do
     [
-      # PhoenixKit provides the Module behaviour, Settings, Scope, and Activity.
-      # Two-segment `~> 2.0` on purpose: `~> 2.0.x` would expand to
-      # `< 2.1.0` and make this module unsatisfiable alongside a newer core
-      # minor. Guarded by test/core_pin_conformance_test.exs.
-      pk_dep(:phoenix_kit, "~> 2.0"),
+      # PhoenixKit provides the Module behaviour, Settings, Scope, Activity —
+      # and, since the `put_slug/3` adoption, the slug changeset glue.
+      # 2.4.0+ is REQUIRED, not preferred: `Service.changeset/2` calls
+      # `PhoenixKit.Utils.Slug.put_slug/3`, which does not exist before core
+      # 2.4.0. Under `~> 2.0` a host could resolve core 2.0–2.3 and every
+      # save touching `:name` would raise UndefinedFunctionError — in the
+      # consumer's app, never in this repo's own run, because the workspace
+      # always resolves the newest core. Two-segment, so every later 2.x
+      # still satisfies it. Guarded by test/core_pin_conformance_test.exs.
+      pk_dep(:phoenix_kit, "~> 2.4"),
 
       # The booking rules engine (BookingConfig / Availability / Constraints /
       # TimeSlots) and calendar UI components.
@@ -116,7 +121,7 @@ defmodule PhoenixKitBookings.MixProject do
   defp docs do
     [
       main: "PhoenixKitBookings",
-      source_ref: "v#{@version}"
+      source_ref: "#{@version}"
     ]
   end
 end

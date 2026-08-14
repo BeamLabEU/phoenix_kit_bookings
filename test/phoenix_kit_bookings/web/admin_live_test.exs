@@ -3,6 +3,7 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
   alias Ecto.Adapters.SQL
   alias PhoenixKitBookings.{Bookings, Services}
+  alias PhoenixKitBookings.Schemas.Service
   alias PhoenixKitBookings.Test.Repo
 
   defp admin_conn(conn), do: put_test_scope(conn, fake_scope())
@@ -52,6 +53,27 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
       assert service = Services.get_active_service_by_slug("sauna-session")
       assert service.duration == 45
+      assert_redirect(view, "/en/admin/bookings/services/#{service.uuid}/edit")
+    end
+
+    test "creates a service from a Cyrillic name with a romanized public slug", %{conn: conn} do
+      {:ok, view, _html} = live(admin_conn(conn), "/en/admin/bookings/services/new")
+
+      view
+      |> form("form[phx-submit=save]", %{
+        "service" => %{
+          "name" => "Массаж спины",
+          "time_unit" => "minutes",
+          "duration" => "60",
+          "seats" => "1"
+        }
+      })
+      |> render_submit()
+
+      assert %Service{} = service = Repo.get_by(Service, name: "Массаж спины")
+
+      assert service.slug =~ ~r/^[a-z0-9][a-z0-9-]*$/
+      assert Services.get_active_service_by_slug(service.slug).uuid == service.uuid
       assert_redirect(view, "/en/admin/bookings/services/#{service.uuid}/edit")
     end
 
