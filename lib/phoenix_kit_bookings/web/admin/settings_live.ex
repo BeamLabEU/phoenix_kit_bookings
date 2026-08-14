@@ -84,13 +84,13 @@ defmodule PhoenixKitBookings.Web.Admin.SettingsLive do
               checked={@user_services_enabled}
               class="toggle"
             />
-            <span class="label-text">
+            <span class="fieldset-legend">
               {gettext("Users may create their own services")}
             </span>
           </label>
 
-          <label class="form-control max-w-xs">
-            <span class="label-text text-sm">
+          <label class="fieldset max-w-xs">
+            <span class="fieldset-legend text-sm">
               {gettext("Services per user (0 = unlimited)")}
             </span>
             <input
@@ -98,7 +98,7 @@ defmodule PhoenixKitBookings.Web.Admin.SettingsLive do
               name="settings[max_services_per_user]"
               value={@max_services}
               min="0"
-              class="input input-bordered"
+              class="input"
             />
           </label>
 

@@ -408,33 +408,33 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
           Fully booked? Join the waitlist and get an email when a spot frees up.
         </p>
         <div class="flex flex-wrap items-end gap-2">
-          <label class="form-control">
-            <span class="label-text text-xs">Date</span>
+          <label class="fieldset">
+            <span class="fieldset-legend text-xs">Date</span>
             <input
               type="date"
               name="waitlist[date]"
               value={Date.to_iso8601(@pick_date)}
-              class="input input-bordered input-sm"
+              class="input input-sm"
               required
             />
           </label>
-          <label class="form-control">
-            <span class="label-text text-xs">Name</span>
+          <label class="fieldset">
+            <span class="fieldset-legend text-xs">Name</span>
             <input
               type="text"
               name="waitlist[customer_name]"
               value={@customer_form[:customer_name].value}
-              class="input input-bordered input-sm"
+              class="input input-sm"
               required
             />
           </label>
-          <label class="form-control">
-            <span class="label-text text-xs">Email</span>
+          <label class="fieldset">
+            <span class="fieldset-legend text-xs">Email</span>
             <input
               type="email"
               name="waitlist[customer_email]"
               value={@customer_form[:customer_email].value}
-              class="input input-bordered input-sm"
+              class="input input-sm"
               required
             />
           </label>
@@ -449,19 +449,19 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     ~H"""
     <form phx-submit="pick_dates" class="flex flex-col gap-3">
       <div class="flex flex-wrap items-end gap-3">
-        <label class="form-control">
-          <span class="label-text text-xs">{if @service.time_unit == "night", do: "Check-in", else: "First day"}</span>
+        <label class="fieldset">
+          <span class="fieldset-legend text-xs">{if @service.time_unit == "night", do: "Check-in", else: "First day"}</span>
           <input
             type="date"
             name="picker[starts_on]"
             min={Date.to_iso8601(Engine.today())}
-            class="input input-bordered"
+            class="input"
             required
           />
         </label>
-        <label class="form-control">
-          <span class="label-text text-xs">{if @service.time_unit == "night", do: "Check-out", else: "Day after the last day"}</span>
-          <input type="date" name="picker[ends_on]" class="input input-bordered" required />
+        <label class="fieldset">
+          <span class="fieldset-legend text-xs">{if @service.time_unit == "night", do: "Check-out", else: "Day after the last day"}</span>
+          <input type="date" name="picker[ends_on]" class="input" required />
         </label>
         <button type="submit" class="btn btn-primary">Check availability</button>
       </div>
@@ -475,24 +475,24 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   defp picker(%{service: %Service{flexible_duration: true}} = assigns) do
     ~H"""
     <form phx-submit="pick_free" class="flex flex-wrap items-end gap-3">
-      <label class="form-control">
-        <span class="label-text text-xs">Date</span>
+      <label class="fieldset">
+        <span class="fieldset-legend text-xs">Date</span>
         <input
           type="date"
           name="picker[date]"
           value={Date.to_iso8601(@pick_date)}
           min={Date.to_iso8601(Engine.today())}
-          class="input input-bordered"
+          class="input"
           required
         />
       </label>
-      <label class="form-control">
-        <span class="label-text text-xs">From</span>
-        <input type="time" name="picker[start_time]" class="input input-bordered" required />
+      <label class="fieldset">
+        <span class="fieldset-legend text-xs">From</span>
+        <input type="time" name="picker[start_time]" class="input" required />
       </label>
-      <label class="form-control">
-        <span class="label-text text-xs">To</span>
-        <input type="time" name="picker[end_time]" class="input input-bordered" required />
+      <label class="fieldset">
+        <span class="fieldset-legend text-xs">To</span>
+        <input type="time" name="picker[end_time]" class="input" required />
       </label>
       <button type="submit" class="btn btn-primary">Continue</button>
     </form>
@@ -503,14 +503,14 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     ~H"""
     <div class="flex flex-col gap-3">
       <form phx-change="pick_date" class="w-fit">
-        <label class="form-control">
-          <span class="label-text text-xs">Date</span>
+        <label class="fieldset">
+          <span class="fieldset-legend text-xs">Date</span>
           <input
             type="date"
             name="picker[date]"
             value={Date.to_iso8601(@pick_date)}
             min={Date.to_iso8601(Engine.today())}
-            class="input input-bordered"
+            class="input"
           />
         </label>
       </form>

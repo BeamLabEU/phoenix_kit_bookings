@@ -477,21 +477,21 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
               </label>
             </div>
             <div class="flex flex-wrap items-end gap-3">
-              <label class="form-control">
-                <span class="label-text text-xs">{gettext("Specific date (optional)")}</span>
-                <input type="date" name="rule[date]" class="input input-bordered input-sm" />
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Specific date (optional)")}</span>
+                <input type="date" name="rule[date]" class="input input-sm" />
               </label>
-              <label :if={minutes?(@form)} class="form-control">
-                <span class="label-text text-xs">{gettext("From")}</span>
-                <input type="time" name="rule[start_time]" class="input input-bordered input-sm" />
+              <label :if={minutes?(@form)} class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("From")}</span>
+                <input type="time" name="rule[start_time]" class="input input-sm" />
               </label>
-              <label :if={minutes?(@form)} class="form-control">
-                <span class="label-text text-xs">{gettext("To")}</span>
-                <input type="time" name="rule[end_time]" class="input input-bordered input-sm" />
+              <label :if={minutes?(@form)} class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("To")}</span>
+                <input type="time" name="rule[end_time]" class="input input-sm" />
               </label>
-              <label class="form-control">
-                <span class="label-text text-xs">{gettext("Kind")}</span>
-                <label class="select select-bordered select-sm">
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Kind")}</span>
+                <label class="select select-sm">
                   <select name="rule[available]">
                     <option value="true">{gettext("Open")}</option>
                     <option value="false">{gettext("Closed (block out)")}</option>
@@ -544,9 +544,9 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
           </table>
 
           <form phx-submit="add_unit" class="flex items-end gap-2">
-            <label class="form-control">
-              <span class="label-text text-xs">{gettext("Unit name (e.g. Room 101)")}</span>
-              <input type="text" name="unit[name]" class="input input-bordered input-sm" required />
+            <label class="fieldset">
+              <span class="fieldset-legend text-xs">{gettext("Unit name (e.g. Room 101)")}</span>
+              <input type="text" name="unit[name]" class="input input-sm" required />
             </label>
             <button type="submit" class="btn btn-sm btn-primary">{gettext("Add unit")}</button>
           </form>
