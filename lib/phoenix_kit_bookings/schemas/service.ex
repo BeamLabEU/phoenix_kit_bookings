@@ -33,6 +33,8 @@ defmodule PhoenixKitBookings.Schemas.Service do
 
   import Ecto.Changeset
 
+  alias PhoenixKit.Utils.Slug
+
   @statuses ~w(active inactive trashed)
   @time_units ~w(minutes day night)
   @signup_policies ~w(anyone login_required)
@@ -132,7 +134,16 @@ defmodule PhoenixKitBookings.Schemas.Service do
       :currency,
       :reminder_minutes
     ])
-    |> maybe_generate_slug()
+    # Core's changeset glue, replacing a local generator whose slugify was
+    # ASCII-only (`[^a-z0-9]` after downcase) — a Cyrillic or Greek name
+    # produced "" and then FAILED the format validation below, so such a
+    # service could not be created at all. Core romanizes instead, and also
+    # probes for collisions, suffixing -2, -3 … until free — the old code
+    # never checked, and `phoenix_kit_bookings_services_slug_index` is unique
+    # (migrations/schema.ex:107), so a name collision was a raw constraint
+    # error. `max_length: 160` matches the column and the length cap below;
+    # the suffix respects it rather than overflowing.
+    |> Slug.put_slug(:name, max_length: 160)
     |> validate_required([:name, :slug, :time_unit, :duration, :seats, :signup_policy])
     |> validate_length(:name, max: 255)
     |> validate_length(:slug, max: 160)
@@ -169,27 +180,6 @@ defmodule PhoenixKitBookings.Schemas.Service do
   @doc "Status transitions are controlled — never cast from attrs."
   def status_changeset(service, status) when status in @statuses do
     change(service, status: status)
-  end
-
-  defp maybe_generate_slug(changeset) do
-    case get_field(changeset, :slug) do
-      nil ->
-        case get_field(changeset, :name) do
-          nil -> changeset
-          name -> put_change(changeset, :slug, slugify(name))
-        end
-
-      _slug ->
-        changeset
-    end
-  end
-
-  defp slugify(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z0-9]+/, "-")
-    |> String.trim("-")
-    |> String.slice(0, 160)
   end
 
   defp validate_duration_bounds(changeset) do
