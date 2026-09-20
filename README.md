@@ -65,7 +65,7 @@ one admin, one public surface, and one `bookings` table.
 
 ```elixir
 # mix.exs of your PhoenixKit host app
-{:phoenix_kit_bookings, "~> 0.1.3"}
+{:phoenix_kit_bookings, "~> 0.1.4"}
 ```
 
 Requires [`phoenix_kit`](https://hex.pm/packages/phoenix_kit) `~> 2.14`.

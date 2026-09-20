@@ -30,48 +30,80 @@ defmodule PhoenixKitBookings.Web.Routes do
   on the WebSocket instead of crossing a session boundary. Duplicate `:as`
   names across the two scopes are fine: hosts compile the router with
   `helpers: false`, which is the same assumption core makes.
+
+  The `:locale` segment is unconstrained — Phoenix.Router has no segment
+  constraints, and silently drops any regex option. Core keeps that safe
+  with declaration order (admin / authenticated surfaces are emitted
+  *before* this `generate/1` is spliced) plus the
+  `:phoenix_kit_locale_validation` pipeline plug, which redirects invalid,
+  disabled, and dialect URLs. Both scopes pipe through that plug; skipping
+  it would 200 `/xx/bookings` and apply a disabled language code, which
+  no other PhoenixKit public page does.
+
+  These paths are specific (`/bookings`, `/book/:slug`,
+  `/bookings/manage/:token`), not catch-alls, so they cannot bind
+  `/<prefix>/admin/bookings` as `locale = "admin"` — that URL is already
+  claimed by the admin bare route, which `phoenix_kit_routes/0` declares
+  first. Do not add a catch-all here.
   """
 
   def generate(url_prefix) do
+    extra_on_mount = Application.get_env(:phoenix_kit, :extra_live_session_on_mount, [])
+
     quote do
       live_session :phoenix_kit_bookings_public,
-        on_mount: [{PhoenixKitWeb.Users.Auth, :phoenix_kit_mount_current_scope}] do
+        on_mount:
+          unquote(
+            extra_on_mount ++
+              [{PhoenixKitWeb.Users.Auth, :phoenix_kit_mount_current_scope}]
+          ) do
         # Localized first, so `/<prefix>/et/bookings` is matched as a
         # locale rather than falling through to the bare scope.
-        scope "#{unquote(url_prefix)}/:locale" do
-          pipe_through([:browser, :phoenix_kit_auto_setup])
+        scope unquote(localized_scope(url_prefix)) do
+          pipe_through([
+            :browser,
+            :phoenix_kit_auto_setup,
+            :phoenix_kit_locale_validation
+          ])
 
-          live("/bookings", PhoenixKitBookings.Web.Public.ServicesLive, :index,
-            as: :bookings_public_index
-          )
-
-          live("/book/:slug", PhoenixKitBookings.Web.Public.BookLive, :book,
-            as: :bookings_public_book
-          )
-
-          live("/bookings/manage/:token", PhoenixKitBookings.Web.Public.ManageLive, :manage,
-            as: :bookings_public_manage
-          )
+          unquote(public_live_routes())
         end
 
         scope unquote(url_prefix) do
-          pipe_through([:browser, :phoenix_kit_auto_setup])
+          pipe_through([
+            :browser,
+            :phoenix_kit_auto_setup,
+            :phoenix_kit_locale_validation
+          ])
 
-          live("/bookings", PhoenixKitBookings.Web.Public.ServicesLive, :index,
-            as: :bookings_public_index
-          )
-
-          live("/book/:slug", PhoenixKitBookings.Web.Public.BookLive, :book,
-            as: :bookings_public_book
-          )
-
-          live("/bookings/manage/:token", PhoenixKitBookings.Web.Public.ManageLive, :manage,
-            as: :bookings_public_manage
-          )
+          unquote(public_live_routes())
         end
       end
     end
   end
 
   def public_routes(_url_prefix), do: nil
+
+  # `scope "//:locale"` is what `"#{ "/"}/:locale"` produces. Phoenix
+  # may collapse it, but root-mounted hosts (`url_prefix: "/"`) are the
+  # ones core's shop/`locale="admin"` bug was measured on, so do not
+  # leave that to chance.
+  defp localized_scope(prefix) when prefix in ["/", ""], do: "/:locale"
+  defp localized_scope(prefix), do: "#{prefix}/:locale"
+
+  defp public_live_routes do
+    quote do
+      live("/bookings", PhoenixKitBookings.Web.Public.ServicesLive, :index,
+        as: :bookings_public_index
+      )
+
+      live("/book/:slug", PhoenixKitBookings.Web.Public.BookLive, :book,
+        as: :bookings_public_book
+      )
+
+      live("/bookings/manage/:token", PhoenixKitBookings.Web.Public.ManageLive, :manage,
+        as: :bookings_public_manage
+      )
+    end
+  end
 end

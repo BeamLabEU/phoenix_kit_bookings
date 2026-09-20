@@ -89,8 +89,14 @@ Repo-local aliases:
   pages come from `route_module/0` → `Web.Routes.generate/1`, one
   `live_session :phoenix_kit_bookings_public` with core's permissive
   `:phoenix_kit_mount_current_scope` hook (logged-in scope when present,
-  guest scope otherwise); `public_routes/1` returns nil. Never hand-register
-  these in a host router.
+  guest scope otherwise). Every public path is emitted twice inside that
+  session — `<prefix>/:locale/...` first, then the bare `<prefix>/...` —
+  because `Paths` goes through `Routes.path/1`, which inserts a locale
+  segment the moment Languages is on. Both scopes pipe through
+  `:phoenix_kit_locale_validation` (core's unconstrained-`:locale` plug).
+  `public_routes/1` returns nil. Never hand-register these in a host
+  router, and never drop the localized scope: that is how 0.1.3 404'd
+  every public link, including the manage URL mailed to a guest.
 - LiveView macro: `use PhoenixKitWeb, :live_view` in all eight LiveViews;
   `Web.Public.BookingFlow` is `use Phoenix.Component` + `import
   Phoenix.LiveView`. The routed public pages (`BookLive`, `ManageLive`,
@@ -300,7 +306,7 @@ lib/phoenix_kit_bookings/
   gettext.ex                            PhoenixKitBookings.Gettext backend (no catalogue yet)
   paths.ex                              every path, via Routes.path/1
   migrations/schema.ex                  module-owned chain
-  web/routes.ex                         public routes (generate/1)
+  web/routes.ex                         public routes (generate/1; locale + bare)
   web/format.ex                         range and date formatting in the site frame
   web/admin/{services,service_form,bookings,settings}_live.ex
   web/public/booking_flow.ex            shared state, events and markup of both booking LVs

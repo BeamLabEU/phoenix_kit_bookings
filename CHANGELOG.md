@@ -4,6 +4,35 @@ All notable changes to **PhoenixKitBookings** are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.1.4 - 2026-09-20
+
+Public booking pages exist under both URL shapes Languages produces, and
+the localized scope now runs the same locale-validation plug as the rest
+of PhoenixKit.
+
+### Fixed
+
+- **Public booking pages 404'd when Languages was enabled.**
+  `Web.Routes.generate/1` registered `/bookings`, `/book/:slug` and
+  `/bookings/manage/:token` only under the bare prefix, while `Paths`
+  (and therefore confirmation emails) went through `Routes.path/1`,
+  which inserts a locale segment. A guest's manage link — the only way
+  to cancel without an account — died the moment a host turned Languages
+  on. Both shapes now share one `live_session`, matching core's
+  `build_live_surface/5`. (PR #6)
+
+- **Localized booking URLs skipped locale validation.** The new
+  `/:locale` scope kept `pipe_through([:browser, :phoenix_kit_auto_setup])`,
+  so `/xx/bookings` 200'd and a disabled language code was applied —
+  unlike every other PhoenixKit public page. Both scopes now pipe
+  through `:phoenix_kit_locale_validation`. Root-mounted hosts
+  (`url_prefix: "/"`) get `/:locale`, not `"//:locale"`.
+
+### Changed
+
+- `generate/1` prepends the host's `extra_live_session_on_mount` hooks
+  so per-domain language hooks run on booking pages too.
+
 ## 0.1.3 - 2026-09-06
 
 The site's time frame stops being one number. Everything below follows from

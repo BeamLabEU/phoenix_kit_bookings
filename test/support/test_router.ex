@@ -1,8 +1,12 @@
 defmodule PhoenixKitBookings.Test.Router do
   @moduledoc """
   Minimal Router used by the LiveView test suite. Routes match the URLs
-  produced by `PhoenixKitBookings.Paths` (admin paths get the default
-  "en" locale prefix; public paths are bare).
+  produced by `PhoenixKitBookings.Paths` under the test harness (admin
+  paths get the default "en" locale prefix; public paths are bare —
+  `test_helper.exs` pins the URL prefix to `"/"` and never enables
+  Languages). What `Web.Routes.generate/1` actually emits into a host
+  is pinned in `test/phoenix_kit_bookings/web/routes_test.exs`, which
+  compiles a router from `generate/1` itself.
   """
 
   use Phoenix.Router
