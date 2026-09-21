@@ -259,6 +259,14 @@ Repo-local aliases:
   `starts_at - reminder_minutes` and re-checks state at fire time, so
   cancellations need no job bookkeeping; day-mode bookings, past reminder
   moments and a missing Oban all no-op.
+- `notify: false` on `create_booking/4`, `confirm_booking/2` and
+  `cancel_booking/2` skips every message to THAT booking's customer — the
+  confirmation/approval/cancellation email and, on create, the reminder
+  job — for importers and phone bookings. Only an explicit `false`
+  silences; the waitlist is still notified on a quiet cancel (those are
+  other people who asked). Its tests start a real Oban in manual testing
+  mode: without one `ReminderWorker.schedule/2` fails into its rescue and
+  "no reminder was scheduled" passes whether or not the option works.
 - Waitlist (`Schemas.WaitlistEntry`): join is idempotent per
   service+email+date; a cancellation notifies every open entry for the freed
   dates (notify-all, first-to-book) and flips them to `notified`.
