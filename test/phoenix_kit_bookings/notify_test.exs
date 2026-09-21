@@ -14,7 +14,7 @@ defmodule PhoenixKitBookings.NotifyTest do
 
   import Swoosh.TestAssertions
 
-  alias PhoenixKitBookings.Bookings
+  alias PhoenixKitBookings.{Bookings, Policy}
   alias PhoenixKitBookings.Workers.ReminderWorker
 
   setup do
@@ -83,6 +83,48 @@ defmodule PhoenixKitBookings.NotifyTest do
       {:ok, confirmed} = Bookings.confirm_booking(pending, notify: false)
       assert confirmed.status == "confirmed"
       assert_no_email_sent()
+    end
+  end
+
+  describe "through Policy (the admin surface)" do
+    # A site-wide manager, mirroring LiveCase.fake_scope/1.
+    defp admin_scope do
+      %PhoenixKit.Users.Auth.Scope{
+        user: %{uuid: Ecto.UUID.generate(), email: "admin@example.com"},
+        authenticated?: true,
+        cached_roles: MapSet.new([:user]),
+        cached_permissions: MapSet.new(["bookings", "bookings.manage_all"])
+      }
+    end
+
+    test "confirm_booking/3 passes notify: false through" do
+      service = reminding_service(%{"require_approval" => true})
+
+      {:ok, pending} =
+        Bookings.create_booking(service, range(), customer_attrs(), notify: false)
+
+      {:ok, confirmed} = Policy.confirm_booking(admin_scope(), pending, notify: false)
+      assert confirmed.status == "confirmed"
+      assert_no_email_sent()
+    end
+
+    test "cancel_booking/3 passes notify: false through" do
+      {:ok, booking} =
+        Bookings.create_booking(reminding_service(), range(), customer_attrs(), notify: false)
+
+      {:ok, cancelled} = Policy.cancel_booking(admin_scope(), booking, notify: false)
+      assert cancelled.status == "cancelled"
+      assert_no_email_sent()
+    end
+
+    test "without the option the customer is still told" do
+      service = reminding_service(%{"require_approval" => true})
+
+      {:ok, pending} =
+        Bookings.create_booking(service, range(), customer_attrs(), notify: false)
+
+      {:ok, _} = Policy.confirm_booking(admin_scope(), pending)
+      assert_email_sent(fn email -> assert email.subject =~ "Booking approved" end)
     end
   end
 

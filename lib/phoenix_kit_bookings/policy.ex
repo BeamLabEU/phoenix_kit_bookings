@@ -166,10 +166,13 @@ defmodule PhoenixKitBookings.Policy do
     authorized(scope, service, fn -> Services.delete_rule(rule, actor_opts(scope)) end)
   end
 
-  @doc "Booking lifecycle actions authorize against the booking's service."
-  def confirm_booking(scope, booking) do
+  @doc """
+  Booking lifecycle actions authorize against the booking's service.
+  `opts` pass through to the context (e.g. `notify: false`, `reason:`).
+  """
+  def confirm_booking(scope, booking, opts \\ []) do
     with_booking_service(scope, booking, fn ->
-      PhoenixKitBookings.Bookings.confirm_booking(booking, actor_opts(scope))
+      PhoenixKitBookings.Bookings.confirm_booking(booking, actor_opts(scope) ++ opts)
     end)
   end
 
