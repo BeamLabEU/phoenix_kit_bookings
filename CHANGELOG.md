@@ -4,6 +4,28 @@ All notable changes to **PhoenixKitBookings** are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.1.5 - 2026-09-21
+
+Bookings can be created, approved and cancelled without contacting the
+customer, for importers and phone bookings.
+
+### Added
+
+- **`notify: false` on `create_booking/4`, `confirm_booking/2` and
+  `cancel_booking/2`.** Skips the confirmation, approval or cancellation
+  email to that booking's customer and, on create, the reminder job.
+  Only an explicit `false` turns notifications off. Validation,
+  capacity, pricing, the activity log and PubSub are unchanged, and a
+  quiet cancellation still notifies the waitlist. (PR #7)
+- **`Policy.confirm_booking/3`** takes `opts` like
+  `Policy.cancel_booking/3`, so the authorized admin surface can approve
+  without emailing the customer.
+
+### Changed
+
+- Dependencies: `phoenix_kit` 2.34.0, `etcher` 0.16.0, `fresco` 0.12.2
+  in the lock.
+
 ## 0.1.4 - 2026-09-20
 
 Public booking pages exist under both URL shapes Languages produces, and
