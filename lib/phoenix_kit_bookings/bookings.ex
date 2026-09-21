@@ -152,12 +152,27 @@ defmodule PhoenixKitBookings.Bookings do
   Options: `:user_uuid` (REQUIRED when `signup_policy` is
   `"login_required"`), `:source` (`"public"` default | `"admin"`),
   `:actor_uuid`, `:hold_uuid` (the caller's own hold — excluded from the
-  capacity check and consumed on success), `:now`/`:today` (test
-  injection).
+  capacity check and consumed on success), `:notify` (see below),
+  `:now`/`:today` (test injection).
 
   On success the booking carries the computed `total_price`/`currency`
   (priced services) and an auto-assigned `unit_uuid` (unit-tracked
   services); the confirmation email + reminder job fire best-effort.
+
+  ## `:notify`
+
+  `true` by default. `notify: false` creates the booking without telling
+  the customer: no confirmation email and no reminder job. It exists for
+  callers that are not a customer booking for themselves — an importer
+  loading existing reservations (which would otherwise mail every one of
+  those customers and schedule reminders for them), or an operator
+  entering a booking taken by phone. It is a server-side option only;
+  nothing on the public flow sets it.
+
+  Everything else is unchanged by it: validation, capacity, pricing, the
+  activity log and the PubSub broadcast. A caller that wants reminders
+  but not the confirmation can pass `notify: false` and then call
+  `PhoenixKitBookings.Workers.ReminderWorker.schedule/2` itself.
 
   Returns `{:ok, booking}`, `{:error, %Ecto.Changeset{}}` or
   `{:error, reason_atom, message}`.
@@ -355,13 +370,20 @@ defmodule PhoenixKitBookings.Bookings do
 
   defp after_create(booking, service, opts) do
     log_and_broadcast(booking, "bookings.booking_created", opts)
-    Notifier.booking_created(booking, service)
-    ReminderWorker.schedule(booking, service)
+
+    if notify?(opts) do
+      Notifier.booking_created(booking, service)
+      ReminderWorker.schedule(booking, service)
+    end
   end
 
   # ── Lifecycle ────────────────────────────────────────────────────────
 
-  @doc "Approves a pending booking (capacity was already held)."
+  @doc """
+  Approves a pending booking (capacity was already held).
+
+  `notify: false` skips the approval email; see `create_booking/4`.
+  """
   def confirm_booking(%Booking{status: "pending"} = booking, opts \\ []) do
     booking
     |> Booking.status_changeset("confirmed")
@@ -369,7 +391,14 @@ defmodule PhoenixKitBookings.Bookings do
     |> tap_lifecycle("bookings.booking_confirmed", opts, &Notifier.booking_confirmed/2)
   end
 
-  @doc "Cancels a pending or confirmed booking; frees capacity immediately."
+  @doc """
+  Cancels a pending or confirmed booking; frees capacity immediately.
+
+  `notify: false` skips the cancellation email to THIS booking's customer
+  (see `create_booking/4`). It deliberately does not silence the waitlist:
+  those are other people who asked to be told when these dates free up,
+  and a quiet cancellation still frees them.
+  """
   def cancel_booking(booking, opts \\ [])
 
   def cancel_booking(%Booking{status: status} = booking, opts)
@@ -633,12 +662,16 @@ defmodule PhoenixKitBookings.Bookings do
 
   defp repo, do: PhoenixKit.RepoHelper.repo()
 
+  # Only an explicit `false` silences. Anything else — absent, nil, a stray
+  # value — keeps the default, so a typo cannot quietly stop confirmations.
+  defp notify?(opts), do: Keyword.get(opts, :notify, true) != false
+
   defp tap_lifecycle({:ok, booking} = result, action, opts, notify_fun) do
     log_and_broadcast(booking, action, opts)
 
-    case Services.get_service(booking.service_uuid) do
-      nil -> :ok
-      service -> notify_fun.(booking, service)
+    with true <- notify?(opts),
+         %Service{} = service <- Services.get_service(booking.service_uuid) do
+      notify_fun.(booking, service)
     end
 
     result
