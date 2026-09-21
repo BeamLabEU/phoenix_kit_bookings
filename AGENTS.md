@@ -114,11 +114,11 @@ Repo-local aliases:
 - `enabled?/0` reads `bookings_enabled`, rescues, catches `:exit` and returns
   `false`. `Policy.user_services_enabled?/0` and `max_services_per_user/0`
   do the same with their defaults.
-- Activity logging: `PhoenixKitBookings.Activity.log/2` wraps
-  `PhoenixKit.Activity.log/1` (module `"bookings"`, `Code.ensure_loaded?/1`
-  guard, swallows Postgrex / ownership errors, never crashes the caller).
+- Activity logging: `PhoenixKitBookings.Activity.log/2` is core's
+  `PhoenixKit.Activity.log/3` under the module key `"bookings"` — it never
+  raises; a failure is logged and returned as `{:error, _}`.
   The actor travels as `opts[:actor_uuid]` from `Policy` into the contexts;
-  `Activity.actor_uuid/1` reads it from socket assigns. Metadata carries the
+  `Policy` reads it from the scope with `PhoenixKitWeb.Actor`. Metadata carries the
   service name or `service_uuid` + `status`, never customer fields.
 - Soft-delete: `Service.status = "trashed"`. `Services.list_services/1`
   hides trashed rows unless `include_trashed: true` or `status: "trashed"`;

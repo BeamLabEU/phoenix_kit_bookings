@@ -29,6 +29,7 @@ defmodule PhoenixKitBookings.Policy do
   alias PhoenixKit.Users.Auth.Scope
   alias PhoenixKitBookings.Schemas.Service
   alias PhoenixKitBookings.Services
+  alias PhoenixKitWeb.Actor
 
   @manage_all "bookings.manage_all"
 
@@ -43,7 +44,7 @@ defmodule PhoenixKitBookings.Policy do
   end
 
   defp owns?(scope, %Service{owner_uuid: owner_uuid}) do
-    user_uuid = user_uuid(scope)
+    user_uuid = Actor.uuid(scope)
     not is_nil(owner_uuid) and not is_nil(user_uuid) and owner_uuid == user_uuid
   end
 
@@ -55,7 +56,7 @@ defmodule PhoenixKitBookings.Policy do
   def can_create?(scope) do
     cond do
       manage_all?(scope) -> true
-      is_nil(user_uuid(scope)) -> false
+      is_nil(Actor.uuid(scope)) -> false
       not user_services_enabled?() -> false
       true -> under_cap?(scope)
     end
@@ -64,7 +65,7 @@ defmodule PhoenixKitBookings.Policy do
   defp under_cap?(scope) do
     case max_services_per_user() do
       0 -> true
-      max -> Services.count_owned(user_uuid(scope)) < max
+      max -> Services.count_owned(Actor.uuid(scope)) < max
     end
   end
 
@@ -93,7 +94,7 @@ defmodule PhoenixKitBookings.Policy do
     if manage_all?(scope) do
       Services.list_services(opts)
     else
-      Services.list_services(Keyword.put(opts, :owner_uuid, user_uuid(scope)))
+      Services.list_services(Keyword.put(opts, :owner_uuid, Actor.uuid(scope)))
     end
   end
 
@@ -113,8 +114,8 @@ defmodule PhoenixKitBookings.Policy do
   """
   def create_service(scope, attrs) do
     if can_create?(scope) do
-      owner = if manage_all?(scope), do: nil, else: user_uuid(scope)
-      Services.create_service(attrs, actor_opts(scope) ++ [owner_uuid: owner])
+      owner = if manage_all?(scope), do: nil, else: Actor.uuid(scope)
+      Services.create_service(attrs, Actor.opts(scope) ++ [owner_uuid: owner])
     else
       {:error, :not_allowed}
     end
@@ -122,48 +123,48 @@ defmodule PhoenixKitBookings.Policy do
 
   def update_service(scope, %Service{} = service, attrs) do
     authorized(scope, service, fn ->
-      Services.update_service(service, attrs, actor_opts(scope))
+      Services.update_service(service, attrs, Actor.opts(scope))
     end)
   end
 
   def set_status(scope, %Service{} = service, status) do
     authorized(scope, service, fn ->
-      Services.set_status(service, status, actor_opts(scope))
+      Services.set_status(service, status, Actor.opts(scope))
     end)
   end
 
   def trash_service(scope, %Service{} = service) do
-    authorized(scope, service, fn -> Services.trash_service(service, actor_opts(scope)) end)
+    authorized(scope, service, fn -> Services.trash_service(service, Actor.opts(scope)) end)
   end
 
   def restore_service(scope, %Service{} = service) do
-    authorized(scope, service, fn -> Services.restore_service(service, actor_opts(scope)) end)
+    authorized(scope, service, fn -> Services.restore_service(service, Actor.opts(scope)) end)
   end
 
   def delete_service(scope, %Service{} = service) do
-    authorized(scope, service, fn -> Services.delete_service(service, actor_opts(scope)) end)
+    authorized(scope, service, fn -> Services.delete_service(service, Actor.opts(scope)) end)
   end
 
   def add_rule(scope, %Service{} = service, attrs) do
-    authorized(scope, service, fn -> Services.add_rule(service, attrs, actor_opts(scope)) end)
+    authorized(scope, service, fn -> Services.add_rule(service, attrs, Actor.opts(scope)) end)
   end
 
   def add_unit(scope, %Service{} = service, attrs) do
-    authorized(scope, service, fn -> Services.add_unit(service, attrs, actor_opts(scope)) end)
+    authorized(scope, service, fn -> Services.add_unit(service, attrs, Actor.opts(scope)) end)
   end
 
   def set_unit_active(scope, %Service{} = service, unit, active?) do
     authorized(scope, service, fn ->
-      Services.set_unit_active(unit, active?, actor_opts(scope))
+      Services.set_unit_active(unit, active?, Actor.opts(scope))
     end)
   end
 
   def delete_unit(scope, %Service{} = service, unit) do
-    authorized(scope, service, fn -> Services.delete_unit(unit, actor_opts(scope)) end)
+    authorized(scope, service, fn -> Services.delete_unit(unit, Actor.opts(scope)) end)
   end
 
   def delete_rule(scope, %Service{} = service, rule) do
-    authorized(scope, service, fn -> Services.delete_rule(rule, actor_opts(scope)) end)
+    authorized(scope, service, fn -> Services.delete_rule(rule, Actor.opts(scope)) end)
   end
 
   @doc """
@@ -172,13 +173,13 @@ defmodule PhoenixKitBookings.Policy do
   """
   def confirm_booking(scope, booking, opts \\ []) do
     with_booking_service(scope, booking, fn ->
-      PhoenixKitBookings.Bookings.confirm_booking(booking, actor_opts(scope) ++ opts)
+      PhoenixKitBookings.Bookings.confirm_booking(booking, Actor.opts(scope) ++ opts)
     end)
   end
 
   def cancel_booking(scope, booking, opts \\ []) do
     with_booking_service(scope, booking, fn ->
-      PhoenixKitBookings.Bookings.cancel_booking(booking, actor_opts(scope) ++ opts)
+      PhoenixKitBookings.Bookings.cancel_booking(booking, Actor.opts(scope) ++ opts)
     end)
   end
 
@@ -192,15 +193,6 @@ defmodule PhoenixKitBookings.Policy do
     case Services.get_service(booking.service_uuid) do
       nil -> {:error, :not_allowed}
       service -> authorized(scope, service, fun)
-    end
-  end
-
-  defp actor_opts(scope), do: [actor_uuid: user_uuid(scope)]
-
-  defp user_uuid(scope) do
-    case scope do
-      %{user: %{uuid: uuid}} -> uuid
-      _ -> nil
     end
   end
 end
