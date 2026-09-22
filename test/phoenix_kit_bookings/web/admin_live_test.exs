@@ -8,6 +8,14 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
   defp admin_conn(conn), do: put_test_scope(conn, fake_scope())
 
+  test "a message not meant for a page leaves it running", %{conn: conn} do
+    for path <- ["/en/admin/bookings/services", "/en/admin/bookings/reservations"] do
+      {:ok, view, _html} = live(admin_conn(conn), path)
+      send(view.pid, {:email, %{to: "someone@example.com"}})
+      assert render(view) =~ "<", path
+    end
+  end
+
   describe "ServicesLive" do
     test "lists services with mode summaries", %{conn: conn} do
       slot = slot_service_fixture()

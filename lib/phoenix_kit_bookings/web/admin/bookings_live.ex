@@ -80,6 +80,11 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
     {:noreply, load_bookings(socket)}
   end
 
+  # Anything else — another broadcast on a shared topic, a mailer's test
+  # adapter reporting to the process that sent an email — is not for this
+  # page, and must not crash it.
+  def handle_info(_message, socket), do: {:noreply, socket}
+
   @impl true
   def handle_event("confirm", %{"uuid" => uuid}, socket) do
     with %{status: "pending"} = booking <- Bookings.get_booking(uuid),

@@ -59,6 +59,11 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
     {:noreply, load_services(socket)}
   end
 
+  # Anything else — another broadcast on a shared topic, a mailer's test
+  # adapter reporting to the process that sent an email — is not for this
+  # page, and must not crash it.
+  def handle_info(_message, socket), do: {:noreply, socket}
+
   @impl true
   def handle_event("set_status", %{"uuid" => uuid, "status" => status}, socket)
       when status in ["active", "inactive"] do

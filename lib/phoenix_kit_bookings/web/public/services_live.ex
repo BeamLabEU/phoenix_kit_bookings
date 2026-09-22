@@ -36,6 +36,11 @@ defmodule PhoenixKitBookings.Web.Public.ServicesLive do
     {:noreply, assign(socket, services: Services.list_public_services())}
   end
 
+  # Anything else — another broadcast on a shared topic, a mailer's test
+  # adapter reporting to the process that sent an email — is not for this
+  # page, and must not crash it.
+  def handle_info(_message, socket), do: {:noreply, socket}
+
   @impl true
   def render(assigns) do
     ~H"""
