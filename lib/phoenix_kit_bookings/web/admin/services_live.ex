@@ -7,6 +7,8 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
 
   use PhoenixKitWeb, :live_view
 
+  require Logger
+
   alias PhoenixKitBookings.{Errors, Paths, Policy}
   alias PhoenixKitBookings.Schemas.Service
   alias PhoenixKitBookings.Services
@@ -21,7 +23,14 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
       end
     end
 
-    {:ok, assign(socket, page_title: gettext("Services"), filter: "all")}
+    {:ok,
+     assign(socket,
+       page_section: gettext("Bookings"),
+       page_section_path: Paths.admin_reservations(),
+       page_crumbs: [],
+       page_title: gettext("Services"),
+       filter: "all"
+     )}
   end
 
   @impl true
@@ -57,6 +66,15 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
   @impl true
   def handle_info({:bookings_service_changed, _uuid}, socket) do
     {:noreply, load_services(socket)}
+  end
+
+  # Anything else — another broadcast on a shared topic, a mailer's test
+  # adapter reporting to the process that sent an email — is not for this
+  # page, and must not crash it. Logged at debug, so a dropped one can be
+  # found.
+  def handle_info(message, socket) do
+    Logger.debug("ServicesLive ignored unhandled message: #{inspect(message)}")
+    {:noreply, socket}
   end
 
   @impl true

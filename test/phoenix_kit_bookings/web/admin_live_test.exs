@@ -8,6 +8,14 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
   defp admin_conn(conn), do: put_test_scope(conn, fake_scope())
 
+  test "a message not meant for a page leaves it running", %{conn: conn} do
+    for path <- ["/en/admin/bookings/services", "/en/admin/bookings/reservations"] do
+      {:ok, view, _html} = live(admin_conn(conn), path)
+      send(view.pid, {:email, %{to: "someone@example.com"}})
+      assert Process.alive?(view.pid), path
+    end
+  end
+
   describe "ServicesLive" do
     test "lists services with mode summaries", %{conn: conn} do
       slot = slot_service_fixture()
@@ -102,6 +110,40 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
       |> render_click()
 
       assert Services.list_rules(service.uuid) == []
+    end
+  end
+
+  describe "admin header trail" do
+    # Core's header bar draws Admin Panel / page_section / crumbs / page_title
+    # from these assigns; the test layout does not render the bar, so the
+    # assigns are read off the socket.
+    defp trail(view) do
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      {assigns[:page_section], Enum.map(assigns[:page_crumbs] || [], & &1.label),
+       assigns.page_title}
+    end
+
+    test "the reservations list is the landing page; the rest carry Bookings as the section",
+         %{conn: conn} do
+      service = slot_service_fixture()
+      conn = admin_conn(conn)
+
+      {:ok, view, _} = live(conn, "/en/admin/bookings/reservations")
+      assert trail(view) == {nil, [], "Bookings"}
+
+      {:ok, view, _} = live(conn, "/en/admin/bookings/services")
+      assert trail(view) == {"Bookings", [], "Services"}
+
+      {:ok, view, _} = live(conn, "/en/admin/bookings/services/new")
+      assert trail(view) == {"Bookings", ["Services"], "New service"}
+
+      {:ok, view, html} = live(conn, "/en/admin/bookings/services/#{service.uuid}/edit")
+      assert trail(view) == {"Bookings", ["Services", service.name], "Edit"}
+      assert html =~ "<h2 class=\"text-2xl font-bold\">#{service.name}</h2>"
+
+      {:ok, view, _} = live(conn, "/en/admin/settings/bookings")
+      assert trail(view) == {"Settings", [], "Bookings"}
     end
   end
 

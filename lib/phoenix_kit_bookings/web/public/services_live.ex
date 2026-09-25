@@ -7,6 +7,8 @@ defmodule PhoenixKitBookings.Web.Public.ServicesLive do
 
   use PhoenixKitWeb, :live_view
 
+  require Logger
+
   alias PhoenixKitBookings.{Paths, Services}
   alias PhoenixKitBookings.Web.Format
 
@@ -34,6 +36,15 @@ defmodule PhoenixKitBookings.Web.Public.ServicesLive do
   @impl true
   def handle_info({:bookings_service_changed, _uuid}, socket) do
     {:noreply, assign(socket, services: Services.list_public_services())}
+  end
+
+  # Anything else — another broadcast on a shared topic, a mailer's test
+  # adapter reporting to the process that sent an email — is not for this
+  # page, and must not crash it. Logged at debug, so a dropped one can be
+  # found.
+  def handle_info(message, socket) do
+    Logger.debug("Public.ServicesLive ignored unhandled message: #{inspect(message)}")
+    {:noreply, socket}
   end
 
   @impl true

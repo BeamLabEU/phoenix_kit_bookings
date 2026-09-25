@@ -14,6 +14,12 @@ defmodule PhoenixKitBookings.Web.PublicLiveTest do
       assert html =~ active.name
       refute html =~ inactive.name
     end
+
+    test "a message not meant for the page leaves it running", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/bookings")
+      send(view.pid, {:email, %{to: "someone@example.com"}})
+      assert Process.alive?(view.pid)
+    end
   end
 
   describe "book page — fixed slots" do

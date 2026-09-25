@@ -32,21 +32,28 @@ defmodule PhoenixKitBookings.CorePinConformanceTest do
       ships as a no-op. Unlike the other two this one does not raise
       anywhere; it just quietly stores the wrong instants.
 
-  Raising the floor is NOT the trap described above. `~> 2.14` is
-  two-segment, so it still admits every later core minor; the forbidden shape
-  is the three-segment `~> 2.14.0`, which would pin to a single minor and is
+  Raising the floor is NOT the trap described above. `>= 2.38.0 and < 3.0.0`
+  is open at the top, so it still admits every later core minor; the forbidden
+  shape is the three-segment `~> 2.38.0`, which would pin to a single minor and is
   still rejected by the `@must_admit` entries below.
 
   The entries deliberately say nothing about `2.14.0` itself — it was
   superseded the next day, and the assertions below encode the REQUIREMENT
   (2.13.x and older out, every later minor in), not one requirement string's
   exact shape.
+
+  The floor is `>= 2.38.0 and < 3.0.0` now: the actor and the activity log
+  come from `PhoenixKitWeb.Actor` and `Activity.log/3`, first shipped in core
+  2.38.0 and no longer feature-detected — an older core does not compile the
+  package. Any earlier floor's reasons above still hold below it. Keep the
+  compound form: patch-precise at the bottom, open through every later 2.x
+  minor at the top.
   """
 
-  @must_admit ["2.14.1", "2.15.0", "2.15.1", "2.20.0"]
-  @must_reject ["1.7.189", "1.7.236", "2.0.0", "2.3.0", "2.4.0", "2.13.9", "3.0.0"]
+  @must_admit ["2.38.0", "2.38.1", "2.39.0", "2.99.4"]
+  @must_reject ["1.7.236", "2.0.0", "2.14.1", "2.15.0", "2.15.1", "2.20.0", "2.37.5", "3.0.0"]
 
-  test "the :phoenix_kit requirement admits every core 2.14+ and nothing else" do
+  test "the :phoenix_kit requirement admits every core >= 2.38.0 minor and nothing else" do
     requirement = core_requirement()
 
     assert match?({:ok, _parsed}, Version.parse_requirement(requirement)),
@@ -56,7 +63,7 @@ defmodule PhoenixKitBookings.CorePinConformanceTest do
       assert Version.match?(version, requirement),
              "`:phoenix_kit` requirement #{inspect(requirement)} rejects core #{version}. " <>
                "A pin that excludes a core minor breaks `mix deps.get` for every host " <>
-               "running this module alongside that core. Keep it a two-segment `~> 2.14`."
+               "running this module alongside that core. Keep the floor patch-precise and the ceiling open (`>= 2.38.0 and < 3.0.0`)."
     end
 
     for version <- @must_reject do

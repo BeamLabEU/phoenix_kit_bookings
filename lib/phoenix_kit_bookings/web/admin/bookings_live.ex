@@ -6,6 +6,8 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
 
   use PhoenixKitWeb, :live_view
 
+  require Logger
+
   alias PhoenixKitBookings.{Bookings, Errors, Policy}
   alias PhoenixKitBookings.Web.Format
 
@@ -18,7 +20,9 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
       end
     end
 
-    {:ok, assign(socket, page_title: gettext("Reservations"), filter: "upcoming")}
+    # The tab's landing page (redirect_to_first_subtab lands here), so the
+    # header trail is "Admin Panel / Bookings" — the module is the title.
+    {:ok, assign(socket, page_title: gettext("Bookings"), filter: "upcoming")}
   end
 
   @impl true
@@ -78,6 +82,15 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
   @impl true
   def handle_info({:bookings_changed, _service_uuid}, socket) do
     {:noreply, load_bookings(socket)}
+  end
+
+  # Anything else — another broadcast on a shared topic, a mailer's test
+  # adapter reporting to the process that sent an email — is not for this
+  # page, and must not crash it. Logged at debug, so a dropped one can be
+  # found.
+  def handle_info(message, socket) do
+    Logger.debug("BookingsLive ignored unhandled message: #{inspect(message)}")
+    {:noreply, socket}
   end
 
   @impl true

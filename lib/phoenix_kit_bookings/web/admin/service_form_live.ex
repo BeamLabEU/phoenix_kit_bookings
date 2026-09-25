@@ -46,15 +46,41 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
     else
       {:ok,
        socket
+       |> assign(header_assigns(action, service))
        |> assign(
-         page_title:
-           if(action == :new, do: gettext("New Service"), else: gettext("Edit Service")),
          action: action,
          service: service,
          form: to_form(Service.changeset(service, %{}))
        )
        |> load_rules()}
     end
+  end
+
+  # Header trail: Bookings / Services / New service, and
+  # Bookings / Services / <service> / Edit. The service has no page of its
+  # own (the list is it), so its crumb is text, not a link. `heading` is
+  # the in-page title, which names the record where the trail says "Edit".
+  defp header_assigns(:new, _service) do
+    [
+      page_section: gettext("Bookings"),
+      page_section_path: Paths.admin_reservations(),
+      page_crumbs: [%{label: gettext("Services"), path: Paths.admin_services()}],
+      page_title: gettext("New service"),
+      heading: gettext("New service")
+    ]
+  end
+
+  defp header_assigns(:edit, service) do
+    [
+      page_section: gettext("Bookings"),
+      page_section_path: Paths.admin_reservations(),
+      page_crumbs: [
+        %{label: gettext("Services"), path: Paths.admin_services()},
+        %{label: service.name}
+      ],
+      page_title: gettext("Edit"),
+      heading: service.name
+    ]
   end
 
   defp load_rules(%{assigns: %{service: %Service{uuid: nil}}} = socket),
@@ -245,7 +271,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
     ~H"""
     <div class="flex flex-col w-full px-4 py-8 gap-6 max-w-3xl">
       <div class="flex items-center justify-between">
-        <h2 class="text-2xl font-bold">{@page_title}</h2>
+        <h2 class="text-2xl font-bold">{@heading}</h2>
         <.link navigate={Paths.admin_services()} class="btn btn-ghost btn-sm">
           {gettext("Back to services")}
         </.link>
