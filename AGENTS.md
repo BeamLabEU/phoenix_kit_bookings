@@ -15,7 +15,7 @@ in details, manage the booking through a signed token and join a waitlist;
 the admin manages reservations (approval queue, cancel), services
 (availability rules, named units, trash) and the self-service policy.
 
-- **Depends on:** `phoenix_kit` `~> 2.14` (Hex; the floor is functional, see
+- **Depends on:** `phoenix_kit` `>= 2.38.0 and < 3.0.0` (Hex; the floor is functional, see
   Conventions → Time frame), `phoenix_live_calendar` `~> 0.4` (hard; the
   booking rules engine). Staff is read schemalessly, never depended on.
 - **Consumed by:** nothing yet.
@@ -181,11 +181,12 @@ Repo-local aliases:
   zone AT THE INSTANT CONVERTED through core's `Utils.Date.shift_to_offset/2`
   and `parse_datetime_local/2`. Never turn the setting into one number and
   add it: a scalar offset is an hour off across every daylight-saving switch
-  and plain UTC on IANA sites. This is why the core pin is `~> 2.14`: those
-  helpers are per-instant only from 2.14.1, and below it the frame silently
-  collapses to UTC without raising. `test/core_pin_conformance_test.exs`
-  guards the pin; keep it two-segment (`~> 2.14.0` would exclude every later
-  core minor and break `mix deps.get` in hosts).
+  and plain UTC on IANA sites. Those helpers are per-instant only from 2.14.1,
+  and below it the frame silently collapses to UTC without raising — one of
+  the reasons behind the core floor (now `>= 2.38.0 and < 3.0.0`, for
+  `PhoenixKitWeb.Actor` and `Activity.log/3`). `test/core_pin_conformance_test.exs`
+  guards the pin; keep the compound form (a three-segment `~> 2.38.0` would
+  exclude every later core minor and break `mix deps.get` in hosts).
 - `Engine.site_tz/0` is a settings query. Operations that convert many
   values (`validate_request/5`, `bookable_slots/5`) read it once and pass it
   down; `utc_to_frame/1` re-reads per call.

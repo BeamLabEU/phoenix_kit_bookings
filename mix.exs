@@ -101,7 +101,12 @@ defmodule PhoenixKitBookings.MixProject do
       #
       # Two-segment, so every later 2.x still satisfies it. Guarded by
       # test/core_pin_conformance_test.exs.
-      pk_dep(:phoenix_kit, "~> 2.14"),
+      # 2.38.0 is the floor now: the actor and the activity log come from
+      # `PhoenixKitWeb.Actor` and `PhoenixKit.Activity.log/3`, first shipped
+      # there and no longer feature-detected, so a lower core fails to compile.
+      # Patch-precise floor in the compound form, so the ceiling stays open
+      # through every later 2.x minor (see test/core_pin_conformance_test.exs).
+      pk_dep(:phoenix_kit, ">= 2.38.0 and < 3.0.0"),
 
       # The booking rules engine (BookingConfig / Availability / Constraints /
       # TimeSlots) and calendar UI components.
