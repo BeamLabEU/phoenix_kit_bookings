@@ -23,7 +23,14 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
       end
     end
 
-    {:ok, assign(socket, page_title: gettext("Services"), filter: "all")}
+    {:ok,
+     assign(socket,
+       page_section: gettext("Bookings"),
+       page_section_path: Paths.admin_reservations(),
+       page_crumbs: [],
+       page_title: gettext("Services"),
+       filter: "all"
+     )}
   end
 
   @impl true

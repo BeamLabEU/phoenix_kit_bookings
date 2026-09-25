@@ -20,7 +20,9 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
       end
     end
 
-    {:ok, assign(socket, page_title: gettext("Reservations"), filter: "upcoming")}
+    # The tab's landing page (redirect_to_first_subtab lands here), so the
+    # header trail is "Admin Panel / Bookings" — the module is the title.
+    {:ok, assign(socket, page_title: gettext("Bookings"), filter: "upcoming")}
   end
 
   @impl true

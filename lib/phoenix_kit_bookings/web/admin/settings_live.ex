@@ -16,7 +16,10 @@ defmodule PhoenixKitBookings.Web.Admin.SettingsLive do
     if Policy.manage_all?(socket.assigns[:phoenix_kit_current_scope]) do
       {:ok,
        assign(socket,
-         page_title: gettext("Bookings Settings"),
+         page_section: gettext("Settings"),
+         page_section_path: Routes.path("/admin/settings"),
+         page_crumbs: [],
+         page_title: gettext("Bookings"),
          user_services_enabled: Policy.user_services_enabled?(),
          max_services: Policy.max_services_per_user()
        )}

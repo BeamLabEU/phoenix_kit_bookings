@@ -113,6 +113,40 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
     end
   end
 
+  describe "admin header trail" do
+    # Core's header bar draws Admin Panel / page_section / crumbs / page_title
+    # from these assigns; the test layout does not render the bar, so the
+    # assigns are read off the socket.
+    defp trail(view) do
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      {assigns[:page_section], Enum.map(assigns[:page_crumbs] || [], & &1.label),
+       assigns.page_title}
+    end
+
+    test "the reservations list is the landing page; the rest carry Bookings as the section",
+         %{conn: conn} do
+      service = slot_service_fixture()
+      conn = admin_conn(conn)
+
+      {:ok, view, _} = live(conn, "/en/admin/bookings/reservations")
+      assert trail(view) == {nil, [], "Bookings"}
+
+      {:ok, view, _} = live(conn, "/en/admin/bookings/services")
+      assert trail(view) == {"Bookings", [], "Services"}
+
+      {:ok, view, _} = live(conn, "/en/admin/bookings/services/new")
+      assert trail(view) == {"Bookings", ["Services"], "New service"}
+
+      {:ok, view, html} = live(conn, "/en/admin/bookings/services/#{service.uuid}/edit")
+      assert trail(view) == {"Bookings", ["Services", service.name], "Edit"}
+      assert html =~ "<h2 class=\"text-2xl font-bold\">#{service.name}</h2>"
+
+      {:ok, view, _} = live(conn, "/en/admin/settings/bookings")
+      assert trail(view) == {"Settings", [], "Bookings"}
+    end
+  end
+
   describe "ownership scoping" do
     test "a base-permission user sees only their own services", %{conn: conn} do
       user_uuid = create_real_user()
