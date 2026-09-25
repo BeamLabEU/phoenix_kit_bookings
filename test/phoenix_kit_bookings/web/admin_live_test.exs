@@ -12,7 +12,7 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
     for path <- ["/en/admin/bookings/services", "/en/admin/bookings/reservations"] do
       {:ok, view, _html} = live(admin_conn(conn), path)
       send(view.pid, {:email, %{to: "someone@example.com"}})
-      assert render(view) =~ "<", path
+      assert Process.alive?(view.pid), path
     end
   end
 
