@@ -51,7 +51,16 @@ defmodule PhoenixKitBookings.Test.Layouts do
   # started in module tests.
   def public(assigns) do
     ~H"""
-    <div id="test-public-layout">{@inner_content}</div>
+    <div id="test-public-layout">
+      <a
+        :if={assigns[:admin_edit_url]}
+        id="test-admin-edit"
+        href={@admin_edit_url}
+      >
+        {assigns[:admin_edit_label]}
+      </a>
+      {@inner_content}
+    </div>
     """
   end
 

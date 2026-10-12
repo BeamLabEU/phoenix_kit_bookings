@@ -1,6 +1,8 @@
 defmodule PhoenixKitBookings.Web.PublicLiveTest do
   use PhoenixKitBookings.LiveCase, async: true
 
+  alias Ecto.Adapters.SQL
+  alias PhoenixKit.Users.Role
   alias PhoenixKitBookings.Bookings
 
   describe "public services index" do
@@ -19,6 +21,121 @@ defmodule PhoenixKitBookings.Web.PublicLiveTest do
       {:ok, view, _html} = live(conn, "/bookings")
       send(view.pid, {:email, %{to: "someone@example.com"}})
       assert Process.alive?(view.pid)
+    end
+  end
+
+  describe "book page — admin edit link" do
+    # The test host layout renders `#test-admin-edit` only when the layout
+    # itself was handed `admin_edit_url`, so this proves the whole path
+    # (socket assign -> `module_assigns` -> `app_layout` -> host layout).
+    defp edit_link(html) do
+      case Regex.run(~r/<a[^>]*id="test-admin-edit"[^>]*>(.*?)<\/a>/s, html) do
+        nil -> nil
+        [tag, text] -> {tag, String.trim(text)}
+      end
+    end
+
+    # `fake_scope/1` models roles as a MapSet of atoms, which core's
+    # `can_access_admin_area?/1` (the helper's first gate) does not read: it
+    # wants the list of role-name strings a real scope carries.
+    defp admin_scope(opts) do
+      owner = Role.system_roles().owner
+      struct!(fake_scope(opts), cached_roles: [owner])
+    end
+
+    # A non-system-role user: reaches the admin area through permissions alone.
+    defp member_scope(opts), do: struct!(fake_scope(opts), cached_roles: [])
+
+    defp create_real_user do
+      {:ok, %{rows: [[uuid]]}} =
+        SQL.query(
+          PhoenixKitBookings.Test.Repo,
+          "INSERT INTO phoenix_kit_users (email, hashed_password, inserted_at, updated_at) " <>
+            "VALUES ($1, 'x', NOW(), NOW()) RETURNING uuid",
+          ["lv-owner-#{System.unique_integer([:positive])}@example.com"]
+        )
+
+      Ecto.UUID.load!(uuid)
+    end
+
+    test "a site-wide manager gets the service editor in the layout", %{conn: conn} do
+      service = slot_service_fixture()
+      conn = put_test_scope(conn, admin_scope([]))
+
+      {:ok, _view, html} = live(conn, "/book/#{service.slug}")
+
+      assert {tag, "Edit service"} = edit_link(html)
+      assert tag =~ ~s(href="#{PhoenixKitBookings.Paths.admin_service_edit(service.uuid)}")
+    end
+
+    test "the owner of the service gets it with the base permission only", %{conn: conn} do
+      owner_uuid = create_real_user()
+
+      {:ok, service} =
+        PhoenixKitBookings.Services.create_service(%{"name" => unique_name("Owned")},
+          owner_uuid: owner_uuid
+        )
+
+      conn =
+        put_test_scope(
+          conn,
+          fake_scope(user_uuid: owner_uuid, permissions: ["bookings"])
+          |> struct!(cached_roles: [])
+        )
+
+      {:ok, _view, html} = live(conn, "/book/#{service.slug}")
+
+      assert {_, _} = edit_link(html)
+    end
+
+    test "a base-permission holder who does not own the service gets nothing", %{conn: conn} do
+      service = slot_service_fixture()
+      conn = put_test_scope(conn, member_scope(permissions: ["bookings"]))
+
+      {:ok, _view, html} = live(conn, "/book/#{service.slug}")
+
+      assert is_nil(edit_link(html))
+    end
+
+    test "an admin without the bookings key gets nothing", %{conn: conn} do
+      service = slot_service_fixture()
+      conn = put_test_scope(conn, admin_scope(permissions: ["shop"]))
+
+      {:ok, _view, html} = live(conn, "/book/#{service.slug}")
+
+      assert is_nil(edit_link(html))
+    end
+
+    test "the owner of the service still needs the bookings key", %{conn: conn} do
+      owner_uuid = create_real_user()
+
+      {:ok, service} =
+        PhoenixKitBookings.Services.create_service(%{"name" => unique_name("Owned")},
+          owner_uuid: owner_uuid
+        )
+
+      conn = put_test_scope(conn, member_scope(user_uuid: owner_uuid, permissions: ["shop"]))
+
+      {:ok, _view, html} = live(conn, "/book/#{service.slug}")
+
+      assert is_nil(edit_link(html))
+    end
+
+    test "an anonymous visitor gets nothing", %{conn: conn} do
+      service = slot_service_fixture()
+
+      {:ok, _view, html} = live(conn, "/book/#{service.slug}")
+
+      assert is_nil(edit_link(html))
+    end
+
+    test "an unknown slug gets no link even for a manager", %{conn: conn} do
+      conn = put_test_scope(conn, admin_scope([]))
+
+      {:ok, _view, html} = live(conn, "/book/no-such-service")
+
+      assert html =~ "does not exist"
+      assert is_nil(edit_link(html))
     end
   end
 
