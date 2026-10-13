@@ -137,6 +137,102 @@ defmodule PhoenixKitBookings.Web.PublicLiveTest do
       assert html =~ "does not exist"
       assert is_nil(edit_link(html))
     end
+
+    test "patching from an owned service clears the link for an unowned service", %{conn: conn} do
+      owner_uuid = create_real_user()
+
+      {:ok, owned} =
+        PhoenixKitBookings.Services.create_service(%{"name" => unique_name("Owned")},
+          owner_uuid: owner_uuid
+        )
+
+      unowned = slot_service_fixture()
+      conn = put_test_scope(conn, member_scope(user_uuid: owner_uuid, permissions: ["bookings"]))
+      {:ok, view, html} = live(conn, "/book/#{owned.slug}")
+      assert edit_link(html)
+
+      html = render_patch(view, "/book/#{unowned.slug}")
+      assert html =~ unowned.name
+      assert is_nil(edit_link(html))
+
+      html = render_patch(view, "/book/#{owned.slug}")
+      assert {tag, "Edit service"} = edit_link(html)
+      assert tag =~ ~s(href="#{PhoenixKitBookings.Paths.admin_service_edit(owned.uuid)}")
+    end
+
+    test "patching to an unknown slug clears the link", %{conn: conn} do
+      service = slot_service_fixture()
+      conn = put_test_scope(conn, admin_scope([]))
+      {:ok, view, html} = live(conn, "/book/#{service.slug}")
+      assert edit_link(html)
+
+      html = render_patch(view, "/book/no-such-service")
+      assert html =~ "does not exist"
+      assert is_nil(edit_link(html))
+    end
+
+    test "a manager with permissions and no system role gets the link", %{conn: conn} do
+      service = slot_service_fixture()
+      conn = put_test_scope(conn, member_scope([]))
+      {:ok, _view, html} = live(conn, "/book/#{service.slug}")
+
+      assert {tag, "Edit service"} = edit_link(html)
+      assert tag =~ ~s(href="#{PhoenixKitBookings.Paths.admin_service_edit(service.uuid)}")
+    end
+  end
+
+  describe "book page — navigation cleanup" do
+    test "reloading the flow releases its hold and switches its subscription", %{conn: conn} do
+      first = slot_service_fixture()
+      second = slot_service_fixture()
+      {:ok, view, _html} = live(conn, "/book/#{first.slug}")
+      tomorrow = Date.add(Date.utc_today(), 1)
+      starts_at = DateTime.new!(tomorrow, ~T[10:00:00], "Etc/UTC")
+      range = {starts_at, DateTime.add(starts_at, 3600, :second)}
+      pubsub = PhoenixKit.Config.pubsub_server()
+
+      view
+      |> form("form[phx-change=pick_date]")
+      |> render_change(%{"picker" => %{"date" => Date.to_iso8601(tomorrow)}})
+
+      view
+      |> element(~s{button[phx-click="pick_slot"][phx-value-start="10:00:00"]})
+      |> render_click()
+
+      assert [_hold] = Bookings.list_occupancy(first.uuid, range)
+      render_patch(view, "/book/#{second.slug}")
+
+      assert Bookings.list_occupancy(first.uuid, range) == []
+      refute {view.pid, nil} in Registry.lookup(pubsub, Bookings.service_topic(first.uuid))
+      assert {view.pid, nil} in Registry.lookup(pubsub, Bookings.service_topic(second.uuid))
+
+      view
+      |> form("form[phx-change=pick_date]")
+      |> render_change(%{"picker" => %{"date" => Date.to_iso8601(tomorrow)}})
+
+      view
+      |> element(~s{button[phx-click="pick_slot"][phx-value-start="10:00:00"]})
+      |> render_click()
+
+      assert [_hold] = Bookings.list_occupancy(second.uuid, range)
+      render_patch(view, "/book/no-such-service")
+      assert Bookings.list_occupancy(second.uuid, range) == []
+      refute {view.pid, nil} in Registry.lookup(pubsub, Bookings.service_topic(second.uuid))
+
+      # A notification already queued before unsubscribe must be harmless.
+      send(view.pid, {:bookings_changed, second.uuid})
+      assert render(view) =~ "does not exist"
+
+      # A click in flight from the previous picker must be harmless as well.
+      assert render_click(view, "pick_slot", %{"start" => "10:00", "end" => "11:00"}) =~
+               "does not exist"
+    end
+
+    test "an unknown slug ignores booking notifications", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/book/no-such-service")
+      send(view.pid, {:bookings_changed, Ecto.UUID.generate()})
+      assert render(view) =~ "does not exist"
+    end
   end
 
   describe "book page — fixed slots" do

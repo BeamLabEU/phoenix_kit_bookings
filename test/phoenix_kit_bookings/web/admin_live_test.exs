@@ -2,7 +2,8 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
   use PhoenixKitBookings.LiveCase, async: true
 
   alias Ecto.Adapters.SQL
-  alias PhoenixKitBookings.{Bookings, Services}
+  alias PhoenixKit.Utils.Routes
+  alias PhoenixKitBookings.{Bookings, Paths, Services}
   alias PhoenixKitBookings.Schemas.Service
   alias PhoenixKitBookings.Test.Repo
 
@@ -61,7 +62,7 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
       assert service = Services.get_active_service_by_slug("sauna-session")
       assert service.duration == 45
-      assert_redirect(view, "/en/admin/bookings/services/#{service.uuid}/edit")
+      assert_redirect(view, Paths.admin_service_edit(service.uuid))
     end
 
     test "creates a service from a Cyrillic name with a romanized public slug", %{conn: conn} do
@@ -82,7 +83,7 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
       assert service.slug =~ ~r/^[a-z0-9][a-z0-9-]*$/
       assert Services.get_active_service_by_slug(service.slug).uuid == service.uuid
-      assert_redirect(view, "/en/admin/bookings/services/#{service.uuid}/edit")
+      assert_redirect(view, Paths.admin_service_edit(service.uuid))
     end
 
     test "adds and removes an availability rule on the edit page", %{conn: conn} do
@@ -169,7 +170,9 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
     test "the settings page is manage_all-only", %{conn: conn} do
       conn = put_test_scope(conn, fake_scope(permissions: ["bookings"]))
 
-      assert {:error, {:live_redirect, %{to: "/en/admin"}}} =
+      admin_path = Routes.path("/admin")
+
+      assert {:error, {:live_redirect, %{to: ^admin_path}}} =
                live(conn, "/en/admin/settings/bookings")
     end
   end

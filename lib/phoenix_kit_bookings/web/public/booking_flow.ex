@@ -70,11 +70,28 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   end
 
   @doc """
-  Releases the visitor's hold when their LiveView goes away — both public
-  LVs call this from `terminate/2`.
+  Releases the current hold and service subscription before replacing a flow,
+  including navigation to an unavailable service.
   """
-  def on_terminate(socket) do
+  def clear_flow(socket) do
     Bookings.release_hold(socket.assigns[:hold_uuid])
+
+    if connected?(socket) and socket.assigns[:service] do
+      case PhoenixKit.Config.pubsub_server() do
+        nil ->
+          :ok
+
+        pubsub ->
+          Phoenix.PubSub.unsubscribe(pubsub, Bookings.service_topic(socket.assigns.service.uuid))
+      end
+    end
+
+    assign(socket, service: nil, hold_uuid: nil)
+  end
+
+  @doc "Releases flow resources when either public LiveView terminates."
+  def on_terminate(socket) do
+    clear_flow(socket)
     :ok
   end
 
@@ -137,6 +154,9 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   end
 
   # ── Events (LiveViews delegate their handle_event/3 here) ────────────
+
+  def handle_event(_event, _params, %{assigns: %{service: nil}} = socket),
+    do: {:noreply, socket}
 
   def handle_event("pick_date", %{"picker" => %{"date" => date_str}}, socket) do
     case Date.from_iso8601(date_str) do
@@ -318,7 +338,10 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
   # ── PubSub (LiveViews delegate their handle_info/2 here) ─────────────
 
-  def handle_info({:bookings_changed, _service_uuid}, socket) do
+  def handle_info(
+        {:bookings_changed, service_uuid},
+        %{assigns: %{service: %Service{uuid: service_uuid}}} = socket
+      ) do
     {:noreply, refresh_pick(socket)}
   end
 

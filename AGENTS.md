@@ -236,6 +236,15 @@ Repo-local aliases:
   flatten `module_assigns` into the host layout but lack the attrs; keep it
   that way while the core floor is below 2.62.0. `module_assigns` skips the
   helper's gate, so only ever fill it from assigns the helper set.
+  Clear both Edit assigns on every `handle_params/3` call. `BookLive`'s
+  `booking_layout/1` also forwards change flags for the flattened Edit keys:
+  core's flattening uses `Map.put_new`, and its newer resolver tracks only
+  binary URLs, so clearing the socket alone leaves a stale link in the host
+  layout. Keep the adapter until core tracks removal through `module_assigns`.
+  Before reloading the flow, `BookingFlow.clear_flow/1` releases its hold and
+  unsubscribes from the old service, including navigation to a missing slug.
+  Notifications must match the current service; unavailable pages ignore
+  notifications and booking events that were already in flight.
 - Holds: `create_hold/3` runs after the advisory validation passes (5-minute
   TTL). `list_occupancy/3` maps unexpired holds to pseudo-bookings so EVERY
   capacity read (picker, advisory, locked create) sees them; expired rows

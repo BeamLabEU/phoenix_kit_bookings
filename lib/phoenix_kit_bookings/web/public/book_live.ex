@@ -9,6 +9,7 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
   alias PhoenixKitBookings.{Paths, Policy}
   alias PhoenixKitBookings.Web.Public.BookingFlow
   alias PhoenixKitWeb.AdminEditHelper
+  alias PhoenixKitWeb.Components.LayoutWrapper
 
   @impl true
   def mount(_params, _session, socket) do
@@ -17,7 +18,10 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
 
   @impl true
   def handle_params(%{"slug" => slug} = _params, uri, socket) do
-    socket = assign(socket, url_path: URI.parse(uri).path)
+    socket =
+      socket
+      |> BookingFlow.clear_flow()
+      |> assign(url_path: URI.parse(uri).path, admin_edit_url: nil, admin_edit_label: nil)
 
     case PhoenixKitBookings.Services.get_active_service_by_slug(slug) do
       nil ->
@@ -67,10 +71,29 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
     :ok
   end
 
+  # Core flattens module_assigns without tracking the flattened keys, and its
+  # edit-link resolver only marks a binary URL as changed. Carry the change
+  # through on removal too, while retaining the pre-2.62 module_assigns API.
+  defp booking_layout(assigns) do
+    assigns =
+      case assigns.__changed__ do
+        %{module_assigns: _} = changed ->
+          %{
+            assigns
+            | __changed__: Map.merge(changed, %{admin_edit_url: true, admin_edit_label: true})
+          }
+
+        _ ->
+          assigns
+      end
+
+    LayoutWrapper.app_layout(assigns)
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
-    <PhoenixKitWeb.Components.LayoutWrapper.app_layout
+    <.booking_layout
       socket={@socket}
       flash={@flash}
       phoenix_kit_current_scope={assigns[:phoenix_kit_current_scope]}
@@ -107,7 +130,7 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
           </div>
         </div>
       </div>
-    </PhoenixKitWeb.Components.LayoutWrapper.app_layout>
+    </.booking_layout>
     """
   end
 end
