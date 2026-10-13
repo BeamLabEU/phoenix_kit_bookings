@@ -4,6 +4,38 @@ All notable changes to **PhoenixKitBookings** are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.1.6 - 2026-10-13
+
+Managers get an "Edit service" shortcut on the public booking page, and the
+public flow is steadier under navigation and stray messages.
+
+### Added
+
+- **"Edit service" link on `/book/:slug`** for site-wide managers and the
+  service's owner. It is gated by `Policy.can_manage?/2` plus core's
+  `AdminEditHelper` check (admin area and the `bookings` key) and reaches the
+  host layout through `module_assigns`, so it works on every supported core.
+  (PR #9)
+- **Admin header trail:** Bookings is the landing title; Services, New
+  service, `<service>` / Edit and Settings / Bookings hang off it. (PR #8)
+
+### Changed
+
+- **Core floor raised to `phoenix_kit >= 2.38.0 and < 3.0.0`**, which carries
+  `PhoenixKitWeb.Actor` and `Activity.log/3`.
+- **Activity logging** reads the actor and logs through core.
+
+### Fixed
+
+- The Edit link no longer survives a client patch to another service, or to
+  a missing slug, in the rendered host layout.
+- Reloading the booking page for another service releases the old hold and
+  unsubscribes from the old service topic; unavailable pages ignore queued
+  booking notifications and events instead of crashing.
+- Booking pages no longer crash on a message that is not for them; dropped
+  messages are logged at debug.
+- Three admin tests no longer assume a locale prefix on admin redirects.
+
 ## 0.1.5 - 2026-09-21
 
 Bookings can be created, approved and cancelled without contacting the
