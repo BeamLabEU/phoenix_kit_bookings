@@ -96,7 +96,7 @@ defmodule PhoenixKitBookings.Engine do
 
   @doc """
   Validates a booking request against the service's rules and the current
-  active bookings. Advisory — `PhoenixKitBookings.Bookings.create_booking/5`
+  active bookings. Advisory — `PhoenixKitBookings.Bookings.create_booking/4`
   re-runs it inside a locked transaction.
 
   `range` is `{starts_at_utc, ends_at_utc}` (DateTime, minute services) or
