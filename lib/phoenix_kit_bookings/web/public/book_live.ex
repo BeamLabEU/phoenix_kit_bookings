@@ -6,7 +6,9 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
 
   use PhoenixKitWeb, :live_view
 
+  alias PhoenixKitBookings.{Paths, Policy}
   alias PhoenixKitBookings.Web.Public.BookingFlow
+  alias PhoenixKitWeb.AdminEditHelper
 
   @impl true
   def mount(_params, _session, socket) do
@@ -25,7 +27,24 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
         {:noreply,
          socket
          |> assign(page_title: service.name)
+         |> assign_admin_edit(service)
          |> BookingFlow.assign_flow(service, current_user(socket))}
+    end
+  end
+
+  # "Edit service" for whoever may edit THIS service: the module key is the
+  # helper's gate, `Policy.can_manage?/2` narrows it to site-wide managers and
+  # the service's owner (the base key alone covers only own services).
+  defp assign_admin_edit(socket, service) do
+    scope = socket.assigns[:phoenix_kit_current_scope]
+
+    if scope && Policy.can_manage?(scope, service) do
+      AdminEditHelper.assign_admin_edit(socket, Paths.admin_service_edit(service.uuid),
+        label: gettext("Edit service"),
+        permission: PhoenixKitBookings.module_key()
+      )
+    else
+      socket
     end
   end
 
@@ -57,6 +76,12 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
       phoenix_kit_current_scope={assigns[:phoenix_kit_current_scope]}
       page_title={@page_title}
       current_path={assigns[:url_path] || "/"}
+      module_assigns={
+        %{
+          admin_edit_url: assigns[:admin_edit_url],
+          admin_edit_label: assigns[:admin_edit_label]
+        }
+      }
     >
       <div class="max-w-2xl mx-auto px-4 py-10">
         <div :if={is_nil(@service)} class="alert alert-warning">
