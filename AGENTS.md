@@ -229,6 +229,13 @@ Repo-local aliases:
   `handle_event/3` + `handle_info/2` there and call
   `BookingFlow.on_terminate/1` from `terminate/2`. `live_render` skips router
   `on_mount` hooks, so the host passes the viewer through the session.
+- Edit link: `BookLive` shows "Edit service" in the host layout for viewers who
+  pass `Policy.can_manage?/2` AND core's `AdminEditHelper` gate (admin area +
+  the `bookings` module key). It travels through `app_layout`'s
+  `module_assigns`, not the 2.62+ `admin_edit_url` attrs, because older cores
+  flatten `module_assigns` into the host layout but lack the attrs; keep it
+  that way while the core floor is below 2.62.0. `module_assigns` skips the
+  helper's gate, so only ever fill it from assigns the helper set.
 - Holds: `create_hold/3` runs after the advisory validation passes (5-minute
   TTL). `list_occupancy/3` maps unexpired holds to pseudo-bookings so EVERY
   capacity read (picker, advisory, locked create) sees them; expired rows
