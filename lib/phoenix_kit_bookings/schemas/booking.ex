@@ -80,7 +80,7 @@ defmodule PhoenixKitBookings.Schemas.Booking do
     |> validate_length(:customer_email, max: 255)
     |> validate_length(:customer_phone, max: 50)
     |> validate_length(:notes, max: 2000)
-    |> validate_format(:customer_email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    |> validate_format(:customer_email, ~r/\A[^\s@]+@[^\s@]+\.[^\s@]+\z/,
       message: "must be a valid email address"
     )
   end
@@ -120,20 +120,22 @@ defmodule PhoenixKitBookings.Schemas.Booking do
   defp maybe_put_user(changeset, nil), do: changeset
   defp maybe_put_user(changeset, user_uuid), do: put_change(changeset, :user_uuid, user_uuid)
 
-  @doc "Controlled status transition — never cast from attrs."
-  def status_changeset(booking, status, opts \\ []) when status in @statuses do
-    booking
-    |> change(status: status)
-    |> maybe_stamp_cancellation(status, opts)
+  @doc """
+  The columns a status transition writes — never cast from attrs. A keyword
+  list for `Bookings`' conditional UPDATE.
+  """
+  def status_changes(status, opts \\ []) when status in @statuses do
+    [{:status, status} | cancellation_stamp(status, opts)]
   end
 
-  defp maybe_stamp_cancellation(changeset, "cancelled", opts) do
-    changeset
-    |> put_change(:cancelled_at, DateTime.truncate(DateTime.utc_now(), :second))
-    |> put_change(:cancel_reason, Keyword.get(opts, :reason))
+  defp cancellation_stamp("cancelled", opts) do
+    [
+      cancelled_at: DateTime.truncate(DateTime.utc_now(), :second),
+      cancel_reason: Keyword.get(opts, :reason)
+    ]
   end
 
-  defp maybe_stamp_cancellation(changeset, _status, _opts), do: changeset
+  defp cancellation_stamp(_status, _opts), do: []
 
   @doc "True when the booking still occupies capacity."
   def active?(%__MODULE__{status: status}), do: status in ["pending", "confirmed"]

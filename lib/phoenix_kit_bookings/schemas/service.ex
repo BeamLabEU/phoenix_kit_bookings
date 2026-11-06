@@ -147,7 +147,7 @@ defmodule PhoenixKitBookings.Schemas.Service do
     |> validate_required([:name, :slug, :time_unit, :duration, :seats, :signup_policy])
     |> validate_length(:name, max: 255)
     |> validate_length(:slug, max: 160)
-    |> validate_format(:slug, ~r/^[a-z0-9][a-z0-9-]*$/,
+    |> validate_format(:slug, ~r/\A[a-z0-9][a-z0-9-]*\z/,
       message: "must be lowercase letters, digits and hyphens"
     )
     |> validate_inclusion(:time_unit, @time_units)

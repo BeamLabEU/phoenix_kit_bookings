@@ -22,4 +22,8 @@ defmodule PhoenixKitBookingsTest do
     %{key: "bookings", sub_permissions: [%{key: "manage_all"}]} =
       PhoenixKitBookings.permission_metadata()
   end
+
+  test "the public route segments are reserved" do
+    assert PhoenixKitBookings.reserved_route_prefixes() == ["book", "bookings"]
+  end
 end

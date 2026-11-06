@@ -9,10 +9,11 @@ defmodule PhoenixKitBookings.Schemas.AvailabilityRule do
   - `available: false` turns either shape into a block-out (a closed
     weekday or a blackout date).
 
-  For minute-unit services `start_time`/`end_time` bound the bookable
-  window (both required). For day/night services the rule is date-granular
-  and times stay nil — a weekly rule marks open days (arrival days), a
-  date override closes or opens a specific date.
+  For minute-unit services an open rule's `start_time`/`end_time` bound the
+  bookable window (both required). A closed rule closes its whole day whatever
+  times it carries, so it needs none. For day/night services the rule is
+  date-granular and times stay nil — a weekly rule marks open days (arrival
+  days), a date override closes or opens a specific date.
   """
 
   use Ecto.Schema
@@ -90,9 +91,13 @@ defmodule PhoenixKitBookings.Schemas.AvailabilityRule do
   end
 
   defp validate_times(changeset, _minutes) do
-    changeset
-    |> validate_required([:start_time, :end_time])
-    |> validate_time_order()
+    if get_field(changeset, :available) do
+      changeset
+      |> validate_required([:start_time, :end_time])
+      |> validate_time_order()
+    else
+      validate_time_order(changeset)
+    end
   end
 
   defp validate_time_order(changeset) do

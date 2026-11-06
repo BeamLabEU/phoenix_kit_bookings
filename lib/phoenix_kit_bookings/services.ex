@@ -5,7 +5,8 @@ defmodule PhoenixKitBookings.Services do
   Every mutation logs an Activity entry (actor via `opts[:actor_uuid]`,
   passed down from the LiveView layer) and broadcasts
   `{:bookings_service_changed, service_uuid}` on `services_topic/0` so
-  admin lists and public pickers stay live.
+  the service lists stay live. An open booking flow keeps the rules it mounted
+  with: the locked create reads them fresh, so what it shows is advice.
   """
 
   import Ecto.Query
@@ -53,9 +54,9 @@ defmodule PhoenixKitBookings.Services do
     |> repo().aggregate(:count)
   end
 
-  @doc "Active services for the public listing."
+  @doc "Active services for the public listing, with their real capacity."
   def list_public_services do
-    list_services(status: "active")
+    [status: "active"] |> list_services() |> with_effective_seats()
   end
 
   @doc "Fetches a service by UUID; nil on miss or forged id."
@@ -135,8 +136,8 @@ defmodule PhoenixKitBookings.Services do
   end
 
   @doc """
-  Permanent delete — Trash view only. Cascades to availability rules and
-  bookings (DB `ON DELETE CASCADE`).
+  Permanent delete — Trash view only. Cascades to rules, units, holds,
+  the waitlist and bookings (DB `ON DELETE CASCADE`).
   """
   def delete_service(%Service{} = service, opts \\ []) do
     service
@@ -213,6 +214,25 @@ defmodule PhoenixKitBookings.Services do
       0 -> service.seats
       count -> count
     end
+  end
+
+  @doc """
+  `services` with `seats` read as `effective_seats/1` would, in one query: the
+  copy a list shows, so a unit-tracked service does not say "1 seat".
+  """
+  def with_effective_seats(services) when is_list(services) do
+    uuids = Enum.map(services, & &1.uuid)
+
+    counts =
+      from(u in Unit,
+        where: u.service_uuid in ^uuids and u.active == true,
+        group_by: u.service_uuid,
+        select: {u.service_uuid, count(u.uuid)}
+      )
+      |> repo().all()
+      |> Map.new()
+
+    Enum.map(services, &%{&1 | seats: Map.get(counts, &1.uuid, &1.seats)})
   end
 
   @doc "A unit's display name; nil for a deleted/unknown unit."

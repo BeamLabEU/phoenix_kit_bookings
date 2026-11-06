@@ -54,7 +54,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
       |> Enum.frequencies_by(& &1.status)
 
     assign(socket,
-      services: services,
+      services: Services.with_effective_seats(services),
       counts: counts,
       waitlist_counts: PhoenixKitBookings.Bookings.waitlist_counts(),
       can_create: Policy.can_create?(scope)

@@ -13,7 +13,7 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, peer_ip: BookingFlow.peer_ip(socket))}
   end
 
   @impl true
@@ -71,40 +71,17 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
     :ok
   end
 
-  # Core flattens module_assigns without tracking the flattened keys, and its
-  # edit-link resolver only marks a binary URL as changed. Carry the change
-  # through on removal too, while retaining the pre-2.62 module_assigns API.
-  defp booking_layout(assigns) do
-    assigns =
-      case assigns.__changed__ do
-        %{module_assigns: _} = changed ->
-          %{
-            assigns
-            | __changed__: Map.merge(changed, %{admin_edit_url: true, admin_edit_label: true})
-          }
-
-        _ ->
-          assigns
-      end
-
-    LayoutWrapper.app_layout(assigns)
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
-    <.booking_layout
+    <LayoutWrapper.app_layout
       socket={@socket}
       flash={@flash}
       phoenix_kit_current_scope={assigns[:phoenix_kit_current_scope]}
       page_title={@page_title}
       current_path={assigns[:url_path] || "/"}
-      module_assigns={
-        %{
-          admin_edit_url: assigns[:admin_edit_url],
-          admin_edit_label: assigns[:admin_edit_label]
-        }
-      }
+      admin_edit_url={assigns[:admin_edit_url]}
+      admin_edit_label={assigns[:admin_edit_label]}
     >
       <div class="max-w-2xl mx-auto px-4 py-10">
         <div :if={is_nil(@service)} class="alert alert-warning">
@@ -130,7 +107,7 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
           </div>
         </div>
       </div>
-    </.booking_layout>
+    </LayoutWrapper.app_layout>
     """
   end
 end

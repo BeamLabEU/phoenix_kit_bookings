@@ -5,6 +5,7 @@ defmodule PhoenixKitBookings.MigrationsTest do
   """
   use PhoenixKitBookings.DataCase, async: false
 
+  alias Ecto.Migration.Runner
   alias PhoenixKitBookings.Migrations.Schema
   alias PhoenixKitBookings.Test.Repo
 
@@ -33,5 +34,27 @@ defmodule PhoenixKitBookings.MigrationsTest do
     assert data_type == "character varying"
     assert max_len == 64
     assert is_nullable == "YES"
+  end
+
+  test "an invalid prefix raises instead of reading as not installed" do
+    assert_raise ArgumentError, fn -> Schema.migrated_version_runtime(prefix: "x; DROP") end
+  end
+
+  defmodule DownToCurrent do
+    use Ecto.Migration
+    def up, do: Schema.down(version: Schema.current_version())
+    def down, do: :ok
+  end
+
+  test "down to the version already applied changes nothing" do
+    Runner.run(Repo, [], 99_001, DownToCurrent, :forward, :up, :up, log: false)
+
+    assert %{rows: [["time_zone"]]} =
+             Repo.query!("""
+             SELECT column_name FROM information_schema.columns
+             WHERE table_name = 'phoenix_kit_bookings_bookings' AND column_name = 'time_zone'
+             """)
+
+    assert Schema.migrated_version_runtime(prefix: "public") == Schema.current_version()
   end
 end

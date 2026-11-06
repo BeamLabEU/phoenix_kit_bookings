@@ -27,7 +27,7 @@ defmodule PhoenixKitBookings.Web.PublicLiveTest do
   describe "book page — admin edit link" do
     # The test host layout renders `#test-admin-edit` only when the layout
     # itself was handed `admin_edit_url`, so this proves the whole path
-    # (socket assign -> `module_assigns` -> `app_layout` -> host layout).
+    # (socket assign -> `app_layout` attrs -> host layout).
     defp edit_link(html) do
       case Regex.run(~r/<a[^>]*id="test-admin-edit"[^>]*>(.*?)<\/a>/s, html) do
         nil -> nil
@@ -339,7 +339,7 @@ defmodule PhoenixKitBookings.Web.PublicLiveTest do
         })
         |> render_submit()
 
-      assert html =~ "2 night(s)"
+      assert html =~ "2 nights"
 
       view
       |> form("form[phx-submit=submit_details]", %{
@@ -500,6 +500,188 @@ defmodule PhoenixKitBookings.Web.PublicLiveTest do
         )
 
       assert html =~ "not currently taking bookings"
+    end
+  end
+
+  describe "hand-made picker events" do
+    setup %{conn: conn} do
+      service = slot_service_fixture()
+      tomorrow = Date.add(Date.utc_today(), 1)
+      {:ok, view, _html} = live(conn, "/book/#{service.slug}")
+
+      view
+      |> form("form[phx-change=pick_date]")
+      |> render_change(%{"picker" => %{"date" => Date.to_iso8601(tomorrow)}})
+
+      %{service: service, view: view, tomorrow: tomorrow}
+    end
+
+    test "a slot off the service's grid is refused", %{view: view} do
+      html = render_click(view, "pick_slot", %{"start" => "10:17:00", "end" => "11:17:00"})
+
+      assert html =~ "not valid"
+      refute html =~ "Your name"
+    end
+
+    test "a slot on the grid still goes through", %{view: view} do
+      html = render_click(view, "pick_slot", %{"start" => "10:00:00", "end" => "11:00:00"})
+
+      assert html =~ "Your name"
+    end
+
+    # Several seats, or capacity would refuse the replay whatever the flow did.
+    test "a replayed submit books once", %{conn: conn, tomorrow: tomorrow} do
+      service = slot_service_fixture(%{"seats" => 5})
+      {:ok, view, _html} = live(conn, "/book/#{service.slug}")
+
+      view
+      |> form("form[phx-change=pick_date]")
+      |> render_change(%{"picker" => %{"date" => Date.to_iso8601(tomorrow)}})
+
+      render_click(view, "pick_slot", %{"start" => "10:00:00", "end" => "11:00:00"})
+
+      details = %{
+        "booking" => %{"customer_name" => "Guest", "customer_email" => "once@example.com"}
+      }
+
+      assert render_submit(view, "submit_details", details) =~ "Booked!"
+      render_submit(view, "submit_details", details)
+
+      assert [_only] = Bookings.list_bookings(service_uuid: service.uuid)
+    end
+
+    test "submitting before a slot is picked does nothing", %{view: view, service: service} do
+      render_submit(view, "submit_details", %{
+        "booking" => %{"customer_name" => "Guest", "customer_email" => "early@example.com"}
+      })
+
+      assert Bookings.list_bookings(service_uuid: service.uuid) == []
+    end
+
+    test "the free-form event does not work on a fixed-slot service", %{
+      view: view,
+      tomorrow: tomorrow
+    } do
+      html =
+        render_click(view, "pick_free", %{
+          "picker" => %{
+            "date" => Date.to_iso8601(tomorrow),
+            "start_time" => "10:17",
+            "end_time" => "11:17"
+          }
+        })
+
+      assert html =~ "not valid"
+      refute html =~ "Your name"
+    end
+  end
+
+  describe "public mail limits" do
+    defp spend_the_address(email) do
+      for _ <- 1..10, do: :ok = PhoenixKitBookings.RateLimit.check(email, nil)
+    end
+
+    test "a booking to an address past its limit is refused and mails nothing", %{conn: conn} do
+      service = slot_service_fixture()
+      email = "bombed-#{System.unique_integer([:positive])}@example.com"
+      spend_the_address(email)
+
+      {:ok, view, _html} = live(conn, "/book/#{service.slug}")
+
+      view
+      |> form("form[phx-change=pick_date]")
+      |> render_change(%{"picker" => %{"date" => Date.to_iso8601(Date.add(Date.utc_today(), 1))}})
+
+      view
+      |> element(~s{button[phx-click="pick_slot"][phx-value-start="10:00:00"]})
+      |> render_click()
+
+      html =
+        view
+        |> form("form[phx-submit=submit_details]", %{
+          "booking" => %{"customer_name" => "Guest", "customer_email" => email}
+        })
+        |> render_submit()
+
+      assert html =~ "Too many attempts"
+      assert Bookings.list_bookings(service_uuid: service.uuid) == []
+    end
+
+    test "a waitlist entry past the limit is refused", %{conn: conn} do
+      service = slot_service_fixture()
+      email = "waiting-#{System.unique_integer([:positive])}@example.com"
+      spend_the_address(email)
+
+      {:ok, view, _html} = live(conn, "/book/#{service.slug}")
+
+      html =
+        render_submit(view, "join_waitlist", %{
+          "waitlist" => %{
+            "date" => Date.to_iso8601(Date.add(Date.utc_today(), 1)),
+            "customer_name" => "Guest",
+            "customer_email" => email
+          }
+        })
+
+      assert html =~ "Too many attempts"
+      assert Bookings.list_waitlist(service.uuid) == []
+    end
+  end
+
+  describe "manage page — a stale tab" do
+    test "cancelling what an admin already cancelled says so", %{conn: conn} do
+      service = slot_service_fixture()
+      starts_at = DateTime.new!(Date.add(Date.utc_today(), 1), ~T[10:00:00], "Etc/UTC")
+
+      {:ok, booking} =
+        Bookings.create_booking(
+          service,
+          {starts_at, DateTime.add(starts_at, 3600, :second)},
+          customer_attrs()
+        )
+
+      {:ok, view, _html} = live(conn, "/bookings/manage/#{Bookings.manage_token(booking)}")
+      {:ok, _} = Bookings.cancel_booking(booking)
+
+      html = view |> element(~s{button[phx-click="cancel"]}) |> render_click()
+
+      assert html =~ "already been cancelled"
+    end
+  end
+
+  describe "embeddable widget — who the viewer is" do
+    defp inactive_user! do
+      %{rows: [[uuid]]} =
+        SQL.query!(
+          PhoenixKitBookings.Test.Repo,
+          "INSERT INTO phoenix_kit_users (email, hashed_password, is_active, inserted_at, updated_at) " <>
+            "VALUES ($1, 'x', FALSE, NOW(), NOW()) RETURNING uuid",
+          ["gone-#{System.unique_integer([:positive])}@example.com"]
+        )
+
+      Ecto.UUID.load!(uuid)
+    end
+
+    test "a deactivated account is a guest on a login-required service", %{conn: conn} do
+      service = slot_service_fixture(%{"signup_policy" => "login_required"})
+      tomorrow = Date.add(Date.utc_today(), 1)
+
+      {:ok, view, _html} =
+        live_isolated(conn, PhoenixKitBookings.Web.Public.BookingWidgetLive,
+          session: %{"slug" => service.slug, "current_user_uuid" => inactive_user!()}
+        )
+
+      view
+      |> form("form[phx-change=pick_date]")
+      |> render_change(%{"picker" => %{"date" => Date.to_iso8601(tomorrow)}})
+
+      html =
+        view
+        |> element(~s{button[phx-click="pick_slot"][phx-value-start="10:00:00"]})
+        |> render_click()
+
+      assert html =~ "log in"
+      refute html =~ "Your name"
     end
   end
 

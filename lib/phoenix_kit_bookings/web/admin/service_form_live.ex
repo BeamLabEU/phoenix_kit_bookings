@@ -50,6 +50,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
        |> assign(
          action: action,
          service: service,
+         providers: provider_options(),
          form: to_form(Service.changeset(service, %{}))
        )
        |> load_rules()}
@@ -100,7 +101,9 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
   # Staff is an optional module — read its people SCHEMALESSLY from the
   # sibling table when it exists (the `phoenix_kit_calendar` cross-module
-  # pattern: no compile-time reference, graceful absence).
+  # pattern: no compile-time reference, graceful absence). Read once at mount:
+  # the form renders on every keystroke. A person's own `name` is usually blank,
+  # so the label falls back through their account, as staff's own pages do.
   defp provider_options do
     repo = PhoenixKit.RepoHelper.repo()
 
@@ -112,14 +115,16 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
         import Ecto.Query, only: [from: 2]
 
         from(p in "phoenix_kit_staff_people",
+          left_join: u in "phoenix_kit_users",
+          on: u.uuid == p.user_uuid,
           where: p.status == "active",
-          order_by: [asc: p.name],
-          select: {p.name, type(p.uuid, :string)}
+          select: {p.name, u.first_name, u.last_name, u.email, type(p.uuid, :string)}
         )
         |> repo.all()
-        |> Enum.map(fn {name, uuid} ->
-          {name || "Person #{String.slice(uuid, 0, 8)}", uuid}
+        |> Enum.map(fn {name, first_name, last_name, email, uuid} ->
+          {provider_label(name, first_name, last_name, email, uuid), uuid}
         end)
+        |> Enum.sort_by(fn {label, _uuid} -> String.downcase(label) end)
 
       _ ->
         []
@@ -128,6 +133,16 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
     _ -> []
   catch
     :exit, _ -> []
+  end
+
+  defp provider_label(name, first_name, last_name, email, uuid) do
+    full_name =
+      [first_name, last_name]
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.join(" ")
+
+    Enum.find([name, full_name, email], &(&1 not in [nil, ""])) ||
+      "Person #{String.slice(uuid, 0, 8)}"
   end
 
   @impl true
@@ -277,7 +292,13 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
         </.link>
       </div>
 
-      <.form for={@form} phx-change="validate" phx-submit="save" class="flex flex-col gap-6">
+      <.form
+        for={@form}
+        id="bookings-service-form"
+        phx-change="validate"
+        phx-submit="save"
+        class="flex flex-col gap-6"
+      >
         <div class="card bg-base-100 shadow-lg">
           <div class="card-body gap-4">
             <h3 class="card-title text-base">{gettext("Basics")}</h3>
@@ -406,11 +427,11 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
               />
             </div>
             <.select
-              :if={provider_options() != []}
+              :if={@providers != []}
               field={@form[:provider_uuid]}
               label={gettext("Provider (staff person — their bookings block each other across services)")}
               prompt={gettext("No provider")}
-              options={provider_options()}
+              options={@providers}
             />
           </div>
         </div>
@@ -453,7 +474,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
         <div class="card-body gap-4">
           <h3 class="card-title text-base">{gettext("Availability")}</h3>
           <p class="text-sm text-base-content/60">
-            {gettext("No rules = always open. Weekly rules set opening hours; a rule with a date overrides the weekly rules on that date; a closed rule blocks the day.")}
+            {gettext("No rules = always open. Weekly rules set opening hours; a rule with a date overrides the weekly rules on that date; a closed rule blocks the whole day, and needs no times. With only closed rules, every other day stays open.")}
           </p>
 
           <table :if={@rules != []} class="table table-sm">
@@ -487,7 +508,11 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
             </tbody>
           </table>
 
-          <form phx-submit="add_rule" class="flex flex-col gap-3 border-t border-base-200 pt-4">
+          <form
+            id="bookings-add-rule"
+            phx-submit="add_rule"
+            class="flex flex-col gap-3 border-t border-base-200 pt-4"
+          >
             <div class="flex flex-wrap items-center gap-3">
               <label
                 :for={{num, label} <- weekdays()}
@@ -569,7 +594,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
             </tbody>
           </table>
 
-          <form phx-submit="add_unit" class="flex items-end gap-2">
+          <form id="bookings-add-unit" phx-submit="add_unit" class="flex items-end gap-2">
             <label class="fieldset">
               <span class="fieldset-legend text-xs">{gettext("Unit name (e.g. Room 101)")}</span>
               <input type="text" name="unit[name]" class="input input-sm" required />

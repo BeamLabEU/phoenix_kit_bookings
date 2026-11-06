@@ -12,15 +12,22 @@ defmodule PhoenixKitBookings.Engine.DayEngine do
     no part in availability math.
   - A date is **open** when: a date-override rule on it says
     `available: true`, or (no override) a weekly rule covers its weekday
-    with `available: true`, or the service has no rules at all. Every
+    with `available: true` and no closed weekly rule does, or the service
+    has no open rule at all and nothing closes the date. Every
     OCCUPIED date `[starts_on, ends_on)` must be open (blackout = closed
     date; closed-to-arrival/-departure refinements are post-v1).
+  - A stay with no `max_stay` still ends within `@unbounded_days`, the
+    ceiling free-form minute services have (`Engine`): without one, a single
+    public request could take a room for the rest of the calendar, and
+    every check below walks each date of the stay.
   - Capacity is pooled per date: active bookings covering a date must stay
     below `seats` (7 rooms of a type — Checkfront/Planyo-style; named unit
     assignment is post-v1).
   """
 
   alias PhoenixKitBookings.Schemas.{AvailabilityRule, Booking, Service}
+
+  @unbounded_days 366
 
   @doc """
   Validates a `[starts_on, ends_on)` stay request.
@@ -82,13 +89,13 @@ defmodule PhoenixKitBookings.Engine.DayEngine do
 
     case weekly do
       [] ->
-        # No weekly rule mentions this weekday. If the service has weekly
-        # OPEN rules at all, unlisted weekdays are closed; with only
-        # overrides/block-outs configured, unlisted days stay open.
-        not Enum.any?(rules, &(is_nil(&1.date) and &1.available))
+        # No weekly rule mentions this weekday. If the service has OPEN rules
+        # at all, what they do not cover is closed; with only block-outs
+        # configured, unlisted days stay open.
+        not Enum.any?(rules, & &1.available)
 
       matched ->
-        Enum.all?(matched, & &1.available) and Enum.any?(matched, & &1.available)
+        Enum.all?(matched, & &1.available)
     end
   end
 
@@ -142,14 +149,15 @@ defmodule PhoenixKitBookings.Engine.DayEngine do
   defp validate_stay(starts_on, ends_on, %Service{} = service) do
     units = Date.diff(ends_on, starts_on)
     min_stay = service.min_stay || 1
+    max_stay = service.max_stay || @unbounded_days
     unit_word = if service.time_unit == "night", do: "night(s)", else: "day(s)"
 
     cond do
       units < min_stay ->
         {:error, :too_short, "Minimum stay is #{min_stay} #{unit_word}"}
 
-      is_integer(service.max_stay) and units > service.max_stay ->
-        {:error, :too_long, "Maximum stay is #{service.max_stay} #{unit_word}"}
+      units > max_stay ->
+        {:error, :too_long, "Maximum stay is #{max_stay} #{unit_word}"}
 
       true ->
         :ok

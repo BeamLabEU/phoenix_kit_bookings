@@ -345,4 +345,192 @@ defmodule PhoenixKitBookings.FeaturesTest do
                ReminderWorker.perform(%Oban.Job{args: %{"booking_uuid" => Ecto.UUID.generate()}})
     end
   end
+
+  describe "unit and provider buffers" do
+    test "a unit keeps the service's buffer free after a booking" do
+      service = slot_service_fixture(%{"buffer_after" => 30})
+      {:ok, _} = Services.add_unit(service, %{"name" => "Room A"})
+      {:ok, _} = Services.add_unit(service, %{"name" => "Room B"})
+
+      {:ok, first} =
+        Bookings.create_booking(service, {tomorrow_at(10), tomorrow_at(11)}, customer_attrs())
+
+      {:ok, second} =
+        Bookings.create_booking(service, {tomorrow_at(11), tomorrow_at(12)}, customer_attrs())
+
+      assert first.unit_uuid
+      assert second.unit_uuid
+      assert second.unit_uuid != first.unit_uuid
+    end
+
+    test "a request's buffer reaches the provider's other bookings" do
+      provider_uuid = Ecto.UUID.generate()
+      massage = slot_service_fixture(%{"provider_uuid" => provider_uuid, "buffer_after" => 30})
+      consult = slot_service_fixture(%{"provider_uuid" => provider_uuid})
+
+      {:ok, _} =
+        Bookings.create_booking(consult, {tomorrow_at(11), tomorrow_at(12)}, customer_attrs())
+
+      assert {:error, :overlap, _} =
+               Bookings.create_booking(
+                 massage,
+                 {tomorrow_at(10), tomorrow_at(11)},
+                 customer_attrs()
+               )
+    end
+  end
+
+  describe "waitlist edges" do
+    test "a timed booking across midnight frees every date it covered" do
+      service = freeform_service_fixture(%{"seats" => 1})
+      first_day = future_date(3)
+      second_day = future_date(4)
+
+      {:ok, booking} =
+        Bookings.create_booking(
+          service,
+          {DateTime.new!(first_day, ~T[22:00:00], "Etc/UTC"),
+           DateTime.new!(second_day, ~T[02:00:00], "Etc/UTC")},
+          customer_attrs()
+        )
+
+      {:ok, entry} =
+        Bookings.join_waitlist(service, %{
+          "date" => Date.to_iso8601(second_day),
+          "customer_name" => "Waiter",
+          "customer_email" => "waiter@example.com"
+        })
+
+      {:ok, _} = Bookings.cancel_booking(booking)
+
+      assert %{status: "notified"} =
+               Repo.get(PhoenixKitBookings.Schemas.WaitlistEntry, entry.uuid)
+    end
+
+    test "a date already past is refused" do
+      service = slot_service_fixture()
+
+      assert {:error, %Ecto.Changeset{}} =
+               Bookings.join_waitlist(service, %{
+                 "date" => Date.to_iso8601(future_date(-1)),
+                 "customer_name" => "Late",
+                 "customer_email" => "late@example.com"
+               })
+    end
+
+    test "the same address in another case is the same entry" do
+      service = slot_service_fixture()
+      date = Date.to_iso8601(future_date(3))
+
+      {:ok, first} =
+        Bookings.join_waitlist(service, %{
+          "date" => date,
+          "customer_name" => "Waiter",
+          "customer_email" => "waiter@example.com"
+        })
+
+      {:ok, second} =
+        Bookings.join_waitlist(service, %{
+          "date" => date,
+          "customer_name" => "Waiter",
+          "customer_email" => "Waiter@Example.com"
+        })
+
+      assert first.uuid == second.uuid
+    end
+
+    test "two open rows from a double submit do not break the next join" do
+      service = slot_service_fixture()
+      date = future_date(3)
+
+      for _ <- 1..2 do
+        Repo.insert!(%PhoenixKitBookings.Schemas.WaitlistEntry{
+          service_uuid: service.uuid,
+          date: date,
+          customer_name: "Twice",
+          customer_email: "twice@example.com"
+        })
+      end
+
+      assert {:ok, _} =
+               Bookings.join_waitlist(service, %{
+                 "date" => Date.to_iso8601(date),
+                 "customer_name" => "Twice",
+                 "customer_email" => "twice@example.com"
+               })
+    end
+  end
+
+  describe "hold broadcasts" do
+    setup do
+      pubsub = PhoenixKit.Config.pubsub_server()
+      service = slot_service_fixture()
+      :ok = Phoenix.PubSub.subscribe(pubsub, Bookings.service_topic(service.uuid))
+      :ok = Phoenix.PubSub.subscribe(pubsub, Bookings.admin_topic())
+      %{service: service, uuid: service.uuid}
+    end
+
+    test "a new hold tells the pickers once, and the admin list not at all", %{
+      service: service,
+      uuid: uuid
+    } do
+      {:ok, _hold} = Bookings.create_hold(service, {tomorrow_at(10), tomorrow_at(11)})
+
+      assert_receive {:bookings_changed, ^uuid}
+      refute_receive {:bookings_changed, ^uuid}, 50
+    end
+
+    test "releasing a hold gives the slot back to the open pickers", %{
+      service: service,
+      uuid: uuid
+    } do
+      {:ok, hold} = Bookings.create_hold(service, {tomorrow_at(10), tomorrow_at(11)})
+      assert_receive {:bookings_changed, ^uuid}
+
+      :ok = Bookings.release_hold(hold.uuid)
+
+      assert_receive {:bookings_changed, ^uuid}
+    end
+  end
+
+  describe "input edges" do
+    test "an address with a trailing newline is not an address" do
+      changeset =
+        Booking.customer_changeset(%Booking{}, %{
+          "customer_name" => "Guest",
+          "customer_email" => "guest@example.com\n"
+        })
+
+      refute changeset.valid?
+    end
+
+    test "every line of an .ics file fits the 75 octets RFC 5545 allows" do
+      service = slot_service_fixture(%{"name" => String.duplicate("Long massage name ", 8)})
+
+      {:ok, booking} =
+        Bookings.create_booking(service, {tomorrow_at(10), tomorrow_at(11)}, customer_attrs())
+
+      url = "https://example.com/bookings/manage/" <> String.duplicate("t", 200)
+      ics = ICS.booking_ics(booking, service, url)
+
+      assert ics |> String.split("\r\n") |> Enum.all?(&(byte_size(&1) <= 75))
+      # Unfolding gives the text back.
+      assert String.replace(ics, "\r\n ", "") =~ url
+    end
+  end
+
+  describe "capacity shown in lists" do
+    test "a unit-tracked service lists its units, not its seats column" do
+      tracked = slot_service_fixture(%{"seats" => 1})
+      plain = slot_service_fixture(%{"seats" => 4})
+      {:ok, _} = Services.add_unit(tracked, %{"name" => "A"})
+      {:ok, _} = Services.add_unit(tracked, %{"name" => "B"})
+      {:ok, unit} = Services.add_unit(tracked, %{"name" => "C"})
+      {:ok, _} = Services.set_unit_active(unit, false)
+
+      listed = Services.with_effective_seats([tracked, plain])
+
+      assert [%{seats: 2}, %{seats: 4}] = listed
+    end
+  end
 end

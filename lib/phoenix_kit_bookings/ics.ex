@@ -8,6 +8,8 @@ defmodule PhoenixKitBookings.ICS do
 
   alias PhoenixKitBookings.Schemas.{Booking, Service}
 
+  @max_line_octets 75
+
   @doc "The .ics file content for a booking."
   def booking_ics(%Booking{} = booking, %Service{} = service, manage_url) do
     now = DateTime.utc_now()
@@ -31,7 +33,22 @@ defmodule PhoenixKitBookings.ICS do
           "END:VCALENDAR"
         ]
 
-    Enum.join(lines, "\r\n") <> "\r\n"
+    lines |> Enum.flat_map(&fold/1) |> Enum.join("\r\n") |> Kernel.<>("\r\n")
+  end
+
+  # RFC 5545 §3.1: a line stops at 75 octets and goes on after CRLF and a space.
+  # A manage URL alone is longer. Folded between code points, never inside one.
+  defp fold(line) do
+    {lines, last} =
+      line
+      |> String.codepoints()
+      |> Enum.reduce({[], ""}, fn point, {lines, current} ->
+        if byte_size(current) + byte_size(point) > @max_line_octets,
+          do: {[current | lines], " " <> point},
+          else: {lines, current <> point}
+      end)
+
+    Enum.reverse([last | lines])
   end
 
   defp dt_lines(%Booking{starts_at: %DateTime{} = starts_at} = booking) do
@@ -60,6 +77,7 @@ defmodule PhoenixKitBookings.ICS do
     |> String.replace("\\", "\\\\")
     |> String.replace(";", "\\;")
     |> String.replace(",", "\\,")
+    |> String.replace("\r\n", "\n")
     |> String.replace("\n", "\\n")
   end
 end

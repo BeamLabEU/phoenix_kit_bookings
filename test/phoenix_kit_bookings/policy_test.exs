@@ -168,4 +168,35 @@ defmodule PhoenixKitBookings.PolicyTest do
       assert {:ok, _} = Policy.cancel_booking(user, booking)
     end
   end
+
+  describe "fail-closed edges" do
+    test "a scope with no user sees no services, not all of them" do
+      _service = slot_service_fixture()
+
+      assert Policy.visible_services(scope(["bookings"], nil)) == []
+    end
+
+    test "owning a service stops counting once the base key is gone" do
+      owner = create_real_user()
+      {:ok, service} = Services.create_service(%{"name" => "Mine"}, owner_uuid: owner)
+
+      assert Policy.can_manage?(scope(["bookings"], owner), service)
+      refute Policy.can_manage?(scope([], owner), service)
+    end
+
+    test "restoring from the trash counts against the cap, like creating" do
+      owner = create_real_user()
+      enable_self_service(1)
+      who = user_scope(owner)
+
+      {:ok, first} = Policy.create_service(who, %{"name" => "First"})
+      {:ok, _} = Policy.trash_service(who, first)
+      {:ok, _second} = Policy.create_service(who, %{"name" => "Second"})
+
+      assert {:error, :not_allowed} =
+               Policy.restore_service(who, Services.get_service(first.uuid))
+
+      assert {:ok, _} = Policy.restore_service(admin_scope(), Services.get_service(first.uuid))
+    end
+  end
 end

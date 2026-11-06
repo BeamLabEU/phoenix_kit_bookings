@@ -2,10 +2,9 @@ defmodule PhoenixKitBookings.Migrations.Schema do
   @moduledoc """
   Versioned migration for the Bookings module.
 
-  Creates the `phoenix_kit_bookings_services`,
-  `phoenix_kit_bookings_availability_rules` and
-  `phoenix_kit_bookings_bookings` tables. All statements use IF NOT EXISTS
-  guards — safe to run multiple times.
+  Creates the six `phoenix_kit_bookings_*` tables: services, availability
+  rules, units, holds, waitlist and bookings. All statements use IF NOT
+  EXISTS guards — safe to run multiple times.
 
   Implements the versioned-migration protocol expected by PhoenixKit Core
   (`mix phoenix_kit.update`): `current_version/0` and
@@ -52,8 +51,13 @@ defmodule PhoenixKitBookings.Migrations.Schema do
   `:prefix`.
   """
   def migrated_version_runtime(opts \\ []) do
-    prefix = normalize_prefix(opts)
+    # Outside the rescue: an invalid prefix is an error, not "not installed".
+    opts |> normalize_prefix() |> read_version()
+  end
 
+  # `catch :exit` matters as much as `rescue`: a dead or unstarted pool exits
+  # rather than raising, and `mix phoenix_kit.status` asks every module.
+  defp read_version(prefix) do
     query = """
     SELECT d.description
     FROM pg_class c
@@ -70,6 +74,8 @@ defmodule PhoenixKitBookings.Migrations.Schema do
     end
   rescue
     _ -> 0
+  catch
+    :exit, _ -> 0
   end
 
   defp parse_version(n) do
@@ -308,10 +314,10 @@ defmodule PhoenixKitBookings.Migrations.Schema do
     prefix_str = prefix_str(normalize_prefix(opts))
     target = if is_list(opts), do: Keyword.get(opts, :version, 0), else: 0
 
-    if target >= 1 do
-      down_to_v1(prefix_str)
-    else
-      drop_everything(prefix_str)
+    cond do
+      target >= @current_version -> :ok
+      target >= 1 -> down_to_v1(prefix_str)
+      true -> drop_everything(prefix_str)
     end
   end
 

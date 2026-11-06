@@ -17,13 +17,15 @@ defmodule PhoenixKitBookings.Web.Public.BookingWidgetLive do
   break embedding (the `phoenix_kit_projects` embedding lesson). Because
   `live_render` skips router `on_mount` hooks, the host passes the
   current user's uuid through the session if logged-in behavior is wanted
-  (`login_required` services, prefill).
+  (`login_required` services, prefill). Core resolves it
+  (`assign_embedded_current_user/2`): an unknown or deactivated account is a
+  guest here.
   """
 
   use PhoenixKitWeb, :live_view
 
-  alias PhoenixKit.Users.Auth
   alias PhoenixKitBookings.Web.Public.BookingFlow
+  alias PhoenixKitWeb.Users.Auth
 
   @impl true
   def mount(_params, session, socket) do
@@ -36,25 +38,23 @@ defmodule PhoenixKitBookings.Web.Public.BookingWidgetLive do
           nil
       end
 
-    socket = assign(socket, wrapper_class: session["wrapper_class"] || "")
+    socket =
+      assign(socket,
+        wrapper_class: session["wrapper_class"] || "",
+        peer_ip: BookingFlow.peer_ip(socket)
+      )
 
     case service do
       nil ->
         {:ok, assign(socket, service: nil)}
 
       service ->
-        user = load_user(session["current_user_uuid"])
+        socket = Auth.assign_embedded_current_user(socket, session)
+        user = socket.assigns[:phoenix_kit_current_user]
+
         {:ok, BookingFlow.assign_flow(socket, service, user, session["prefill"] || %{})}
     end
   end
-
-  defp load_user(uuid) when is_binary(uuid) do
-    Auth.get_user(uuid)
-  rescue
-    _ -> nil
-  end
-
-  defp load_user(_), do: nil
 
   @impl true
   def handle_event(event, params, socket), do: BookingFlow.handle_event(event, params, socket)

@@ -215,4 +215,120 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
       assert Bookings.get_booking(booking.uuid).status == "confirmed"
     end
   end
+
+  describe "service form — providers" do
+    # Core 3.x creates no staff tables and the suite does not install staff, so
+    # the table is made here, inside the test's transaction.
+    defp staff_table! do
+      SQL.query!(
+        PhoenixKitBookings.Test.Repo,
+        """
+        CREATE TABLE phoenix_kit_staff_people (
+          uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_uuid uuid,
+          status varchar(20) NOT NULL DEFAULT 'active',
+          name varchar
+        )
+        """
+      )
+    end
+
+    defp person!(name, user_uuid \\ nil, status \\ "active") do
+      %{rows: [[uuid]]} =
+        SQL.query!(
+          PhoenixKitBookings.Test.Repo,
+          "INSERT INTO phoenix_kit_staff_people (user_uuid, status, name) " <>
+            "VALUES ($1, $2, $3) RETURNING uuid::text",
+          [user_uuid && Ecto.UUID.dump!(user_uuid), status, name]
+        )
+
+      uuid
+    end
+
+    defp account!(first_name, last_name, email) do
+      %{rows: [[uuid]]} =
+        SQL.query!(
+          PhoenixKitBookings.Test.Repo,
+          "INSERT INTO phoenix_kit_users (email, first_name, last_name, hashed_password, " <>
+            "inserted_at, updated_at) VALUES ($1, $2, $3, 'x', NOW(), NOW()) RETURNING uuid::text",
+          [email, first_name, last_name]
+        )
+
+      uuid
+    end
+
+    test "a person is named from their account when their own name is blank", %{conn: conn} do
+      staff_table!()
+      person!("Named Therapist")
+      person!(nil, account!("Mari", "Tamm", "mari-#{System.unique_integer([:positive])}@x.ee"))
+
+      unnamed = "plain-#{System.unique_integer([:positive])}@x.ee"
+      person!(nil, account!(nil, nil, unnamed))
+      person!("Left Long Ago", nil, "trashed")
+
+      service = slot_service_fixture()
+      conn = put_test_scope(conn, fake_scope())
+      {:ok, _view, html} = live(conn, "/en/admin/bookings/services/#{service.uuid}/edit")
+
+      assert html =~ "Named Therapist"
+      assert html =~ "Mari Tamm"
+      assert html =~ unnamed
+      refute html =~ "Left Long Ago"
+    end
+
+    test "with no staff table the select is not drawn", %{conn: conn} do
+      service = slot_service_fixture()
+      conn = put_test_scope(conn, fake_scope())
+      {:ok, _view, html} = live(conn, "/en/admin/bookings/services/#{service.uuid}/edit")
+
+      refute html =~ "No provider"
+    end
+  end
+
+  describe "reservations — long lists" do
+    test "a list reaching into the past opens on the newest", %{conn: conn} do
+      service = freeform_service_fixture()
+
+      for days <- 3..4 do
+        day = Date.add(Date.utc_today(), days)
+
+        {:ok, _} =
+          PhoenixKitBookings.Bookings.create_booking(
+            service,
+            {DateTime.new!(day, ~T[10:00:00], "Etc/UTC"),
+             DateTime.new!(day, ~T[11:00:00], "Etc/UTC")},
+            customer_attrs(%{"customer_name" => "Guest #{days}"}),
+            notify: false
+          )
+      end
+
+      conn = put_test_scope(conn, fake_scope())
+      {:ok, _view, html} = live(conn, "/en/admin/bookings/reservations?filter=confirmed")
+
+      {newest, _} = :binary.match(html, "Guest 4")
+      {oldest, _} = :binary.match(html, "Guest 3")
+      assert newest < oldest
+    end
+
+    test "approving a booking cancelled in another tab says so", %{conn: conn} do
+      service = slot_service_fixture(%{"require_approval" => true})
+      starts_at = DateTime.new!(Date.add(Date.utc_today(), 2), ~T[10:00:00], "Etc/UTC")
+
+      {:ok, booking} =
+        PhoenixKitBookings.Bookings.create_booking(
+          service,
+          {starts_at, DateTime.add(starts_at, 3600, :second)},
+          customer_attrs(),
+          notify: false
+        )
+
+      conn = put_test_scope(conn, fake_scope())
+      {:ok, view, _html} = live(conn, "/en/admin/bookings/reservations?filter=pending")
+      {:ok, _} = PhoenixKitBookings.Bookings.cancel_booking(booking, notify: false)
+
+      render_click(view, "confirm", %{"uuid" => booking.uuid})
+
+      assert PhoenixKitBookings.Bookings.get_booking(booking.uuid).status == "cancelled"
+    end
+  end
 end

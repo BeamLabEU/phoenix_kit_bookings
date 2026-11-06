@@ -11,6 +11,8 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
   alias PhoenixKitBookings.{Bookings, Errors, Policy}
   alias PhoenixKitBookings.Web.Format
 
+  @list_limit 200
+
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
@@ -38,12 +40,17 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
   defp load_bookings(socket) do
     scope = scope(socket)
 
+    # The two queues read soonest first. The lists that reach into the past read
+    # newest first, or the limit would cut exactly the bookings being looked for.
     opts =
       case socket.assigns.filter do
         "upcoming" -> [upcoming: true]
-        "all" -> []
-        status -> [status: status]
+        "pending" -> [status: "pending"]
+        "all" -> [order: :desc]
+        status -> [status: status, order: :desc]
       end
+
+    opts = Keyword.put(opts, :limit, @list_limit)
 
     visible = Policy.visible_services(scope, include_trashed: true)
     services = Map.new(visible, &{&1.uuid, &1})
@@ -71,6 +78,7 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
 
     assign(socket,
       bookings: bookings,
+      truncated: length(bookings) >= @list_limit,
       services: services,
       unit_names: unit_names,
       counts: Bookings.count_by_status(count_opts)
@@ -99,7 +107,11 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
          {:ok, _} <- Policy.confirm_booking(scope(socket), booking) do
       {:noreply, socket |> put_flash(:info, gettext("Booking confirmed.")) |> load_bookings()}
     else
-      _ -> {:noreply, put_flash(socket, :error, Errors.message(:unknown))}
+      {:error, reason, _} ->
+        {:noreply, socket |> put_flash(:error, Errors.message(reason)) |> load_bookings()}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, Errors.message(:unknown))}
     end
   end
 
@@ -108,8 +120,11 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
          {:ok, _} <- Policy.cancel_booking(scope(socket), booking) do
       {:noreply, socket |> put_flash(:info, gettext("Booking cancelled.")) |> load_bookings()}
     else
-      {:error, reason, _} -> {:noreply, put_flash(socket, :error, Errors.message(reason))}
-      _ -> {:noreply, put_flash(socket, :error, Errors.message(:unknown))}
+      {:error, reason, _} ->
+        {:noreply, socket |> put_flash(:error, Errors.message(reason)) |> load_bookings()}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, Errors.message(:unknown))}
     end
   end
 
@@ -219,6 +234,10 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
           </tbody>
         </table>
       </div>
+
+      <p :if={@truncated} class="text-sm text-base-content/60">
+        {gettext("Showing the first %{count} bookings of this view.", count: length(@bookings))}
+      </p>
     </div>
     """
   end

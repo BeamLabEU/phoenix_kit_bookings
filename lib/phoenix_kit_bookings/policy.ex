@@ -31,6 +31,7 @@ defmodule PhoenixKitBookings.Policy do
   alias PhoenixKitBookings.Services
   alias PhoenixKitWeb.Actor
 
+  @base "bookings"
   @manage_all "bookings.manage_all"
 
   # ── Capability checks ────────────────────────────────────────────────
@@ -45,7 +46,9 @@ defmodule PhoenixKitBookings.Policy do
 
   defp owns?(scope, %Service{owner_uuid: owner_uuid}) do
     user_uuid = Actor.uuid(scope)
-    not is_nil(owner_uuid) and not is_nil(user_uuid) and owner_uuid == user_uuid
+
+    not is_nil(owner_uuid) and not is_nil(user_uuid) and owner_uuid == user_uuid and
+      Scope.can?(scope, @base)
   end
 
   @doc """
@@ -91,10 +94,11 @@ defmodule PhoenixKitBookings.Policy do
 
   @doc "Services this scope may see in the admin (all opts pass through)."
   def visible_services(scope, opts \\ []) do
-    if manage_all?(scope) do
-      Services.list_services(opts)
-    else
-      Services.list_services(Keyword.put(opts, :owner_uuid, Actor.uuid(scope)))
+    cond do
+      manage_all?(scope) -> Services.list_services(opts)
+      # `list_services/1` reads a nil owner as "no filter".
+      is_nil(Actor.uuid(scope)) -> []
+      true -> Services.list_services(Keyword.put(opts, :owner_uuid, Actor.uuid(scope)))
     end
   end
 
@@ -137,8 +141,18 @@ defmodule PhoenixKitBookings.Policy do
     authorized(scope, service, fn -> Services.trash_service(service, Actor.opts(scope)) end)
   end
 
+  @doc """
+  Restores a trashed service. A trashed service does not count against the
+  per-user cap, so a base-permission holder restoring one is creating one.
+  """
   def restore_service(scope, %Service{} = service) do
-    authorized(scope, service, fn -> Services.restore_service(service, Actor.opts(scope)) end)
+    authorized(scope, service, fn ->
+      if manage_all?(scope) or under_cap?(scope) do
+        Services.restore_service(service, Actor.opts(scope))
+      else
+        {:error, :not_allowed}
+      end
+    end)
   end
 
   def delete_service(scope, %Service{} = service) do

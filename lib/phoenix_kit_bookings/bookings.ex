@@ -12,19 +12,25 @@ defmodule PhoenixKitBookings.Bookings do
   occupancy (bookings + unexpired holds) and re-validates, so the last
   seat can only be taken once. When the service has a provider, ALL of
   that provider's services are locked in uuid order (deadlock-safe), and
-  the provider's other bookings block the request absolutely.
+  the provider's other bookings block the request absolutely. The locked
+  read is also what the status, the signup policy and the approval rule are
+  judged from: the caller's struct is as old as the page that holds it.
 
   ## Lifecycle
 
   `pending` (services with `require_approval` — RSVP-style) → `confirmed`
   → `cancelled`. Pending bookings HOLD capacity. A cancellation frees
   capacity immediately, emails the customer, and notifies open waitlist
-  entries for the freed dates (notify-all-first-to-book).
+  entries for the freed dates (notify-all-first-to-book). A transition is
+  one conditional UPDATE on the stored status, so a stale page cannot repeat
+  it or bring back what another session cancelled.
 
   ## Live updates
 
-  Every mutation broadcasts `{:bookings_changed, service_uuid}` on both
-  `service_topic(service_uuid)` and `admin_topic/0`. Minimal payload.
+  Every booking mutation broadcasts `{:bookings_changed, service_uuid}` on
+  both `service_topic(service_uuid)` and `admin_topic/0`. A hold taken or
+  released goes to the service topic only: the admin list shows no holds.
+  Minimal payload.
   """
 
   import Ecto.Query
@@ -39,6 +45,9 @@ defmodule PhoenixKitBookings.Bookings do
   # fill in the details form.
   @hold_ttl_seconds 5 * 60
 
+  @service_unavailable "This service is not currently bookable"
+  @already_cancelled "This booking is already cancelled"
+
   def admin_topic, do: @admin_topic
 
   @doc "Per-service PubSub topic — public pickers subscribe to exactly one."
@@ -47,22 +56,31 @@ defmodule PhoenixKitBookings.Bookings do
   # ── Queries ──────────────────────────────────────────────────────────
 
   @doc """
-  Lists bookings for the admin. Options: `:service_uuid`,
+  Lists bookings for the admin, by when they start. Options: `:service_uuid`,
   `:service_uuids`, `:status`, `:upcoming` (from today, site frame),
-  `:limit` (default 200).
+  `:order` (`:asc` default, soonest first; `:desc` for a list that reaches
+  into the past, so the limit cuts the oldest), `:limit` (default 200).
   """
   def list_bookings(opts \\ []) do
     limit = Keyword.get(opts, :limit, 200)
 
-    from(b in Booking,
-      order_by: [asc_nulls_last: b.starts_at, asc_nulls_last: b.starts_on, desc: b.inserted_at],
-      limit: ^limit
-    )
+    from(b in Booking, limit: ^limit)
+    |> order_bookings(Keyword.get(opts, :order, :asc))
     |> maybe_filter_service(opts[:service_uuid])
     |> maybe_filter_services(opts[:service_uuids])
     |> maybe_filter_status(opts[:status])
     |> maybe_filter_upcoming(opts[:upcoming])
     |> repo().all()
+  end
+
+  # A timed and a dated booking sort on one line: a date reads as its midnight.
+  defp order_bookings(query, direction) when direction in [:asc, :desc] do
+    from(b in query,
+      order_by: [
+        {^direction, fragment("COALESCE(?, ?::timestamptz)", b.starts_at, b.starts_on)},
+        desc: b.inserted_at
+      ]
+    )
   end
 
   defp maybe_filter_service(query, nil), do: query
@@ -190,7 +208,7 @@ defmodule PhoenixKitBookings.Bookings do
   defp policy_gate(service, user_uuid, source) do
     cond do
       service.status != "active" and source != "admin" ->
-        {:error, :service_unavailable, "This service is not currently bookable"}
+        {:error, :service_unavailable, @service_unavailable}
 
       service.signup_policy == "login_required" and is_nil(user_uuid) and source != "admin" ->
         {:error, :login_required, "Please log in to book this service"}
@@ -200,14 +218,17 @@ defmodule PhoenixKitBookings.Bookings do
     end
   end
 
-  defp build_changeset(service, range, customer_attrs, user_uuid, source) do
-    status = if service.require_approval and source != "admin", do: "pending", else: "confirmed"
+  defp initial_status(%Service{require_approval: true}, source) when source != "admin",
+    do: "pending"
 
+  defp initial_status(%Service{}, _source), do: "confirmed"
+
+  defp build_changeset(service, range, customer_attrs, user_uuid, source) do
     changeset =
       %Booking{}
       |> Booking.customer_changeset(customer_attrs)
       |> Booking.stamp_changeset(service.uuid, range, [
-        {:status, status},
+        {:status, initial_status(service, source)},
         {:source, source},
         {:user_uuid, user_uuid}
       ])
@@ -222,7 +243,7 @@ defmodule PhoenixKitBookings.Bookings do
   defp insert_locked(service, range, changeset, opts) do
     result =
       repo().transaction(fn ->
-        locked_service = lock_service_tree(service)
+        locked_service = lock_and_gate(service, opts)
         prune_expired_holds(locked_service.uuid)
 
         units = Services.list_active_units(locked_service.uuid)
@@ -235,19 +256,22 @@ defmodule PhoenixKitBookings.Bookings do
 
         extra_events = provider_blocking_events(effective, range)
 
-        effective
-        |> Engine.validate_request(
-          rules,
-          range,
-          occupancy,
-          Keyword.take(opts, [:now, :today]) ++ [extra_events: extra_events]
-        )
-        |> insert_validated(changeset, effective, units, range, opts)
+        booking =
+          effective
+          |> Engine.validate_request(
+            rules,
+            range,
+            occupancy,
+            Keyword.take(opts, [:now, :today]) ++ [extra_events: extra_events]
+          )
+          |> insert_validated(changeset, effective, units, range, opts)
+
+        {booking, locked_service}
       end)
 
     case result do
-      {:ok, booking} ->
-        after_create(booking, service, opts)
+      {:ok, {booking, locked_service}} ->
+        after_create(booking, locked_service, opts)
         {:ok, booking}
 
       {:error, {:changeset, cs}} ->
@@ -258,11 +282,27 @@ defmodule PhoenixKitBookings.Bookings do
     end
   end
 
+  # The gate again, on the row as it stands under the lock: `service` is as old
+  # as the page holding it, and a visitor can type for minutes while the service
+  # is deactivated, trashed, deleted or moved behind a login.
+  defp lock_and_gate(service, opts) do
+    user_uuid = Keyword.get(opts, :user_uuid)
+    source = Keyword.get(opts, :source, "public")
+
+    with %Service{} = locked <- lock_service_tree(service),
+         :ok <- policy_gate(locked, user_uuid, source) do
+      locked
+    else
+      nil -> repo().rollback({:rejected, :service_unavailable, @service_unavailable})
+      {:error, reason, message} -> repo().rollback({:rejected, reason, message})
+    end
+  end
+
   # Locks the service row — and, when a provider is attached, ALL the
   # provider's service rows in uuid order so cross-service provider
-  # conflicts serialize without deadlocks.
+  # conflicts serialize without deadlocks. Nil when the row is gone.
   defp lock_service_tree(%Service{provider_uuid: nil} = service) do
-    repo().one!(from(s in Service, where: s.uuid == ^service.uuid, lock: "FOR UPDATE"))
+    repo().one(from(s in Service, where: s.uuid == ^service.uuid, lock: "FOR UPDATE"))
   end
 
   defp lock_service_tree(%Service{provider_uuid: provider_uuid} = service) do
@@ -284,6 +324,7 @@ defmodule PhoenixKitBookings.Bookings do
     changeset =
       changeset
       |> Ecto.Changeset.change(
+        status: initial_status(effective, Ecto.Changeset.get_field(changeset, :source)),
         unit_uuid: pick_unit(units, effective, range),
         total_price: Pricing.total(effective, range),
         currency: if(effective.price, do: effective.currency)
@@ -303,16 +344,15 @@ defmodule PhoenixKitBookings.Bookings do
     repo().rollback({:rejected, reason, message})
   end
 
-  # Least-loaded assignment: the first (by name) active unit not occupied
-  # by an overlapping active booking. Legacy bookings without a unit
-  # consume capacity but no unit — the capacity check has already
-  # guaranteed the count fits.
+  # The first (by name) active unit not taken by an active booking. Legacy
+  # bookings without a unit consume capacity but no unit — the capacity check
+  # has already guaranteed the count fits.
   defp pick_unit([], _service, _range), do: nil
 
   defp pick_unit(units, service, range) do
     occupied =
       service.uuid
-      |> list_active_overlapping(raw_window(range))
+      |> list_active_overlapping(unit_window(service, range))
       |> Enum.map(& &1.unit_uuid)
       |> Enum.reject(&is_nil/1)
       |> MapSet.new()
@@ -322,8 +362,16 @@ defmodule PhoenixKitBookings.Bookings do
     end)
   end
 
-  defp raw_window({%DateTime{} = from, %DateTime{} = until}), do: {from, until}
-  defp raw_window({:dates, from, until}), do: {:dates, from, until}
+  # A booking holds its unit for as long as the capacity check counts it: the
+  # buffers widen the booking (`Engine.bookings_to_events/3`), the request stays
+  # as asked. A narrower window hands a room over before its cleaning time is
+  # up; a wider one finds no free unit where capacity said there was one.
+  defp unit_window(service, {%DateTime{} = from, %DateTime{} = until}) do
+    {DateTime.add(from, -service.buffer_after * 60, :second),
+     DateTime.add(until, service.buffer_before * 60, :second)}
+  end
+
+  defp unit_window(_service, {:dates, _from, _until} = window), do: window
 
   # Provider-attached minute services: the provider's OTHER bookings block
   # this request absolutely (a person can't be in two places).
@@ -331,6 +379,11 @@ defmodule PhoenixKitBookings.Bookings do
   defp provider_blocking_events(%Service{time_unit: unit}, _range) when unit != "minutes", do: []
 
   defp provider_blocking_events(%Service{} = service, {%DateTime{} = from, %DateTime{} = until}) do
+    # The lib widens the REQUEST by the buffers before it compares, so the read
+    # has to reach as far, or a neighbour inside the buffer is never seen.
+    from = DateTime.add(from, -service.buffer_before * 60, :second)
+    until = DateTime.add(until, service.buffer_after * 60, :second)
+
     sibling_uuids =
       from(s in Service,
         where: s.provider_uuid == ^service.provider_uuid and s.uuid != ^service.uuid,
@@ -384,10 +437,13 @@ defmodule PhoenixKitBookings.Bookings do
 
   `notify: false` skips the approval email; see `create_booking/4`.
   """
-  def confirm_booking(%Booking{status: "pending"} = booking, opts \\ []) do
+  def confirm_booking(%Booking{} = booking, opts \\ []) do
     booking
-    |> Booking.status_changeset("confirmed")
-    |> repo().update()
+    |> transition(["pending"], Booking.status_changes("confirmed"))
+    |> case do
+      {:ok, _} = result -> result
+      :stale -> {:error, :not_pending, "This booking is no longer waiting for approval"}
+    end
     |> tap_lifecycle("bookings.booking_confirmed", opts, &Notifier.booking_confirmed/2)
   end
 
@@ -404,14 +460,35 @@ defmodule PhoenixKitBookings.Bookings do
   def cancel_booking(%Booking{status: status} = booking, opts)
       when status in ["pending", "confirmed"] do
     booking
-    |> Booking.status_changeset("cancelled", reason: opts[:reason])
-    |> repo().update()
+    |> transition(["pending", "confirmed"], Booking.status_changes("cancelled", opts))
+    |> case do
+      {:ok, _} = result -> result
+      :stale -> {:error, :not_cancellable, @already_cancelled}
+    end
     |> tap_lifecycle("bookings.booking_cancelled", opts, &Notifier.booking_cancelled/2)
     |> tap_waitlist()
   end
 
   def cancel_booking(%Booking{} = _booking, _opts),
-    do: {:error, :not_cancellable, "This booking is already cancelled"}
+    do: {:error, :not_cancellable, @already_cancelled}
+
+  # One conditional UPDATE: the status is checked and changed in the same
+  # statement, so of two writers exactly one wins, and a struct read before
+  # another session moved the booking cannot move it back.
+  defp transition(%Booking{uuid: uuid}, from_statuses, changes) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    query =
+      from(b in Booking,
+        where: b.uuid == ^uuid and b.status in ^from_statuses,
+        select: b
+      )
+
+    case repo().update_all(query, set: [{:updated_at, now} | changes]) do
+      {1, [booking]} -> {:ok, booking}
+      {0, []} -> :stale
+    end
+  end
 
   @doc """
   Whether a CUSTOMER may still self-cancel: active, upcoming, and outside
@@ -471,7 +548,12 @@ defmodule PhoenixKitBookings.Bookings do
   def release_hold(nil), do: :ok
 
   def release_hold(hold_uuid) do
-    {_count, _} = from(h in Hold, where: h.uuid == ^hold_uuid) |> repo().delete_all()
+    {_count, service_uuids} =
+      from(h in Hold, where: h.uuid == ^hold_uuid, select: h.service_uuid)
+      |> repo().delete_all()
+
+    # Open pickers show the slot as taken until somebody tells them.
+    Enum.each(service_uuids, &broadcast_to_pickers/1)
     :ok
   rescue
     Ecto.Query.CastError -> :ok
@@ -537,7 +619,7 @@ defmodule PhoenixKitBookings.Bookings do
   repeat joins are collapsed.
   """
   def join_waitlist(%Service{} = service, attrs) do
-    changeset = WaitlistEntry.changeset(%WaitlistEntry{}, attrs)
+    changeset = WaitlistEntry.changeset(%WaitlistEntry{}, attrs, Engine.today())
 
     with true <- changeset.valid?,
          email = Ecto.Changeset.get_field(changeset, :customer_email),
@@ -552,13 +634,16 @@ defmodule PhoenixKitBookings.Bookings do
     end
   end
 
+  # No unique index stands behind this, so two rows can exist: take one.
   defp open_waitlist_entry(service_uuid, email, date) do
-    repo().get_by(WaitlistEntry,
-      service_uuid: service_uuid,
-      customer_email: email,
-      date: date,
-      status: "open"
+    email = String.downcase(email)
+
+    from(w in WaitlistEntry,
+      where: w.service_uuid == ^service_uuid and w.date == ^date and w.status == "open",
+      where: fragment("lower(?)", w.customer_email) == ^email,
+      limit: 1
     )
+    |> repo().one()
   end
 
   @doc "Open-entry counts per service — admin visibility."
@@ -609,8 +694,14 @@ defmodule PhoenixKitBookings.Bookings do
     end)
   end
 
-  defp freed_dates(%Booking{starts_at: %DateTime{} = starts_at}) do
-    [starts_at |> Engine.utc_to_frame() |> DateTime.to_date()]
+  # Every date the booking touched. The end is exclusive, so one ending at
+  # midnight frees nothing on the next date.
+  defp freed_dates(%Booking{starts_at: %DateTime{} = starts_at, ends_at: ends_at}) do
+    tz = Engine.site_tz()
+    first = starts_at |> Engine.to_frame(tz) |> DateTime.to_date()
+    last = ends_at |> DateTime.add(-1, :second) |> Engine.to_frame(tz) |> DateTime.to_date()
+
+    first |> Date.range(last) |> Enum.to_list()
   end
 
   defp freed_dates(%Booking{starts_on: %Date{} = starts_on, ends_on: ends_on}) do
@@ -622,9 +713,10 @@ defmodule PhoenixKitBookings.Bookings do
   # ── Guest manage tokens ──────────────────────────────────────────────
 
   @token_salt "phoenix_kit_bookings.manage"
-  # 90 days — long enough to outlive any realistic booking horizon window
-  # a cancel link is mailed for.
-  @token_max_age 90 * 24 * 3600
+  # A link lives until this many days after the booking ended. It runs from the
+  # booking and not from the signing: a stay booked six months ahead has to stay
+  # cancellable from the confirmation mail, and `max_advance` can be blank.
+  @token_grace_days 90
 
   @doc "Signed token a guest uses to view/cancel their booking without an account."
   def manage_token(%Booking{uuid: uuid}) do
@@ -633,13 +725,25 @@ defmodule PhoenixKitBookings.Bookings do
 
   @doc "Resolves a manage token back to its booking; nil when invalid/expired."
   def booking_from_token(token) when is_binary(token) do
-    case Phoenix.Token.verify(token_endpoint(), @token_salt, token, max_age: @token_max_age) do
-      {:ok, uuid} -> get_booking(uuid)
-      {:error, _} -> nil
+    with {:ok, uuid} <-
+           Phoenix.Token.verify(token_endpoint(), @token_salt, token, max_age: :infinity),
+         %Booking{} = booking <- get_booking(uuid),
+         true <- token_live?(booking) do
+      booking
+    else
+      _ -> nil
     end
   end
 
   def booking_from_token(_), do: nil
+
+  defp token_live?(%Booking{ends_at: %DateTime{} = ends_at}) do
+    DateTime.compare(DateTime.utc_now(), DateTime.add(ends_at, @token_grace_days, :day)) != :gt
+  end
+
+  defp token_live?(%Booking{ends_on: %Date{} = ends_on}) do
+    Date.compare(Date.utc_today(), Date.add(ends_on, @token_grace_days)) != :gt
+  end
 
   # Explicit `config :phoenix_kit, endpoint:` wins (tests set it); a host
   # app is discovered via core's :parent_module resolution — core's own
@@ -691,21 +795,24 @@ defmodule PhoenixKitBookings.Bookings do
   end
 
   defp tap_broadcast_hold({:ok, _hold} = result, service_uuid) do
-    broadcast_changed(service_uuid)
+    broadcast_to_pickers(service_uuid)
     result
   end
 
   defp tap_broadcast_hold(result, _service_uuid), do: result
 
   defp broadcast_changed(service_uuid) do
-    case PhoenixKit.Config.pubsub_server() do
-      nil ->
-        :ok
+    broadcast_to_pickers(service_uuid)
+    broadcast(@admin_topic, service_uuid)
+  end
 
-      pubsub ->
-        message = {:bookings_changed, service_uuid}
-        Phoenix.PubSub.broadcast(pubsub, service_topic(service_uuid), message)
-        Phoenix.PubSub.broadcast(pubsub, @admin_topic, message)
+  defp broadcast_to_pickers(service_uuid),
+    do: broadcast(service_topic(service_uuid), service_uuid)
+
+  defp broadcast(topic, service_uuid) do
+    case PhoenixKit.Config.pubsub_server() do
+      nil -> :ok
+      pubsub -> Phoenix.PubSub.broadcast(pubsub, topic, {:bookings_changed, service_uuid})
     end
   rescue
     _ -> :ok

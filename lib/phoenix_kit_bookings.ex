@@ -24,7 +24,7 @@ defmodule PhoenixKitBookings do
   1. `use PhoenixKit.Module` marks this module as a plugin.
   2. PhoenixKit discovers it by `.beam` scanning — no config line needed.
   3. `migration_module/0` points at `PhoenixKitBookings.Migrations.Schema`;
-     `mix phoenix_kit.update` creates the three tables — no core PR needed.
+     `mix phoenix_kit.update` creates the six tables — no core PR needed.
   4. Admin pages ride on `admin_tabs/0`; the public booking pages
      (`/bookings`, `/book/:slug`, `/bookings/manage/:token`) come from
      `PhoenixKitBookings.Web.Routes.generate/1`.
@@ -33,7 +33,7 @@ defmodule PhoenixKitBookings do
 
   Add to your parent app's `mix.exs`:
 
-      {:phoenix_kit_bookings, "~> 0.1.4"}
+      {:phoenix_kit_bookings, "~> 0.1"}
 
   Run `mix deps.get`, then `mix phoenix_kit.update` to create the tables.
   The module appears in the admin sidebar and Modules page automatically.
@@ -222,6 +222,14 @@ defmodule PhoenixKitBookings do
   @impl PhoenixKit.Module
   @doc "Public booking routes (the admin pages ride on `admin_tabs/0`)."
   def route_module, do: PhoenixKitBookings.Web.Routes
+
+  @impl PhoenixKit.Module
+  @doc "Top-level segments of the public routes, kept out of Publishing's catch-all."
+  def reserved_route_prefixes, do: ["book", "bookings"]
+
+  @impl PhoenixKit.Module
+  @doc "The manifest `mix phoenix_kit.doctor` and `repair` check these tables against."
+  def expected_schema, do: PhoenixKitBookings.ExpectedSchema
 
   @impl PhoenixKit.Module
   @doc """

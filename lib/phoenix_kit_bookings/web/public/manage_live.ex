@@ -26,7 +26,8 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
        url_path: URI.parse(uri).path,
        page_title: gettext("Your booking"),
        booking: booking,
-       service: service
+       service: service,
+       unit_name: booking && Services.unit_name(booking.unit_uuid)
      )}
   end
 
@@ -44,7 +45,11 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
            |> assign(booking: cancelled)}
 
         {:error, reason, _} ->
-          {:noreply, put_flash(socket, :error, Errors.message(reason))}
+          # Somebody else got there first: show the booking as it stands.
+          {:noreply,
+           socket
+           |> put_flash(:error, Errors.message(reason))
+           |> assign(booking: Bookings.get_booking(booking.uuid))}
       end
     else
       {:noreply, put_flash(socket, :error, Errors.message(:cancel_window_passed))}
@@ -84,8 +89,8 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
               <div class="text-base-content/60">{@booking.customer_name} · {@booking.customer_email}</div>
             </div>
 
-            <p :if={@booking.unit_uuid && Services.unit_name(@booking.unit_uuid)} class="text-sm">
-              {gettext("Assigned:")} {Services.unit_name(@booking.unit_uuid)}
+            <p :if={@unit_name} class="text-sm">
+              {gettext("Assigned:")} {@unit_name}
             </p>
             <p :if={@booking.total_price} class="text-sm font-medium">
               {gettext("Total:")} {Pricing.format(@booking.total_price, @booking.currency)}

@@ -15,9 +15,11 @@ in details, manage the booking through a signed token and join a waitlist;
 the admin manages reservations (approval queue, cancel), services
 (availability rules, named units, trash) and the self-service policy.
 
-- **Depends on:** `phoenix_kit` `>= 2.38.0 and < 3.0.0` (Hex; the floor is functional, see
-  Conventions → Time frame), `phoenix_live_calendar` `~> 0.4` (hard; the
-  booking rules engine). Staff is read schemalessly, never depended on.
+- **Depends on:** `phoenix_kit` `>= 3.4.0 and < 4.0.0` (Hex; the release this
+  package is built and tested against, with the ceiling open across later 3.x
+  minors; `core_pin_conformance_test.exs` guards it), `phoenix_live_calendar`
+  `~> 0.5` (hard; the booking rules engine). Staff is read schemalessly, never
+  depended on.
 - **Consumed by:** nothing yet.
 - **Admin surface:** `admin_tabs/0` registers `Bookings` (`/admin/bookings`,
   parent, redirects to its first subtab) with `Reservations`
@@ -53,7 +55,7 @@ the admin manages reservations (approval queue, cancel), services
 
 ```bash
 mix deps.get
-createdb phoenix_kit_bookings_test          # once; DB-backed tests are tagged :integration and auto-skip without it
+createdb phoenix_kit_bookings_test          # once; DB-backed tests are tagged :integration and excluded while the database cannot be reached
 mix test
 mix precommit                # compile --warnings-as-errors + format + credo --strict + dialyzer; run before every commit
 ```
@@ -107,6 +109,8 @@ Repo-local aliases:
   backend, which has no `priv/gettext` catalogue, so engine messages render
   in English everywhere. Every call is macro-form `gettext/1,2`, so
   `mix gettext.extract` sees all of them.
+  `BookingFlow` carries its own `use Gettext` on core's backend, since it is a
+  component and not a LiveView; `Format` and `Notifier` are still plain English.
 - JS hooks: none. If one is ever needed, ship it in a prebuilt bundle
   declared by `js_sources/0` under a namespaced global, never from an inline
   `<script>` (morphdom does not execute inserted script tags, so an inline
@@ -144,10 +148,14 @@ Repo-local aliases:
   inside a transaction holding `FOR UPDATE` on the service row, and when a
   provider is attached on ALL that provider's services in uuid order
   (deadlock-safe). The pure `Engine.validate_request/5` call in the public
-  flow is advisory UX only.
+  flow is advisory UX only. The status, the signup policy and the approval
+  rule are judged from the row read under that lock, never from the struct
+  the caller holds: a visitor's page can be minutes old.
 - Lifecycle `pending` (services with `require_approval`) → `confirmed` →
   `cancelled`. Pending bookings HOLD capacity; cancelled rows keep their
-  times but stop counting.
+  times but stop counting. A transition is one conditional UPDATE on the
+  stored status (`transition/3`), so of two writers one wins and a stale
+  struct cannot repeat a transition or bring back a cancelled booking.
 
 ### Engine adapter
 
@@ -167,7 +175,28 @@ Repo-local aliases:
   `@unbounded_minutes` (366 days) because the lib treats nil as "same as
   duration"; the availability window still bounds the real fit.
 - A service with no rules is always open (a synthetic full-day window keeps
-  slot generation and validation consistent).
+  slot generation and validation consistent). So is a service whose rules are
+  all closed ones, except where they close it: `lib_availability/1` adds the
+  same window, because the lib answers no window at all for a day no rule
+  mentions, and one blackout date would otherwise close every other day.
+- A closed weekly rule beats the open rules covering its weekday, on both
+  engines. The lib ignores a closed window beside an open one, so
+  `lib_availability/1` takes the weekday off those open rules. A closed rule
+  closes its whole day whatever times it carries, and needs none.
+- `bookable_slots/6` judges past, `min_notice` and `max_advance` itself and
+  hands the lib zeros for them: the lib reads the UTC clock against wall clocks
+  in the site frame, off by the site's offset, and has no past check. The
+  locked create does not rely on this; `Constraints.validate_booking/5` gets the
+  frame `now`.
+- The lib does not check that a fixed slot sits on the grid, so the public flow
+  does (`on_grid?/3`, against the slots it drew). The context stays open for
+  importers and phone bookings at any time.
+- A stay with no `max_stay` ends within 366 days (`DayEngine`), the ceiling
+  free-form minute services have. `max_advance` bounds only the start, and every
+  check walks each date of the stay.
+- Units are held for as long as capacity counts a booking (`unit_window/2`):
+  the booking widened by its buffers, the request as asked. The provider read
+  reaches as far as the lib widens the request.
 
 ### Time frame
 
@@ -181,19 +210,16 @@ Repo-local aliases:
   zone AT THE INSTANT CONVERTED through core's `Utils.Date.shift_to_offset/2`
   and `parse_datetime_local/2`. Never turn the setting into one number and
   add it: a scalar offset is an hour off across every daylight-saving switch
-  and plain UTC on IANA sites. Those helpers are per-instant only from 2.14.1,
-  and below it the frame silently collapses to UTC without raising — one of
-  the reasons behind the core floor (now `>= 2.38.0 and < 3.0.0`, for
-  `PhoenixKitWeb.Actor` and `Activity.log/3`). `test/core_pin_conformance_test.exs`
-  guards the pin; keep the compound form (a three-segment `~> 2.38.0` would
-  exclude every later core minor and break `mix deps.get` in hosts).
+  and plain UTC on IANA sites. `test/core_pin_conformance_test.exs` guards the
+  core pin; keep the compound form (a three-segment `~> 3.4.0` would exclude
+  every later core minor and break `mix deps.get` in hosts).
 - `Engine.site_tz/0` is a settings query. Operations that convert many
-  values (`validate_request/5`, `bookable_slots/5`) read it once and pass it
+  values (`validate_request/5`, `bookable_slots/6`) read it once and pass it
   down; `utc_to_frame/1` re-reads per call.
 - Two Sundays a year a day is not 24 hours long, and the lib's grid is built
   from minutes. `Engine.frame_span_intact?/5` refuses a span whose wall
   clocks resolve to instants a different distance apart. Every path that
-  turns a wall clock into a range must call it: `bookable_slots/5` marks such
+  turns a wall clock into a range must call it: `bookable_slots/6` marks such
   slots `:unavailable`, and BOTH public pickers (`pick_slot`, `pick_free`)
   check it before building a range, because a free-form service renders no
   grid and `pick_slot`'s params come from the client.
@@ -216,7 +242,9 @@ Repo-local aliases:
   actions re-checked. Managers create SITE services (no owner); base holders
   create services owned by themselves, only when
   `bookings_user_services_enabled` is on and they are under
-  `bookings_max_services_per_user`.
+  `bookings_max_services_per_user`. A trashed service does not count, so
+  restoring one is held to the same cap. Owning a service counts only while
+  the base key is held, and a scope with no user sees no services.
 - Customer self-cancel: `Bookings.cancellable_by_customer?/2` gates
   `ManageLive`, re-checked server-side on the event, not just button-hiding.
   Admins cancel unrestricted.
@@ -232,15 +260,8 @@ Repo-local aliases:
 - Edit link: `BookLive` shows "Edit service" in the host layout for viewers who
   pass `Policy.can_manage?/2` AND core's `AdminEditHelper` gate (admin area +
   the `bookings` module key). It travels through `app_layout`'s
-  `module_assigns`, not the 2.62+ `admin_edit_url` attrs, because older cores
-  flatten `module_assigns` into the host layout but lack the attrs; keep it
-  that way while the core floor is below 2.62.0. `module_assigns` skips the
-  helper's gate, so only ever fill it from assigns the helper set.
-  Clear both Edit assigns on every `handle_params/3` call. `BookLive`'s
-  `booking_layout/1` also forwards change flags for the flattened Edit keys:
-  core's flattening uses `Map.put_new`, and its newer resolver tracks only
-  binary URLs, so clearing the socket alone leaves a stale link in the host
-  layout. Keep the adapter until core tracks removal through `module_assigns`.
+  `admin_edit_url` / `admin_edit_label` attrs. Clear both Edit assigns on every
+  `handle_params/3` call.
   Before reloading the flow, `BookingFlow.clear_flow/1` releases its hold and
   unsubscribes from the old service, including navigation to a missing slug.
   Notifications must match the current service; unavailable pages ignore
@@ -250,13 +271,28 @@ Repo-local aliases:
   capacity read (picker, advisory, locked create) sees them; expired rows
   are ignored and lazily pruned inside the locked create; the flow's own
   hold is excluded via `exclude_hold:` and consumed on success; it is
-  released on `terminate/2`, Back, and before a new pick.
+  released on `terminate/2`, Back, and before a new pick. A hold taken or
+  released is broadcast on the service topic only, so open pickers follow it
+  and the admin list does not reload for it.
 - Manage tokens: `Phoenix.Token` signed against the HOST endpoint. The
   resolution order is explicit `config :phoenix_kit, endpoint:` (tests) →
   core's `Config.get_parent_endpoint/0` (host apps) →
   `PhoenixKitWeb.Endpoint`. Core's own endpoint is compiled but not running
   in a host; signing against it crashes on the ETS lookup. Salt
-  `phoenix_kit_bookings.manage`, max age 90 days.
+  `phoenix_kit_bookings.manage`. A link lives until 90 days after the booking
+  ended, measured from the booking and not from the signing: `max_advance` can
+  be blank, and a stay booked six months out must stay cancellable from its
+  confirmation mail.
+- Public mail limits: `RateLimit.check/2` runs before a public booking and a
+  waitlist join, per address and per peer, per hour. A guest form mails the
+  address it is given, with a typed name in the body. It fails open (capacity
+  is the locked create's), unlike the projects portal. `:peer_ip` is read in
+  `mount/3`, the only place `get_connect_info/2` answers, and needs
+  `connect_info: [:peer_data, ...]` on the host's socket; without it the address
+  bucket still works. Admin and importer paths do not pass through it.
+- Widget identity: `BookingWidgetLive` resolves `current_user_uuid` with core's
+  `assign_embedded_current_user/2`, so an unknown or deactivated account is a
+  guest. Never `Auth.get_user/1` alone: it answers for a deactivated account.
 
 ### Capacity, providers, pricing, email, waitlist
 
@@ -285,16 +321,18 @@ Repo-local aliases:
   mode: without one `ReminderWorker.schedule/2` fails into its rescue and
   "no reminder was scheduled" passes whether or not the option works.
 - Waitlist (`Schemas.WaitlistEntry`): join is idempotent per
-  service+email+date; a cancellation notifies every open entry for the freed
-  dates (notify-all, first-to-book) and flips them to `notified`.
+  service+email+date, the address compared without case, and a date already
+  past is refused; a cancellation notifies every open entry for every date the
+  booking touched (notify-all, first-to-book) and flips them to `notified`.
 - Cancellation windows: `cancel_notice` minutes before start; day-mode
   rounds up to whole days.
 
 ### Landmines
 
-- A DB the probe cannot reach excludes the whole `:integration` set behind a
-  banner while the run stays GREEN. Check the banner is absent before reading
-  a pass as meaningful.
+- A DB the preflight cannot reach excludes the whole `:integration` set behind
+  a banner while the run stays GREEN. Check the banner is absent before reading
+  a pass as meaningful. A DB that answers and then fails to build stops the run:
+  behind core's floor it needs `mix test.reset`, or a fresh `PGDATABASE`.
 - `Swoosh.TestAssertions.assert_email_sent` pops the mailbox IN ORDER:
   consume the confirmation before asserting the cancellation or reminder.
 - `Scope.can?/2` gates on module enablement, so `bookings_enabled` must be
@@ -332,6 +370,8 @@ lib/phoenix_kit_bookings/
   paths.ex                              every path, via Routes.path/1
   migrations/schema.ex                  module-owned chain
   web/routes.ex                         public routes (generate/1; locale + bare)
+  rate_limit.ex                         per-address and per-peer ceiling on the public mail paths
+  expected_schema.ex                    GENERATED manifest for `mix phoenix_kit.doctor` / `repair`
   web/format.ex                         range and date formatting in the site frame
   web/admin/{services,service_form,bookings,settings}_live.ex
   web/public/booking_flow.ex            shared state, events and markup of both booking LVs
@@ -359,7 +399,7 @@ missing server or a failed broadcast is a no-op.
 | Topic | Message | Subscribers |
 |---|---|---|
 | `phoenix_kit_bookings:bookings` (`Bookings.admin_topic/0`) | `{:bookings_changed, service_uuid}` | admin `BookingsLive` |
-| `phoenix_kit_bookings:service:<uuid>` (`Bookings.service_topic/1`) | `{:bookings_changed, service_uuid}` on every booking mutation and every new hold | the public flows (exactly one topic each) |
+| `phoenix_kit_bookings:service:<uuid>` (`Bookings.service_topic/1`) | `{:bookings_changed, service_uuid}` on every booking mutation and every hold taken or released | the public flows (exactly one topic each) |
 | `phoenix_kit_bookings:services` (`Services.services_topic/0`) | `{:bookings_service_changed, service_uuid}` on every service, rule and unit mutation | admin `ServicesLive` |
 
 ### Settings
@@ -392,7 +432,7 @@ Core settings read: `"time_zone"` (the site frame), `"from_email"` /
 | Session key | Required | Meaning |
 |---|---|---|
 | `"slug"` | yes | active service slug; unknown slug renders the "not taking bookings" notice |
-| `"current_user_uuid"` | no | resolved via `PhoenixKit.Users.Auth.get_user/1`; enables `login_required` services and prefill |
+| `"current_user_uuid"` | no | resolved by core's `assign_embedded_current_user/2` (unknown or deactivated = guest); enables `login_required` services and prefill |
 | `"prefill"` | no | map with `"customer_name"` / `"customer_email"` |
 | `"wrapper_class"` | no | class on the outer `<div>` |
 
@@ -402,8 +442,9 @@ Core settings read: `"time_zone"` (the site frame), `"from_email"` /
 contexts return (`:invalid_range`, `:too_short`, `:too_long`, `:in_past`,
 `:insufficient_notice`, `:too_far_ahead`, `:outside_availability`,
 `:overlap`, `:at_capacity`, `:login_required`, `:service_unavailable`,
-`:not_cancellable`, `:cancel_window_passed`, `:invalid_waitlist`) to a
-user-facing string; LiveViews never show a raw atom or engine string.
+`:not_cancellable`, `:not_pending`, `:cancel_window_passed`, `:rate_limited`,
+`:invalid_waitlist`) to a user-facing string; LiveViews never show a raw atom
+or engine string.
 
 ## Database & migrations
 
@@ -419,16 +460,24 @@ applies it in hosts; tests run it via `Ecto.Migrator.run` over the
   statement it certifies. Replaying it on a V1 database adds only what V2
   adds.
 - `migrated_version_runtime/1` reads the marker; a marker-less services
-  table reads as 1 (it predates the marker), a missing table as 0.
+  table reads as 1 (it predates the marker), a missing table or a dead pool as
+  0, and an invalid prefix raises.
 - `down/1` with `version: 1` drops only the V2 column and restamps;
-  `version: 0` (the default) drops all six tables.
+  `version: 0` (the default) drops all six tables; the current version or above
+  changes nothing.
+- `expected_schema.ex` is GENERATED by core's
+  `dev_docs/squash/generate_module_manifest.exs` (its header has the command) and
+  is what `mix phoenix_kit.doctor` and `repair` check these tables against.
+  Regenerate it with every chain change; `expected_schema_test.exs` fails until
+  it is.
 - `opts[:prefix]` is validated as an identifier (`ArgumentError` otherwise)
   before interpolation, and `uuid_generate_v7()` is always schema-qualified:
   a bare call breaks every `--prefix` install and works everywhere else.
   `schema_prefix_conformance_test.exs` greps for both.
 - V1 and V2 are released and immutable. A shape change is V3: add its
   statements to `up/1`, bump `@current_version`, extend `down/1`, mirror the
-  V2 wrapper for the test chain, and extend `migrations_test.exs`.
+  V2 wrapper for the test chain, regenerate the manifest, and extend
+  `migrations_test.exs`.
 
 UUIDv7 primary keys; `use PhoenixKit.SchemaPrefix` on every table-backed
 schema (the conformance test enforces it).
@@ -438,17 +487,19 @@ schema (the conformance test enforces it).
 - Test DB `phoenix_kit_bookings_test` (`MIX_TEST_PARTITION` suffix
   honoured). `mix test.setup` creates it, `mix test.reset` drops and
   recreates it. `config/test.exs` honours `PGUSER` (default `postgres`),
-  `PGPASSWORD`, `PGHOST`.
+  `PGPASSWORD`, `PGHOST`, `PGDATABASE` (a value exported for other work
+  redirects the suite too) and `PGPOOL` (a positive integer).
 - Without Postgres: `engine_test.exs` (Engine + DayEngine, pure),
   `core_pin_conformance_test.exs`, `schema_prefix_conformance_test.exs`,
   `phoenix_kit_bookings_test.exs`. Everything on `DataCase` / `LiveCase` is
-  `:integration` and excluded when `test_helper.exs`'s `psql -lqt` probe or
-  `Repo.start_link` fails (a banner says so).
+  `:integration` and excluded when core's `PostgresPreflight` cannot reach
+  the database (a banner says so).
 - Schema build in `test_helper.exs`: `PhoenixKit.Migration.ensure_current/2`
   for core's tables, then the module chain via `Ecto.Migrator.run` (`{1,
   Test.SchemaMigration}`, `{2, Test.SchemaMigrationV2}`), then
   `bookings_enabled` set BEFORE `Sandbox.mode(:manual)`.
-  `PhoenixKit.PubSub.Manager` and `PhoenixKit.ModuleRegistry` are started,
+  `PhoenixKit.PubSub.Manager`, `PhoenixKit.ModuleRegistry` and the rate
+  limiter's backend are started,
   the URL-prefix persistent term is forced to `"/"`, and `Test.Endpoint`
   starts only when the DB is available.
 - Support modules: `DataCase` (sandbox owner, `errors_on/1`, imports
@@ -473,9 +524,7 @@ schema (the conformance test enforces it).
   functions take the zone as their last argument for the same reason.
 - Known noise, not failures: a "redefining module" warning per
   `test/support` module (`elixirc_paths(:test)` compiles the directory AND
-  `test_helper.exs` `Code.require_file`s the same files), and
-  `Phoenix.LiveViewTest` `missing_form_id` warnings from
-  `public_live_test.exs` (the booking forms carry no `id`). No known flakes.
+  `test_helper.exs` `Code.require_file`s the same files). No known flakes.
 
 ## Feature notes
 

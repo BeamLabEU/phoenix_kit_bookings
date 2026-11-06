@@ -25,10 +25,11 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   """
 
   use Phoenix.Component
+  use Gettext, backend: PhoenixKitWeb.Gettext
 
   import Phoenix.LiveView
 
-  alias PhoenixKitBookings.{Bookings, Engine, Errors, Paths, Pricing, Services}
+  alias PhoenixKitBookings.{Bookings, Engine, Errors, Paths, Pricing, RateLimit, Services}
   alias PhoenixKitBookings.Schemas.{Booking, Service}
   alias PhoenixKitBookings.Web.Format
 
@@ -87,6 +88,17 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     end
 
     assign(socket, service: nil, hold_uuid: nil)
+  end
+
+  @doc """
+  The visitor's address for `RateLimit`. `get_connect_info/2` answers only during
+  `mount/3`, so each LiveView reads it there and keeps it in `:peer_ip`.
+  """
+  def peer_ip(socket) do
+    case get_connect_info(socket, :peer_data) do
+      %{address: address} -> address
+      _ -> nil
+    end
   end
 
   @doc "Releases flow resources when either public LiveView terminates."
@@ -173,6 +185,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
     with {:ok, start_t} <- parse_time(start_str),
          {:ok, end_t} <- parse_time(end_str),
+         true <- on_grid?(socket.assigns.slots, start_t, end_t),
          end_date = end_date_of(date, start_t, end_t),
          true <- Engine.frame_span_intact?(date, start_t, end_date, end_t) do
       range =
@@ -185,7 +198,8 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   end
 
   def handle_event("pick_free", %{"picker" => params}, socket) do
-    with {:ok, date} <- Date.from_iso8601(params["date"] || ""),
+    with true <- socket.assigns.service.flexible_duration,
+         {:ok, date} <- Date.from_iso8601(params["date"] || ""),
          {:ok, start_t} <- parse_time(params["start_time"]),
          {:ok, end_t} <- parse_time(params["end_time"]),
          end_date = end_date_of(date, start_t, end_t),
@@ -225,9 +239,12 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
       "customer_email" => params["customer_email"]
     }
 
-    case Bookings.join_waitlist(service, attrs) do
-      {:ok, _entry} ->
-        {:noreply, assign(socket, waitlist_done: true)}
+    with :ok <- RateLimit.check(params["customer_email"], socket.assigns[:peer_ip]),
+         {:ok, _entry} <- Bookings.join_waitlist(service, attrs) do
+      {:noreply, assign(socket, waitlist_done: true)}
+    else
+      {:error, :rate_limited} ->
+        {:noreply, rate_limited(socket)}
 
       {:error, _changeset} ->
         {:noreply,
@@ -240,7 +257,24 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     {:noreply, assign(socket, customer_form: to_form(changeset, action: :validate))}
   end
 
+  # Only the details step has a form to submit. Replayed after `:done`, the
+  # event would book the same range again.
+  def handle_event("submit_details", _params, %{assigns: %{step: step}} = socket)
+      when step != :details,
+      do: {:noreply, socket}
+
   def handle_event("submit_details", %{"booking" => params}, socket) do
+    case RateLimit.check(params["customer_email"], socket.assigns[:peer_ip]) do
+      :ok -> submit_details(socket, params)
+      {:error, :rate_limited} -> {:noreply, rate_limited(socket)}
+    end
+  end
+
+  defp rate_limited(socket) do
+    assign(socket, flow_error: Errors.message(:rate_limited), flow_error_reason: nil)
+  end
+
+  defp submit_details(socket, params) do
     %{service: service, selected_range: range, current_user: user} = socket.assigns
 
     case Bookings.create_booking(service, range, params,
@@ -268,6 +302,16 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
          )
          |> refresh_pick()}
     end
+  end
+
+  # The grid is the service's own: its params arrive from the client, and neither
+  # the lib nor the locked create checks that a fixed slot sits on the grid, so a
+  # hand-made 10:30 on an hourly service would take two slots. Membership only:
+  # a slot taken meanwhile is `advisory_advance/2`'s to explain.
+  defp on_grid?(slots, start_t, end_t) do
+    Enum.any?(slots, fn {slot_start, slot_end, _status} ->
+      Time.compare(slot_start, start_t) == :eq and Time.compare(slot_end, end_t) == :eq
+    end)
   end
 
   # A picked span ends on the next date when it crosses midnight. The zone
@@ -379,9 +423,11 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
         <p class="text-xs text-base-content/50 mt-1">{Format.mode_summary(@service)}</p>
         <p :if={Pricing.tag(@service)} class="text-sm font-medium mt-1">{Pricing.tag(@service)}</p>
         <p :if={@service.checkin_time} class="text-xs text-base-content/50">
-          Check-in {Calendar.strftime(@service.checkin_time, "%H:%M")}
+          {gettext("Check-in %{time}", time: Calendar.strftime(@service.checkin_time, "%H:%M"))}
           <span :if={@service.checkout_time}>
-            · check-out {Calendar.strftime(@service.checkout_time, "%H:%M")}
+            · {gettext("check-out %{time}",
+              time: Calendar.strftime(@service.checkout_time, "%H:%M")
+            )}
           </span>
         </p>
       </div>
@@ -399,6 +445,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
           />
           <.waitlist_panel
             :if={show_waitlist?(assigns)}
+            service={@service}
             pick_date={@pick_date}
             customer_form={@customer_form}
             waitlist_done={@waitlist_done}
@@ -436,15 +483,20 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     ~H"""
     <div class="border-t border-base-200 pt-3">
       <div :if={@waitlist_done} class="alert alert-success text-sm">
-        You're on the waitlist — we'll email you the moment a spot opens up.
+        {gettext("You're on the waitlist — we'll email you the moment a spot opens up.")}
       </div>
-      <form :if={!@waitlist_done} phx-submit="join_waitlist" class="flex flex-col gap-2">
+      <form
+        :if={!@waitlist_done}
+        id={"booking-waitlist-#{@service.uuid}"}
+        phx-submit="join_waitlist"
+        class="flex flex-col gap-2"
+      >
         <p class="text-sm text-base-content/70">
-          Fully booked? Join the waitlist and get an email when a spot frees up.
+          {gettext("Fully booked? Join the waitlist and get an email when a spot frees up.")}
         </p>
         <div class="flex flex-wrap items-end gap-2">
           <label class="fieldset">
-            <span class="fieldset-legend text-xs">Date</span>
+            <span class="fieldset-legend text-xs">{gettext("Date")}</span>
             <input
               type="date"
               name="waitlist[date]"
@@ -454,7 +506,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
             />
           </label>
           <label class="fieldset">
-            <span class="fieldset-legend text-xs">Name</span>
+            <span class="fieldset-legend text-xs">{gettext("Name")}</span>
             <input
               type="text"
               name="waitlist[customer_name]"
@@ -464,7 +516,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
             />
           </label>
           <label class="fieldset">
-            <span class="fieldset-legend text-xs">Email</span>
+            <span class="fieldset-legend text-xs">{gettext("Email")}</span>
             <input
               type="email"
               name="waitlist[customer_email]"
@@ -473,7 +525,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
               required
             />
           </label>
-          <button type="submit" class="btn btn-sm">Join waitlist</button>
+          <button type="submit" class="btn btn-sm">{gettext("Join waitlist")}</button>
         </div>
       </form>
     </div>
@@ -482,10 +534,10 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
   defp picker(%{service: %Service{time_unit: unit}} = assigns) when unit in ["day", "night"] do
     ~H"""
-    <form phx-submit="pick_dates" class="flex flex-col gap-3">
+    <form id={"booking-dates-#{@service.uuid}"} phx-submit="pick_dates" class="flex flex-col gap-3">
       <div class="flex flex-wrap items-end gap-3">
         <label class="fieldset">
-          <span class="fieldset-legend text-xs">{if @service.time_unit == "night", do: "Check-in", else: "First day"}</span>
+          <span class="fieldset-legend text-xs">{if @service.time_unit == "night", do: gettext("Check-in"), else: gettext("First day")}</span>
           <input
             type="date"
             name="picker[starts_on]"
@@ -495,10 +547,10 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
           />
         </label>
         <label class="fieldset">
-          <span class="fieldset-legend text-xs">{if @service.time_unit == "night", do: "Check-out", else: "Day after the last day"}</span>
+          <span class="fieldset-legend text-xs">{if @service.time_unit == "night", do: gettext("Check-out"), else: gettext("Day after the last day")}</span>
           <input type="date" name="picker[ends_on]" class="input" required />
         </label>
-        <button type="submit" class="btn btn-primary">Check availability</button>
+        <button type="submit" class="btn btn-primary">{gettext("Check availability")}</button>
       </div>
       <p class="text-xs text-base-content/50">
         {next_open_days_note(@day_capacity)}
@@ -509,9 +561,13 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
   defp picker(%{service: %Service{flexible_duration: true}} = assigns) do
     ~H"""
-    <form phx-submit="pick_free" class="flex flex-wrap items-end gap-3">
+    <form
+      id={"booking-range-#{@service.uuid}"}
+      phx-submit="pick_free"
+      class="flex flex-wrap items-end gap-3"
+    >
       <label class="fieldset">
-        <span class="fieldset-legend text-xs">Date</span>
+        <span class="fieldset-legend text-xs">{gettext("Date")}</span>
         <input
           type="date"
           name="picker[date]"
@@ -522,14 +578,14 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
         />
       </label>
       <label class="fieldset">
-        <span class="fieldset-legend text-xs">From</span>
+        <span class="fieldset-legend text-xs">{gettext("From")}</span>
         <input type="time" name="picker[start_time]" class="input" required />
       </label>
       <label class="fieldset">
-        <span class="fieldset-legend text-xs">To</span>
+        <span class="fieldset-legend text-xs">{gettext("To")}</span>
         <input type="time" name="picker[end_time]" class="input" required />
       </label>
-      <button type="submit" class="btn btn-primary">Continue</button>
+      <button type="submit" class="btn btn-primary">{gettext("Continue")}</button>
     </form>
     """
   end
@@ -537,9 +593,9 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   defp picker(assigns) do
     ~H"""
     <div class="flex flex-col gap-3">
-      <form phx-change="pick_date" class="w-fit">
+      <form id={"booking-date-#{@service.uuid}"} phx-change="pick_date" class="w-fit">
         <label class="fieldset">
-          <span class="fieldset-legend text-xs">Date</span>
+          <span class="fieldset-legend text-xs">{gettext("Date")}</span>
           <input
             type="date"
             name="picker[date]"
@@ -551,7 +607,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
       </form>
 
       <div :if={available_slots(@slots) == []} class="text-sm text-base-content/50 py-4">
-        No free times on this date — try another day.
+        {gettext("No free times on this date — try another day.")}
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -577,13 +633,14 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
         <span>
           {selected_label(@service, @selected_range)}
           <span :if={@service.require_approval} class="badge badge-warning badge-sm ml-2">
-            needs approval
+            {gettext("needs approval")}
           </span>
         </span>
       </div>
 
       <.form
         for={@customer_form}
+        id={"booking-details-#{@service.uuid}"}
         phx-change="validate_details"
         phx-submit="submit_details"
         class="flex flex-col gap-3"
@@ -591,30 +648,32 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
         <PhoenixKitWeb.Components.Core.Input.input
           field={@customer_form[:customer_name]}
           type="text"
-          label="Your name"
+          label={gettext("Your name")}
         />
         <PhoenixKitWeb.Components.Core.Input.input
           field={@customer_form[:customer_email]}
           type="email"
-          label="Email"
+          label={gettext("Email")}
         />
         <PhoenixKitWeb.Components.Core.Input.input
           field={@customer_form[:customer_phone]}
           type="tel"
-          label="Phone (optional)"
+          label={gettext("Phone (optional)")}
         />
         <PhoenixKitWeb.Components.Core.Textarea.textarea
           field={@customer_form[:notes]}
-          label="Notes (optional)"
+          label={gettext("Notes (optional)")}
         />
         <p :if={Pricing.total(@service, @selected_range)} class="text-sm font-medium">
-          Total: {Pricing.format(Pricing.total(@service, @selected_range), @service.currency)}
+          {gettext("Total:")} {Pricing.format(Pricing.total(@service, @selected_range), @service.currency)}
         </p>
         <div class="flex gap-2">
           <button type="submit" class="btn btn-primary">
-            {if @service.require_approval, do: "Request booking", else: "Confirm booking"}
+            {if @service.require_approval,
+              do: gettext("Request booking"),
+              else: gettext("Confirm booking")}
           </button>
-          <button type="button" class="btn btn-ghost" phx-click="back">Back</button>
+          <button type="button" class="btn btn-ghost" phx-click="back">{gettext("Back")}</button>
         </div>
       </.form>
     </div>
@@ -626,19 +685,20 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     <div class="flex flex-col gap-3">
       <div class={["alert", @booking.status == "pending" && "alert-warning" || "alert-success"]}>
         <span :if={@booking.status == "confirmed"}>
-          Booked! {Format.format_range(@booking)} is yours.
+          {gettext("Booked! %{range} is yours.", range: Format.format_range(@booking))}
         </span>
         <span :if={@booking.status == "pending"}>
-          Request received for {Format.format_range(@booking)}. You'll hear back once it's approved.
+          {gettext("Request received for %{range}. You'll hear back once it's approved.",
+            range: Format.format_range(@booking)
+          )}
         </span>
       </div>
       <p :if={unit_line(@booking)} class="text-sm">{unit_line(@booking)}</p>
       <p :if={@booking.total_price} class="text-sm font-medium">
-        Total: {Pricing.format(@booking.total_price, @booking.currency)}
+        {gettext("Total:")} {Pricing.format(@booking.total_price, @booking.currency)}
       </p>
       <div class="text-sm">
-        Manage or cancel this booking any time (a confirmation email with a
-        calendar invite is on its way):
+        {gettext("Manage or cancel this booking any time (a confirmation email with a calendar invite is on its way):")}
         <a
           href={Paths.public_manage(Bookings.manage_token(@booking))}
           class="link link-primary break-all"
@@ -655,7 +715,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   defp unit_line(%Booking{unit_uuid: unit_uuid}) do
     case Services.unit_name(unit_uuid) do
       nil -> nil
-      name -> "Assigned: #{name}"
+      name -> gettext("Assigned: %{name}", name: name)
     end
   end
 
@@ -665,9 +725,13 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   defp selected_label(%Service{time_unit: unit} = service, {:dates, starts_on, ends_on})
        when unit in ["day", "night"] do
     n = Date.diff(ends_on, starts_on)
-    word = if unit == "night", do: "night(s)", else: "day(s)"
 
-    "#{Calendar.strftime(starts_on, "%d %b %Y")} → #{Calendar.strftime(ends_on, "%d %b %Y")} · #{n} #{word} · #{service.name}"
+    length =
+      if unit == "night",
+        do: ngettext("%{count} night", "%{count} nights", n),
+        else: ngettext("%{count} day", "%{count} days", n)
+
+    "#{Calendar.strftime(starts_on, "%d %b %Y")} → #{Calendar.strftime(ends_on, "%d %b %Y")} · #{length} · #{service.name}"
   end
 
   defp selected_label(_service, {starts_at, ends_at}) do
@@ -681,6 +745,11 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
   defp next_open_days_note(day_capacity) do
     open = Enum.count(day_capacity, fn {_d, n} -> n > 0 end)
-    "#{open} open day(s) in the current booking window."
+
+    ngettext(
+      "%{count} open day in the current booking window.",
+      "%{count} open days in the current booking window.",
+      open
+    )
   end
 end

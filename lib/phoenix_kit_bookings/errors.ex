@@ -33,8 +33,13 @@ defmodule PhoenixKitBookings.Errors do
 
   def message(:not_cancellable, _), do: gettext("This booking has already been cancelled.")
 
+  def message(:not_pending, _), do: gettext("This booking is no longer waiting for approval.")
+
   def message(:cancel_window_passed, _),
     do: gettext("The cancellation window for this booking has passed.")
+
+  def message(:rate_limited, _),
+    do: gettext("Too many attempts from this address. Please try again later.")
 
   def message(:invalid_waitlist, _),
     do: gettext("Please provide a valid name, email, and date to join the waitlist.")

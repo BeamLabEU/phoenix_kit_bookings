@@ -32,15 +32,21 @@ defmodule PhoenixKitBookings.Schemas.WaitlistEntry do
 
   def statuses, do: @statuses
 
-  @doc "`service_uuid` is stamped by the context, never cast."
-  def changeset(entry, attrs) do
+  @doc """
+  `service_uuid` is stamped by the context, never cast. `today` is the site's
+  date: nothing frees up on a day already gone.
+  """
+  def changeset(entry, attrs, %Date{} = today) do
     entry
     |> cast(attrs, [:date, :customer_name, :customer_email])
     |> validate_required([:date, :customer_name, :customer_email])
     |> validate_length(:customer_name, max: 255)
     |> validate_length(:customer_email, max: 255)
-    |> validate_format(:customer_email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    |> validate_format(:customer_email, ~r/\A[^\s@]+@[^\s@]+\.[^\s@]+\z/,
       message: "must be a valid email address"
     )
+    |> validate_change(:date, fn :date, date ->
+      if Date.compare(date, today) == :lt, do: [date: "is in the past"], else: []
+    end)
   end
 end

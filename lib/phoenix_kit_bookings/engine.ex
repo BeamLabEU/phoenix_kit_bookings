@@ -64,28 +64,56 @@ defmodule PhoenixKitBookings.Engine do
   end
 
   @doc """
-  Maps availability rules onto lib `%Availability{}` structs. A service
-  with no rules is always open — a synthetic full-day window keeps slot
-  generation and validation consistent.
+  Maps availability rules onto lib `%Availability{}` structs, with the same
+  meaning `DayEngine.open_date?/2` gives them.
+
+  The lib only reads a closed window on a date override, and answers no window
+  at all for a day no rule mentions, so two things are settled here:
+
+  - A closed weekday beats the open rules that cover it: those rules lose that
+    weekday.
+  - With no open rule at all the service is open except where closed, as it is
+    with no rules: a synthetic full-day window keeps slot generation and
+    validation consistent. Without it one blackout date would close every other
+    day too.
   """
   def lib_availability([]), do: [full_day_window()]
 
   def lib_availability(rules) when is_list(rules) do
-    Enum.map(rules, fn %AvailabilityRule{} = rule ->
-      %Availability{
-        days_of_week: rule.days_of_week,
-        date: rule.date,
-        start_time: rule.start_time || ~T[00:00:00],
-        end_time: rule.end_time || ~T[23:59:59],
-        available: rule.available,
-        resource_id: nil
-      }
-    end)
+    closed = closed_weekdays(rules)
+    windows = Enum.map(rules, &rule_window(&1, closed))
+
+    if Enum.any?(rules, & &1.available),
+      do: windows,
+      else: [full_day_window(closed) | windows]
   end
 
-  defp full_day_window do
+  defp closed_weekdays(rules) do
+    rules
+    |> Enum.filter(&(not &1.available and is_nil(&1.date) and is_list(&1.days_of_week)))
+    |> Enum.flat_map(& &1.days_of_week)
+  end
+
+  defp rule_window(%AvailabilityRule{} = rule, closed) do
     %Availability{
-      days_of_week: [1, 2, 3, 4, 5, 6, 7],
+      days_of_week: open_days(rule, closed),
+      date: rule.date,
+      start_time: rule.start_time || ~T[00:00:00],
+      end_time: rule.end_time || ~T[23:59:59],
+      available: rule.available,
+      resource_id: nil
+    }
+  end
+
+  defp open_days(%AvailabilityRule{available: true, days_of_week: days}, closed)
+       when is_list(days),
+       do: days -- closed
+
+  defp open_days(%AvailabilityRule{days_of_week: days}, _closed), do: days
+
+  defp full_day_window(closed \\ []) do
+    %Availability{
+      days_of_week: [1, 2, 3, 4, 5, 6, 7] -- closed,
       start_time: ~T[00:00:00],
       end_time: ~T[23:59:59],
       available: true
@@ -155,28 +183,52 @@ defmodule PhoenixKitBookings.Engine do
   a European zone, so a 03:30–04:30 pick would be stored as 04:00–04:30 and
   a 02:30–03:30 one as thirty minutes) or that the fall-back Sunday repeats
   an hour.
-  `tz` defaults to the site's setting; tests pass a zone explicitly.
+
+  A slot `validate_request/5` would refuse is `:unavailable` too: one already
+  past, inside `min_notice`, or beyond `max_advance`. Those are judged here
+  against the site's clock. The lib reads the UTC clock against wall clocks in
+  the site frame, which is off by the site's offset (west of UTC it hides slots
+  that are still free), and it has no past check of its own.
+
+  `tz` and `now` default to the site's setting and the clock; tests pass both.
   """
-  def bookable_slots(service, rules, date, bookings, tz \\ site_tz())
+  def bookable_slots(service, rules, date, bookings, tz \\ site_tz(), now \\ DateTime.utc_now())
 
   def bookable_slots(
         %Service{time_unit: "minutes"} = service,
         rules,
         %Date{} = date,
         bookings,
-        tz
+        tz,
+        %DateTime{} = now
       ) do
+    frame_now = to_frame(now, tz)
+
     date
     |> TimeSlots.bookable_slots(
-      %{booking_config(service) | availability: nil},
+      %{booking_config(service) | availability: nil, min_notice: 0, max_advance: nil},
       lib_availability(rules),
       bookings_to_events(bookings, service, tz)
     )
     |> Enum.map(fn {start_time, end_time, status} ->
-      if slot_intact?(date, start_time, end_time, tz),
-        do: {start_time, end_time, status},
-        else: {start_time, end_time, :unavailable}
+      if slot_intact?(date, start_time, end_time, tz) and
+           in_booking_window?(service, date, start_time, frame_now),
+         do: {start_time, end_time, status},
+         else: {start_time, end_time, :unavailable}
     end)
+  end
+
+  defp in_booking_window?(%Service{} = service, date, start_time, frame_now) do
+    earliest = DateTime.add(frame_now, service.min_notice * 60, :second)
+
+    DateTime.compare(DateTime.new!(date, start_time, "Etc/UTC"), earliest) != :lt and
+      within_advance?(service, date, frame_now)
+  end
+
+  defp within_advance?(%Service{max_advance: nil}, _date, _frame_now), do: true
+
+  defp within_advance?(%Service{max_advance: days}, date, frame_now) do
+    Date.compare(date, Date.add(DateTime.to_date(frame_now), days)) != :gt
   end
 
   defp slot_intact?(date, start_time, end_time, tz) do
@@ -195,7 +247,7 @@ defmodule PhoenixKitBookings.Engine do
   02:30–03:00 is fine, its end IS the jump. On the fall-back day a start in
   the repeated hour resolves to its first occurrence, so 03:30–04:00 would
   store ninety minutes. Either way the stored booking is not the one the
-  customer picked, so every picker refuses the span: `bookable_slots/5`
+  customer picked, so every picker refuses the span: `bookable_slots/6`
   marks such a slot `:unavailable`, and the public flow rejects a
   hand-picked one (free-form services have no slot grid to mark).
 
@@ -293,8 +345,7 @@ defmodule PhoenixKitBookings.Engine do
   # The frame is the site's wall clock tagged UTC, so the lib's minute
   # arithmetic never sees a zone. Both conversions resolve the site's zone
   # AT THE INSTANT BEING CONVERTED through core's helpers (`shift_to_offset/2`
-  # in, `parse_datetime_local/2` out — both older than the 2.0 pin, both
-  # per-instant on any core that knows IANA ids).
+  # in, `parse_datetime_local/2` out).
   #
   # They used to add one scalar, `offset_to_seconds/1` of the setting. Since
   # core 2.13.9 that setting holds an IANA id on any site that touched the
@@ -311,7 +362,7 @@ defmodule PhoenixKitBookings.Engine do
   already answers the default then).
 
   Every read is a settings query, so the operations that convert many
-  values (`validate_request/5`, `bookable_slots/5`) read it ONCE and pass
+  values (`validate_request/5`, `bookable_slots/6`) read it ONCE and pass
   it down rather than letting `utc_to_frame/1` re-read per conversion.
   """
   @spec site_tz() :: String.t()

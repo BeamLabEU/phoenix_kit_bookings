@@ -115,10 +115,16 @@ defmodule PhoenixKitBookings.EngineTest do
       assert Engine.from_frame(~D[2026-07-15], ~T[10:00:00.5], "2") == ~U[2026-07-15 08:00:00.5Z]
     end
 
+    # The dates below are fixed, so the clock has to be too.
+    @year_start ~U[2026-01-01 00:00:00Z]
+
     test "slots inside a spring-forward gap are unavailable" do
       # Tallinn skips 03:00–03:59 on 2026-03-29.
       service = minutes_service(duration: 30, slot_interval: 30)
-      slots = Engine.bookable_slots(service, [], ~D[2026-03-29], [], "Europe/Tallinn")
+
+      slots =
+        Engine.bookable_slots(service, [], ~D[2026-03-29], [], "Europe/Tallinn", @year_start)
+
       by_start = Map.new(slots, fn {start_t, _end_t, status} -> {start_t, status} end)
 
       assert by_start[~T[02:00:00]] == :available
@@ -134,7 +140,8 @@ defmodule PhoenixKitBookings.EngineTest do
           [],
           ~D[2026-03-29],
           [],
-          "Europe/Tallinn"
+          "Europe/Tallinn",
+          @year_start
         )
 
       hour_by_start = Map.new(hour_slots, fn {start_t, _end_t, status} -> {start_t, status} end)
@@ -144,7 +151,7 @@ defmodule PhoenixKitBookings.EngineTest do
 
       # fall-back day (2026-10-25, 04:00 → 03:00): a slot starting in the
       # repeated hour and ending after it would store ninety minutes
-      fall = Engine.bookable_slots(service, [], ~D[2026-10-25], [], "Europe/Tallinn")
+      fall = Engine.bookable_slots(service, [], ~D[2026-10-25], [], "Europe/Tallinn", @year_start)
       fall_by_start = Map.new(fall, fn {start_t, _end_t, status} -> {start_t, status} end)
       assert fall_by_start[~T[02:30:00]] == :available
       assert fall_by_start[~T[03:00:00]] == :available
@@ -152,10 +159,10 @@ defmodule PhoenixKitBookings.EngineTest do
       assert fall_by_start[~T[04:00:00]] == :available
 
       # The same grid on an ordinary day, or in a zone that never moves, is untouched.
-      assert Engine.bookable_slots(service, [], ~D[2026-03-28], [], "Europe/Tallinn")
+      assert Engine.bookable_slots(service, [], ~D[2026-03-28], [], "Europe/Tallinn", @year_start)
              |> Enum.all?(fn {_s, _e, status} -> status == :available end)
 
-      assert Engine.bookable_slots(service, [], ~D[2026-03-29], [], "2")
+      assert Engine.bookable_slots(service, [], ~D[2026-03-29], [], "2", @year_start)
              |> Enum.all?(fn {_s, _e, status} -> status == :available end)
     end
 
@@ -452,6 +459,214 @@ defmodule PhoenixKitBookings.EngineTest do
       dated = booking_on(~D[2030-06-10], ~D[2030-06-12])
 
       assert [] = Engine.bookings_to_events([cancelled, dated], minutes_service())
+    end
+  end
+
+  describe "closed rules on minute services" do
+    # 2030-06-12 is a Wednesday.
+    defp open_slots(service, rules, date) do
+      service
+      |> Engine.bookable_slots(rules, date, [], "0", ~U[2030-01-01 00:00:00Z])
+      |> Enum.filter(fn {_start, _end, status} -> status == :available end)
+    end
+
+    defp validate_at(service, rules, %Date{} = date) do
+      starts_at = DateTime.new!(date, ~T[10:00:00], "Etc/UTC")
+
+      Engine.validate_request(
+        service,
+        rules,
+        {starts_at, DateTime.add(starts_at, 3600, :second)},
+        [],
+        now: ~U[2030-01-01 00:00:00Z]
+      )
+    end
+
+    test "one blackout date leaves an always-open service open on every other day" do
+      service = minutes_service()
+      rules = [rule(date: ~D[2030-06-12], available: false)]
+
+      assert open_slots(service, rules, ~D[2030-06-11]) != []
+      assert open_slots(service, rules, ~D[2030-06-12]) == []
+      assert :ok = validate_at(service, rules, ~D[2030-06-11])
+      assert {:error, :outside_availability, _} = validate_at(service, rules, ~D[2030-06-12])
+    end
+
+    test "a closed weekday alone leaves the other days open" do
+      service = minutes_service()
+      rules = [rule(days_of_week: [3], available: false)]
+
+      assert open_slots(service, rules, ~D[2030-06-11]) != []
+      assert open_slots(service, rules, ~D[2030-06-12]) == []
+    end
+
+    test "a closed weekday beats the open rule that covers it" do
+      service = minutes_service()
+
+      rules = [
+        rule(days_of_week: [1, 2, 3, 4, 5], start_time: ~T[09:00:00], end_time: ~T[17:00:00]),
+        rule(days_of_week: [3], available: false)
+      ]
+
+      assert open_slots(service, rules, ~D[2030-06-11]) != []
+      assert open_slots(service, rules, ~D[2030-06-12]) == []
+      assert {:error, :outside_availability, _} = validate_at(service, rules, ~D[2030-06-12])
+    end
+
+    test "an open date with no weekly rules stays the only open date" do
+      service = minutes_service()
+
+      rules = [
+        rule(date: ~D[2030-06-12], start_time: ~T[10:00:00], end_time: ~T[12:00:00])
+      ]
+
+      assert open_slots(service, rules, ~D[2030-06-12]) != []
+      assert open_slots(service, rules, ~D[2030-06-13]) == []
+    end
+  end
+
+  describe "DayEngine rules" do
+    test "an open date with no weekly rules is the only open date, as on minute services" do
+      rules = [rule(date: ~D[2030-06-12], available: true)]
+
+      assert DayEngine.open_date?(rules, ~D[2030-06-12])
+      refute DayEngine.open_date?(rules, ~D[2030-06-13])
+    end
+  end
+
+  describe "DayEngine stay ceiling" do
+    test "a stay with no maximum still stops at a year, like a free-form booking" do
+      service = night_service(max_stay: nil)
+
+      assert :ok =
+               DayEngine.validate(service, [], ~D[2030-06-15], ~D[2031-06-15], [], today: @today)
+
+      assert {:error, :too_long, _} =
+               DayEngine.validate(service, [], ~D[2030-06-15], ~D[9999-12-31], [], today: @today)
+    end
+
+    test "a configured maximum above the ceiling is honoured" do
+      service = night_service(max_stay: 500)
+
+      assert :ok =
+               DayEngine.validate(service, [], ~D[2030-06-15], ~D[2031-10-01], [], today: @today)
+    end
+  end
+
+  describe "bookable_slots/6 — what can be booked from now" do
+    defp status_at(slots, time) do
+      {_start, _end, status} = Enum.find(slots, fn {start, _end, _status} -> start == time end)
+      status
+    end
+
+    test "a slot already past today is not offered" do
+      # 15:00 UTC is 10:00 in New York in January.
+      slots =
+        Engine.bookable_slots(
+          minutes_service(),
+          [],
+          ~D[2030-01-15],
+          [],
+          "America/New_York",
+          ~U[2030-01-15 15:00:00Z]
+        )
+
+      assert status_at(slots, ~T[09:00:00]) == :unavailable
+      assert status_at(slots, ~T[11:00:00]) == :available
+    end
+
+    test "notice counts from the site's clock west of UTC" do
+      slots =
+        Engine.bookable_slots(
+          minutes_service(min_notice: 60),
+          [],
+          ~D[2030-01-15],
+          [],
+          "America/New_York",
+          ~U[2030-01-15 15:00:00Z]
+        )
+
+      # 10:00 there: 11:00 is an hour away. Read against the UTC clock it looks
+      # five hours gone, and the morning goes unsold.
+      assert status_at(slots, ~T[10:00:00]) == :unavailable
+      assert status_at(slots, ~T[11:00:00]) == :available
+    end
+
+    test "notice never reads the lib's UTC clock against the site's wall clock" do
+      # Today's date, because the lib reads the real clock: on any other day it
+      # is too far away to matter. A fixed offset, so no daylight-saving day can
+      # make the slot unavailable for another reason.
+      tz = "-5"
+      now = DateTime.utc_now()
+      two_hours_on = now |> Engine.to_frame(tz) |> DateTime.add(2 * 3600, :second)
+      slot_start = %{DateTime.to_time(two_hours_on) | minute: 0, second: 0, microsecond: {0, 0}}
+
+      slots =
+        Engine.bookable_slots(
+          minutes_service(min_notice: 60),
+          [],
+          DateTime.to_date(two_hours_on),
+          [],
+          tz,
+          now
+        )
+
+      assert status_at(slots, slot_start) == :available
+    end
+
+    test "notice counts from the site's clock east of UTC" do
+      # 08:00 UTC is 10:00 in Tallinn in January.
+      slots =
+        Engine.bookable_slots(
+          minutes_service(min_notice: 60),
+          [],
+          ~D[2030-01-15],
+          [],
+          "Europe/Tallinn",
+          ~U[2030-01-15 08:00:00Z]
+        )
+
+      assert status_at(slots, ~T[10:00:00]) == :unavailable
+      assert status_at(slots, ~T[11:00:00]) == :available
+    end
+
+    test "max_advance counts from the site's date" do
+      slots =
+        Engine.bookable_slots(
+          minutes_service(max_advance: 1),
+          [],
+          ~D[2030-01-16],
+          [],
+          "Pacific/Auckland",
+          ~U[2030-01-15 20:00:00Z]
+        )
+
+      # Already the 16th in Auckland, so the 16th is today, well inside the limit.
+      assert status_at(slots, ~T[23:00:00]) == :available
+    end
+  end
+
+  describe "AvailabilityRule times" do
+    test "a closed rule on a minute service needs no times: it closes the day" do
+      changeset =
+        AvailabilityRule.changeset(
+          %AvailabilityRule{},
+          %{"date" => "2030-06-12", "available" => false},
+          "minutes"
+        )
+
+      assert changeset.valid?
+    end
+
+    test "an open rule on a minute service still needs both times" do
+      changeset =
+        AvailabilityRule.changeset(
+          %AvailabilityRule{},
+          %{"days_of_week" => [1], "available" => true},
+          "minutes"
+        )
+
+      refute changeset.valid?
     end
   end
 end

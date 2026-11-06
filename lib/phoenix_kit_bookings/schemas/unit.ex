@@ -4,7 +4,7 @@ defmodule PhoenixKitBookings.Schemas.Unit do
 
   When a service has ANY active units, its capacity becomes the count of
   active units (overriding `seats`) and every confirmed/pending booking is
-  auto-assigned the least-loaded free unit inside the locked create
+  auto-assigned the first free unit by name inside the locked create
   (`PhoenixKitBookings.Bookings`). Services without units keep the pooled
   `seats` counter (Checkfront/Planyo-style) — the Booqable `trackable`
   dichotomy, deferred per service.
