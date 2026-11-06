@@ -80,37 +80,20 @@ defmodule PhoenixKitBookings.MixProject do
 
   defp deps do
     [
-      # PhoenixKit provides the Module behaviour, Settings, Scope, Activity —
-      # and, since the `put_slug/3` adoption, the slug changeset glue.
-      # 2.14+ is REQUIRED, not preferred. Three things this module calls only
-      # exist, or only WORK, above the floor — and all three fail in the
-      # consumer's app, never in this repo's own run, because the workspace
-      # always resolves the newest core:
+      # PhoenixKit provides the Module behaviour, Settings, Scope, Activity and the
+      # slug changeset glue.
       #
-      #   * `Utils.Slug.put_slug/3` — absent before 2.4.0. Every save
-      #     touching `:name` raises UndefinedFunctionError.
-      #   * `<.nav_tabs>` in its adoptable form — 2.13.5. The admin filter
-      #     strips render an undefined component.
-      #   * `Utils.Date.shift_to_offset/2` and `parse_datetime_local/2`
-      #     resolving a zone PER INSTANT — 2.14.1, when both were routed
-      #     through `Utils.TimeZone`. Before that they added
-      #     `offset_to_seconds/1`, which was `Float.parse/1` and answered 0
-      #     for every IANA id. `Engine`'s whole frame is built on them, so
-      #     under an older core the site frame silently collapses to UTC —
-      #     the exact bug the frame rewrite exists to fix, shipped as fixed.
-      #
-      # Two-segment, so every later 2.x still satisfies it. Guarded by
-      # test/core_pin_conformance_test.exs.
-      # 2.38.0 is the floor now: the actor and the activity log come from
-      # `PhoenixKitWeb.Actor` and `PhoenixKit.Activity.log/3`, first shipped
-      # there and no longer feature-detected, so a lower core fails to compile.
-      # Patch-precise floor in the compound form, so the ceiling stays open
-      # through every later 2.x minor (see test/core_pin_conformance_test.exs).
-      pk_dep(:phoenix_kit, ">= 2.38.0 and < 3.0.0"),
+      # 3.4.0 is the floor: the release this package is built and tested against.
+      # The compound form is on purpose. Core MINORS must stay admitted: a
+      # requirement that excludes one, as a three-segment `~>` does, breaks
+      # `mix deps.get` for every host running this module beside that core, and
+      # the breakage lands only on consumers. Core majors are not assumed
+      # compatible. `core_pin_conformance_test.exs` guards this.
+      pk_dep(:phoenix_kit, ">= 3.4.0 and < 4.0.0"),
 
       # The booking rules engine (BookingConfig / Availability / Constraints /
       # TimeSlots) and calendar UI components.
-      pk_dep(:phoenix_live_calendar, "~> 0.4"),
+      pk_dep(:phoenix_live_calendar, "~> 0.5"),
 
       # LiveView is needed for the admin and public pages.
       {:phoenix_live_view, "~> 1.1"},

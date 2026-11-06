@@ -65,15 +65,11 @@ one admin, one public surface, and one `bookings` table.
 
 ```elixir
 # mix.exs of your PhoenixKit host app
-{:phoenix_kit_bookings, "~> 0.1.4"}
+{:phoenix_kit_bookings, "~> 0.1"}
 ```
 
-Requires [`phoenix_kit`](https://hex.pm/packages/phoenix_kit) `~> 2.14`.
-The floor is not cosmetic: the site time frame is built on
-`PhoenixKit.Utils.Date.shift_to_offset/2` and `parse_datetime_local/2`,
-which resolve a timezone per instant only from core 2.14.1 — below that
-they answer `0` for every IANA id and every booking is silently stored
-as UTC. Run `mix deps.get`, then `mix phoenix_kit.update` — the module
+Requires [`phoenix_kit`](https://hex.pm/packages/phoenix_kit) `>= 3.4.0 and < 4.0.0`.
+Run `mix deps.get`, then `mix phoenix_kit.update` — the module
 owns its versioned migration (`PhoenixKitBookings.Migrations.Schema`,
 discovered via `migration_module/0`). Enable **Bookings** on the admin
 Modules page.
@@ -82,7 +78,7 @@ Modules page.
 
 ```bash
 mix test.setup   # createdb phoenix_kit_bookings_test + migrations
-mix test         # 105 tests; :integration auto-excluded without a DB
+mix test         # :integration excluded while the database cannot be reached
 mix precommit    # compile --warnings-as-errors, credo --strict, dialyzer
 ```
 

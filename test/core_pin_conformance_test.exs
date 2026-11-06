@@ -5,55 +5,23 @@ defmodule PhoenixKitBookings.CorePinConformanceTest do
   Guards the `:phoenix_kit` requirement against being re-narrowed to a single
   core MINOR, and against a local path override reaching a commit.
 
-  The trap is the three-segment form: `~> 2.0.x` expands to
-  `>= 2.0.x and < 2.1.0`, so no 2.1 or later core satisfies it. The breakage
+  The trap is the three-segment form: `~> 3.4.0` expands to
+  `>= 3.4.0 and < 3.5.0`, so no 3.5 or later core satisfies it. The breakage
   lands on CONSUMERS, never here — a host depending on both this module and a
   newer core minor gets an unsolvable dependency set and `mix deps.get` fails
   outright, with no degraded mode. Nothing else in this repo's own test run
   would notice, which is why the check is a test rather than a convention.
 
-  Core 1.7 is deliberately excluded: core 2.0.0 squashed the migration chain to
-  a V135 floor and this module is verified only against that baseline.
-
-  **The floor moved to 2.4 on 2026-08-14, then to 2.14 on 2026-09-06.** Each
-  move was the *same class* of consumer-only breakage this test exists to
-  catch, just from the opposite direction — too wide rather than too narrow:
-
-    * **2.4.0** — `Service.changeset/2` calls
-      `PhoenixKit.Utils.Slug.put_slug/3`, absent before it, so every save
-      touching `:name` would raise `UndefinedFunctionError`.
-    * **2.13.5** — the admin filter strips render core's `<.nav_tabs>`.
-    * **2.14.1** — `Engine`'s site frame is built on
-      `Utils.Date.shift_to_offset/2` and `parse_datetime_local/2`, which
-      only became per-instant when core routed them through
-      `Utils.TimeZone`. Before that both added `offset_to_seconds/1`, which
-      was `Float.parse/1` and answered `0` for every IANA id — so on an
-      older core the frame silently collapses to UTC and the timezone fix
-      ships as a no-op. Unlike the other two this one does not raise
-      anywhere; it just quietly stores the wrong instants.
-
-  Raising the floor is NOT the trap described above. `>= 2.38.0 and < 3.0.0`
-  is open at the top, so it still admits every later core minor; the forbidden
-  shape is the three-segment `~> 2.38.0`, which would pin to a single minor and is
-  still rejected by the `@must_admit` entries below.
-
-  The entries deliberately say nothing about `2.14.0` itself — it was
-  superseded the next day, and the assertions below encode the REQUIREMENT
-  (2.13.x and older out, every later minor in), not one requirement string's
-  exact shape.
-
-  The floor is `>= 2.38.0 and < 3.0.0` now: the actor and the activity log
-  come from `PhoenixKitWeb.Actor` and `Activity.log/3`, first shipped in core
-  2.38.0 and no longer feature-detected — an older core does not compile the
-  package. Any earlier floor's reasons above still hold below it. Keep the
-  compound form: patch-precise at the bottom, open through every later 2.x
-  minor at the top.
+  The floor is `>= 3.4.0 and < 4.0.0`: the release this package is built and
+  tested against. Raising it is NOT the trap above, since the ceiling stays open
+  through every later 3.x minor. Before it the floor was 2.38.0, for
+  `PhoenixKitWeb.Actor` and `Activity.log/3`.
   """
 
-  @must_admit ["2.38.0", "2.38.1", "2.39.0", "2.99.4"]
-  @must_reject ["1.7.236", "2.0.0", "2.14.1", "2.15.0", "2.15.1", "2.20.0", "2.37.5", "3.0.0"]
+  @must_admit ["3.4.0", "3.4.1", "3.5.0", "3.99.4"]
+  @must_reject ["1.7.236", "2.0.0", "2.38.0", "2.65.0", "3.0.0", "3.3.9", "4.0.0"]
 
-  test "the :phoenix_kit requirement admits every core >= 2.38.0 minor and nothing else" do
+  test "the :phoenix_kit requirement admits every core >= 3.4.0 minor and nothing else" do
     requirement = core_requirement()
 
     assert match?({:ok, _parsed}, Version.parse_requirement(requirement)),
@@ -63,7 +31,7 @@ defmodule PhoenixKitBookings.CorePinConformanceTest do
       assert Version.match?(version, requirement),
              "`:phoenix_kit` requirement #{inspect(requirement)} rejects core #{version}. " <>
                "A pin that excludes a core minor breaks `mix deps.get` for every host " <>
-               "running this module alongside that core. Keep the floor patch-precise and the ceiling open (`>= 2.38.0 and < 3.0.0`)."
+               "running this module alongside that core. Keep the floor patch-precise and the ceiling open (`>= 3.4.0 and < 4.0.0`)."
     end
 
     for version <- @must_reject do
