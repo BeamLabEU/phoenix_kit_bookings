@@ -83,13 +83,14 @@ defmodule PhoenixKitBookings.MixProject do
       # PhoenixKit provides the Module behaviour, Settings, Scope, Activity and the
       # slug changeset glue.
       #
-      # 3.4.0 is the floor: the release this package is built and tested against.
+      # 3.5.0 is the floor (the ecosystem-wide minimum core), the ceiling is open
+      # through core 3.x.
       # The compound form is on purpose. Core MINORS must stay admitted: a
       # requirement that excludes one, as a three-segment `~>` does, breaks
       # `mix deps.get` for every host running this module beside that core, and
       # the breakage lands only on consumers. Core majors are not assumed
       # compatible. `core_pin_conformance_test.exs` guards this.
-      pk_dep(:phoenix_kit, ">= 3.4.0 and < 4.0.0"),
+      pk_dep(:phoenix_kit, ">= 3.5.0 and < 4.0.0"),
 
       # The booking rules engine (BookingConfig / Availability / Constraints /
       # TimeSlots) and calendar UI components.

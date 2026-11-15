@@ -68,7 +68,7 @@ one admin, one public surface, and one `bookings` table.
 {:phoenix_kit_bookings, "~> 0.2"}
 ```
 
-Requires [`phoenix_kit`](https://hex.pm/packages/phoenix_kit) `>= 3.4.0 and < 4.0.0`.
+Requires [`phoenix_kit`](https://hex.pm/packages/phoenix_kit) `>= 3.5.0 and < 4.0.0`.
 Run `mix deps.get`, then `mix phoenix_kit.update` — the module
 owns its versioned migration (`PhoenixKitBookings.Migrations.Schema`,
 discovered via `migration_module/0`). Enable **Bookings** on the admin

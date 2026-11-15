@@ -15,8 +15,8 @@ in details, manage the booking through a signed token and join a waitlist;
 the admin manages reservations (approval queue, cancel), services
 (availability rules, named units, trash) and the self-service policy.
 
-- **Depends on:** `phoenix_kit` `>= 3.4.0 and < 4.0.0` (Hex; the release this
-  package is built and tested against, with the ceiling open across later 3.x
+- **Depends on:** `phoenix_kit` `>= 3.5.0 and < 4.0.0` (Hex; the ecosystem-wide
+  minimum core, with the ceiling open across later 3.x
   minors; `core_pin_conformance_test.exs` guards it), `phoenix_live_calendar`
   `~> 0.5` (hard; the booking rules engine). Staff is read schemalessly, never
   depended on.
@@ -211,7 +211,7 @@ Repo-local aliases:
   and `parse_datetime_local/2`. Never turn the setting into one number and
   add it: a scalar offset is an hour off across every daylight-saving switch
   and plain UTC on IANA sites. `test/core_pin_conformance_test.exs` guards the
-  core pin; keep the compound form (a three-segment `~> 3.4.0` would exclude
+  core pin; keep the compound form (a three-segment `~> 3.5.0` would exclude
   every later core minor and break `mix deps.get` in hosts).
 - `Engine.site_tz/0` is a settings query. Operations that convert many
   values (`validate_request/5`, `bookable_slots/6`) read it once and pass it
