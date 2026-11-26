@@ -43,8 +43,8 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcher do
       `Content-Length` says, within 20 seconds overall.
 
   A feed that really lives on the local network (a calendar server on the
-  LAN) is let through by naming its host, exactly as it appears in the URL,
-  and any extra port it needs:
+  LAN) is let through by naming its host as it appears in the URL (case and
+  a trailing dot aside), and any extra port it needs:
 
       config :phoenix_kit_bookings,
         ical_allowed_hosts: ["calendar.lan", "10.0.0.12"],
