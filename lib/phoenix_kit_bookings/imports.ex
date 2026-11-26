@@ -95,7 +95,12 @@ defmodule PhoenixKitBookings.Imports do
 
     result =
       repo().transaction(fn ->
-        lock_service!(service)
+        locked = lock_service!(service)
+
+        # The entries were shaped for the caller's struct (timed vs dated);
+        # a service switched to another unit since then would take rows of
+        # the wrong shape, so the sync stops and the next one maps afresh.
+        if locked.time_unit != service.time_unit, do: repo().rollback(:service_changed)
 
         existing =
           from(r in spec.schema,

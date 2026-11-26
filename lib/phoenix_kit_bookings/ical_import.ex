@@ -204,6 +204,9 @@ defmodule PhoenixKitBookings.ICalImport do
 
   def describe(:no_url), do: gettext("No feed URL is set.")
 
+  def describe(:service_changed),
+    do: gettext("The service changed during the sync; the next sync will import the feed.")
+
   def describe(:blocked_host),
     do:
       gettext(

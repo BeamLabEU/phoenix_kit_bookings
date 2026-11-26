@@ -95,6 +95,23 @@ defmodule PhoenixKitBookings.ImportsTest do
       assert Imports.list_imported_bookings(service.uuid) == []
     end
 
+    test "a struct whose unit changed since the entries were shaped writes nothing" do
+      service = slot_service_fixture()
+      {:ok, _} = Imports.sync_bookings(service, "ical", [entry("a", 1, 10, 11)])
+
+      stale = %{service | time_unit: "day"}
+
+      assert {:error, :service_changed} =
+               Imports.sync_bookings(stale, "ical", [
+                 %{
+                   external_id: "b",
+                   range: {:dates, Date.utc_today(), Date.add(Date.utc_today(), 1)}
+                 }
+               ])
+
+      assert [%{external_id: "a"}] = Imports.list_imported_bookings(service.uuid)
+    end
+
     test "a bad entry writes nothing at all" do
       service = slot_service_fixture()
       {:ok, _} = Imports.sync_bookings(service, "ical", [entry("keep", 1, 10, 11)])
