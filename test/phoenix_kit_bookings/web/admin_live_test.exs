@@ -112,6 +112,21 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
       assert Services.list_rules(service.uuid) == []
     end
+
+    test "crafted weekday values are refused with a message, not a crash", %{conn: conn} do
+      service = slot_service_fixture()
+
+      {:ok, view, _html} =
+        live(admin_conn(conn), "/en/admin/bookings/services/#{service.uuid}/edit")
+
+      for days <- [["1.5"], ["abc"], ["9"], "1"] do
+        html = render_submit(view, "add_rule", %{"rule" => %{"days_of_week" => days}})
+        assert html =~ "Pick the weekdays from the list."
+      end
+
+      assert Process.alive?(view.pid)
+      assert Services.list_rules(service.uuid) == []
+    end
   end
 
   describe "admin header trail" do

@@ -161,8 +161,16 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
   end
 
   def handle_event("add_rule", %{"rule" => params}, socket) do
-    attrs = normalize_rule_params(params)
+    case normalize_rule_params(params) do
+      {:ok, attrs} ->
+        add_rule(socket, attrs)
 
+      :invalid_days ->
+        {:noreply, put_flash(socket, :error, gettext("Pick the weekdays from the list."))}
+    end
+  end
+
+  defp add_rule(socket, attrs) do
     case Policy.add_rule(scope(socket), socket.assigns.service, attrs) do
       {:ok, _rule} ->
         {:noreply,
@@ -447,20 +455,31 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
   # The add-rule mini-form posts raw params; normalize the checkbox array
   # and drop blanks so the changeset sees clean input.
+  # The weekday checkboxes post ISO numbers; anything else (a crafted
+  # submit) is refused with a message instead of crashing the page.
   defp normalize_rule_params(params) do
-    days =
-      params
-      |> Map.get("days_of_week", [])
-      |> Enum.map(&String.to_integer/1)
-
-    %{
-      "days_of_week" => if(days == [], do: nil, else: days),
-      "date" => presence(params["date"]),
-      "start_time" => presence(params["start_time"]),
-      "end_time" => presence(params["end_time"]),
-      "available" => params["available"] != "false"
-    }
+    with {:ok, days} <- parse_days(Map.get(params, "days_of_week", [])) do
+      {:ok,
+       %{
+         "days_of_week" => if(days == [], do: nil, else: days),
+         "date" => presence(params["date"]),
+         "start_time" => presence(params["start_time"]),
+         "end_time" => presence(params["end_time"]),
+         "available" => params["available"] != "false"
+       }}
+    end
   end
+
+  defp parse_days(values) when is_list(values) do
+    Enum.reduce_while(values, {:ok, []}, fn value, {:ok, acc} ->
+      case Integer.parse(to_string(value)) do
+        {day, ""} when day in 1..7 -> {:cont, {:ok, acc ++ [day]}}
+        _ -> {:halt, :invalid_days}
+      end
+    end)
+  end
+
+  defp parse_days(_values), do: :invalid_days
 
   defp presence(nil), do: nil
   defp presence(""), do: nil
