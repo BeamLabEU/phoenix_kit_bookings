@@ -167,6 +167,12 @@ defmodule PhoenixKitBookings.Events do
         cancel_bookings(event, opts)
         tap_log({:ok, event}, "bookings.event_cancelled", opts)
 
+      # Saving a cancelled event again also finishes a sweep an earlier
+      # cancellation did not complete (cancel_bookings/2 is idempotent).
+      {:ok, {%Event{status: "cancelled"} = event, false}} ->
+        cancel_bookings(event, opts)
+        tap_log({:ok, event}, "bookings.event_updated", opts)
+
       {:ok, {event, false}} ->
         tap_log({:ok, event}, "bookings.event_updated", opts)
 
@@ -203,7 +209,9 @@ defmodule PhoenixKitBookings.Events do
           Ecto.Changeset.add_error(
             changeset,
             :capacity,
-            "is below the %{count} seats already booked", count: taken),
+            "is below the %{count} seats already booked",
+            count: taken
+          ),
         else: changeset
     else
       changeset
@@ -222,8 +230,13 @@ defmodule PhoenixKitBookings.Events do
     end
   end
 
-  defp cancel_bookings(%Event{uuid: uuid}, opts) do
-    from(b in Booking, where: b.event_uuid == ^uuid and b.status in ["pending", "confirmed"])
+  # Only bookings made before the cancellation was stamped: if the event is
+  # reinstated before this sweep runs, a sign-up taken since then stays.
+  defp cancel_bookings(%Event{uuid: uuid, updated_at: cancelled_at}, opts) do
+    from(b in Booking,
+      where: b.event_uuid == ^uuid and b.status in ["pending", "confirmed"],
+      where: b.inserted_at <= ^cancelled_at
+    )
     |> repo().all()
     |> Enum.each(&Bookings.cancel_booking(&1, Keyword.put_new(opts, :reason, "event cancelled")))
   end

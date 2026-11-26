@@ -152,6 +152,43 @@ defmodule PhoenixKitBookings.EventsTest do
       assert errors_on(cs)[:capacity] == ["is below the 2 seats already booked"]
     end
 
+    test "a sign-up through a struct of an event moved to another service is refused" do
+      stale = event_fixture(slot_service_fixture())
+      {:ok, _} = Events.update_event(stale, %{"service_uuid" => slot_service_fixture().uuid})
+
+      assert {:error, :event_unavailable, _} =
+               Bookings.create_event_booking(stale, customer_attrs(), notify: false)
+    end
+
+    test "saving a cancelled event finishes an interrupted sweep, sparing later sign-ups" do
+      event = event_fixture(slot_service_fixture(), %{"capacity" => 3})
+      {:ok, early} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+      {:ok, later} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      # The cancellation committed at 12:00 but its sweep never ran; `later`
+      # was taken after a reinstatement that has since been undone again.
+      stamp = DateTime.utc_now() |> DateTime.add(-3600) |> DateTime.truncate(:second)
+      repo = PhoenixKit.RepoHelper.repo()
+
+      repo.update_all(from(e in PhoenixKitBookings.Schemas.Event, where: e.uuid == ^event.uuid),
+        set: [status: "cancelled", updated_at: stamp]
+      )
+
+      repo.update_all(from(b in PhoenixKitBookings.Schemas.Booking, where: b.uuid == ^early.uuid),
+        set: [inserted_at: DateTime.add(stamp, -60)]
+      )
+
+      repo.update_all(from(b in PhoenixKitBookings.Schemas.Booking, where: b.uuid == ^later.uuid),
+        set: [inserted_at: DateTime.add(stamp, 60)]
+      )
+
+      assert {:ok, %{status: "cancelled"}} =
+               Events.update_event(event, %{"status" => "cancelled"}, notify: false)
+
+      assert Bookings.get_booking(early.uuid).status == "cancelled"
+      assert Bookings.get_booking(later.uuid).status == "confirmed"
+    end
+
     test "an update is judged on the stored row, not on a stale struct" do
       stale =
         event_fixture(slot_service_fixture(), %{"starts_at" => at(4, 10), "ends_at" => at(4, 11)})

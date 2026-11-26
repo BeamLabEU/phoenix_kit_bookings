@@ -617,7 +617,10 @@ defmodule PhoenixKitBookings.Bookings do
     locked_event =
       repo().one(from(e in Event, where: e.uuid == ^event.uuid, lock: "FOR UPDATE"))
 
-    unless event_open?(locked_event, now) do
+    # The caller's struct named the service; an event moved since then is
+    # not this service's to sell.
+    unless locked_event && locked_event.service_uuid == locked_service.uuid &&
+             event_open?(locked_event, now) do
       repo().rollback({:rejected, :event_unavailable, @event_unavailable})
     end
 
