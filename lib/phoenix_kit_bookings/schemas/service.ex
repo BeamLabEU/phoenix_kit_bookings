@@ -86,6 +86,20 @@ defmodule PhoenixKitBookings.Schemas.Service do
     # nil = no reminder email; else minutes before start.
     field(:reminder_minutes, :integer)
 
+    # Optional ref to a host-app record this service stands for (a machine, a
+    # room, a listing), indexed so a host can look the service up by it.
+    field(:host_ref, :string)
+    # false = shown as a read-only availability calendar on the site, never
+    # bookable there (availability comes from an import or the admin).
+    field(:bookable_online, :boolean, default: true)
+    # External iCal feed whose busy entries are imported (`ICalImport`).
+    # `ical_synced_at` / `ical_sync_error` are stamped by the sync, not cast.
+    field(:ical_url, :string)
+    field(:ical_synced_at, :utc_datetime)
+    field(:ical_sync_error, :string)
+    # The public profile of whoever runs this service (nil = none).
+    field(:host_profile_uuid, UUIDv7)
+
     field(:settings, :map, default: %{})
 
     has_many(:availability_rules, PhoenixKitBookings.Schemas.AvailabilityRule,
@@ -132,8 +146,14 @@ defmodule PhoenixKitBookings.Schemas.Service do
       :price,
       :price_per,
       :currency,
-      :reminder_minutes
+      :reminder_minutes,
+      :host_ref,
+      :bookable_online,
+      :ical_url,
+      :host_profile_uuid
     ])
+    |> update_change(:host_ref, &blank_to_nil/1)
+    |> update_change(:ical_url, &blank_to_nil/1)
     # Core's changeset glue, replacing a local generator whose slugify was
     # ASCII-only (`[^a-z0-9]` after downcase) — a Cyrillic or Greek name
     # produced "" and then FAILED the format validation below, so such a
@@ -168,6 +188,8 @@ defmodule PhoenixKitBookings.Schemas.Service do
     |> validate_number(:price, greater_than_or_equal_to: 0)
     |> validate_inclusion(:price_per, @price_pers)
     |> validate_length(:currency, max: 10)
+    |> validate_length(:host_ref, max: 255)
+    |> validate_ical_url()
     |> validate_duration_bounds()
     |> validate_stay_bounds()
     |> unique_constraint(:slug, name: :phoenix_kit_bookings_services_slug_index)
@@ -180,6 +202,29 @@ defmodule PhoenixKitBookings.Schemas.Service do
   @doc "Status transitions are controlled — never cast from attrs."
   def status_changeset(service, status) when status in @statuses do
     change(service, status: status)
+  end
+
+  defp blank_to_nil(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp blank_to_nil(value), do: value
+
+  # http(s) or webcal (a feed link calendars hand out; fetched over https).
+  defp validate_ical_url(changeset) do
+    validate_change(changeset, :ical_url, fn :ical_url, url ->
+      case URI.parse(url) do
+        %URI{scheme: scheme, host: host}
+        when scheme in ["http", "https", "webcal"] and is_binary(host) and host != "" ->
+          []
+
+        _ ->
+          [ical_url: "must be an http(s) or webcal URL"]
+      end
+    end)
   end
 
   defp validate_duration_bounds(changeset) do

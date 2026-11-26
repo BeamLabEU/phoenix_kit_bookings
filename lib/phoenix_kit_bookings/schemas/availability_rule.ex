@@ -31,6 +31,11 @@ defmodule PhoenixKitBookings.Schemas.AvailabilityRule do
     field(:start_time, :time)
     field(:end_time, :time)
     field(:available, :boolean, default: true)
+    # `manual` (the admin's own) or `import` (a feed's, replaced on re-sync).
+    # Stamped, never cast.
+    field(:source, :string, default: "manual")
+    field(:external_source, :string)
+    field(:external_id, :string)
 
     timestamps(type: :utc_datetime)
   end
@@ -50,6 +55,25 @@ defmodule PhoenixKitBookings.Schemas.AvailabilityRule do
     |> validate_days_of_week()
     |> validate_shape()
     |> validate_times(time_unit)
+  end
+
+  @doc """
+  Changeset for an imported rule: the admin changeset's validation plus the
+  stamped `source: "import"` and external ref.
+  """
+  def import_changeset(rule, attrs, time_unit, service_uuid, external_source, external_id) do
+    rule
+    |> changeset(attrs, time_unit)
+    |> put_change(:service_uuid, service_uuid)
+    |> put_change(:source, "import")
+    |> put_change(:external_source, external_source)
+    |> put_change(:external_id, external_id)
+    |> validate_required([:external_source, :external_id])
+    |> validate_length(:external_source, max: 64)
+    |> validate_length(:external_id, max: 255)
+    |> unique_constraint(:external_id,
+      name: :phoenix_kit_bookings_availability_rules_external_index
+    )
   end
 
   defp validate_days_of_week(changeset) do

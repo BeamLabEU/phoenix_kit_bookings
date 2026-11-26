@@ -22,7 +22,7 @@ defmodule PhoenixKitBookings.ExpectedSchema do
   @schema_token "__SCHEMA__"
   @name_marker_exempt "__PK_NAME_EXEMPT__"
   @name_marker_always "__PK_NAME_ALWAYS__"
-  @chain_hash "00fd21674bd915cefd80cca3e08a467633e10544b7148dbed581808b2ae88c26"
+  @chain_hash "1d956221b5a126c279772b76bbaf413a9b442dfdf6e5abf05d92602d4e58bde1"
 
   def objects(prefix) do
     prefix = normalize_prefix!(prefix)
@@ -121,10 +121,54 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: nil
       },
       %{
+        id: "table:phoenix_kit_bookings_events",
+        owner: :phoenix_kit_bookings,
+        check: {:catalog, %{name: "phoenix_kit_bookings_events", kind: :table}},
+        create: "CREATE TABLE IF NOT EXISTS __SCHEMA__.phoenix_kit_bookings_events ()",
+        since: 1,
+        class: :table,
+        revisions: [{1, %{}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id: "table:phoenix_kit_bookings_holds",
         owner: :phoenix_kit_bookings,
         check: {:catalog, %{name: "phoenix_kit_bookings_holds", kind: :table}},
         create: "CREATE TABLE IF NOT EXISTS __SCHEMA__.phoenix_kit_bookings_holds ()",
+        since: 1,
+        class: :table,
+        revisions: [{1, %{}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "table:phoenix_kit_bookings_host_profiles",
+        owner: :phoenix_kit_bookings,
+        check: {:catalog, %{name: "phoenix_kit_bookings_host_profiles", kind: :table}},
+        create: "CREATE TABLE IF NOT EXISTS __SCHEMA__.phoenix_kit_bookings_host_profiles ()",
+        since: 1,
+        class: :table,
+        revisions: [{1, %{}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "table:phoenix_kit_bookings_price_options",
+        owner: :phoenix_kit_bookings,
+        check: {:catalog, %{name: "phoenix_kit_bookings_price_options", kind: :table}},
+        create: "CREATE TABLE IF NOT EXISTS __SCHEMA__.phoenix_kit_bookings_price_options ()",
+        since: 1,
+        class: :table,
+        revisions: [{1, %{}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "table:phoenix_kit_bookings_regular_slots",
+        owner: :phoenix_kit_bookings,
+        check: {:catalog, %{name: "phoenix_kit_bookings_regular_slots", kind: :table}},
+        create: "CREATE TABLE IF NOT EXISTS __SCHEMA__.phoenix_kit_bookings_regular_slots ()",
         since: 1,
         class: :table,
         revisions: [{1, %{}}],
@@ -225,6 +269,44 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: nil
       },
       %{
+        id: "column:phoenix_kit_bookings_availability_rules.external_id",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             table: "phoenix_kit_bookings_availability_rules",
+             column: "external_id",
+             kind: :column
+           }},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_availability_rules ADD COLUMN IF NOT EXISTS \"external_id\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: nil, type: "character varying(255)", pos: 12, not_null: false}}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_availability_rules.external_source",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             table: "phoenix_kit_bookings_availability_rules",
+             column: "external_source",
+             kind: :column
+           }},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_availability_rules ADD COLUMN IF NOT EXISTS \"external_source\" character varying(64)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(64)", pos: 11, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id: "column:phoenix_kit_bookings_availability_rules.inserted_at",
         owner: :phoenix_kit_bookings,
         check:
@@ -261,6 +343,28 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         revisions: [{1, %{default: nil, type: "uuid", pos: 2, not_null: true}}],
         presence: :required,
         backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_availability_rules.source",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_availability_rules", column: "source", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_availability_rules ADD COLUMN IF NOT EXISTS \"source\" character varying(20) DEFAULT 'manual'::character varying NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1,
+           %{
+             default: "'manual'::character varying",
+             type: "character varying(20)",
+             pos: 10,
+             not_null: true
+           }}
+        ],
+        presence: :required,
+        backfill: :default
       },
       %{
         id: "column:phoenix_kit_bookings_availability_rules.start_time",
@@ -369,7 +473,7 @@ defmodule PhoenixKitBookings.ExpectedSchema do
           "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD COLUMN IF NOT EXISTS \"customer_email\" character varying(255)",
         since: 1,
         class: :column,
-        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 9, not_null: true}}],
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 9, not_null: false}}],
         presence: :required,
         backfill: nil
       },
@@ -383,7 +487,7 @@ defmodule PhoenixKitBookings.ExpectedSchema do
           "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD COLUMN IF NOT EXISTS \"customer_name\" character varying(255)",
         since: 1,
         class: :column,
-        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 8, not_null: true}}],
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 8, not_null: false}}],
         presence: :required,
         backfill: nil
       },
@@ -430,6 +534,50 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: nil
       },
       %{
+        id: "column:phoenix_kit_bookings_bookings.event_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_bookings", column: "event_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD COLUMN IF NOT EXISTS \"event_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 26, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_bookings.external_id",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_bookings", column: "external_id", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD COLUMN IF NOT EXISTS \"external_id\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: nil, type: "character varying(255)", pos: 24, not_null: false}}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_bookings.external_source",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_bookings", column: "external_source", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD COLUMN IF NOT EXISTS \"external_source\" character varying(64)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(64)", pos: 23, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id: "column:phoenix_kit_bookings_bookings.inserted_at",
         owner: :phoenix_kit_bookings,
         check:
@@ -468,6 +616,20 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         since: 1,
         class: :column,
         revisions: [{1, %{default: nil, type: "text", pos: 11, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_bookings.price_option_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_bookings", column: "price_option_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD COLUMN IF NOT EXISTS \"price_option_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 25, not_null: false}}],
         presence: :required,
         backfill: nil
       },
@@ -645,6 +807,222 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: :default
       },
       %{
+        id: "column:phoenix_kit_bookings_events.capacity",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "capacity", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"capacity\" integer",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "integer", pos: 9, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.description",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_events", column: "description", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"description\" text",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "text", pos: 5, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.ends_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "ends_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"ends_at\" timestamp with time zone",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: nil, type: "timestamp with time zone", pos: 8, not_null: true}}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.host_profile_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_events", column: "host_profile_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"host_profile_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 3, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.inserted_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_events", column: "inserted_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"inserted_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 14, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.location",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "location", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"location\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 6, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.price",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "price", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"price\" numeric(12,2)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "numeric(12,2)", pos: 10, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.public",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "public", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"public\" boolean DEFAULT true NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "true", type: "boolean", pos: 12, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.service_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_events", column: "service_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"service_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 2, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.settings",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "settings", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"settings\" jsonb DEFAULT '{}'::jsonb NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "'{}'::jsonb", type: "jsonb", pos: 13, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.starts_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "starts_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"starts_at\" timestamp with time zone",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: nil, type: "timestamp with time zone", pos: 7, not_null: true}}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.status",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "status", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"status\" character varying(20) DEFAULT 'scheduled'::character varying NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1,
+           %{
+             default: "'scheduled'::character varying",
+             type: "character varying(20)",
+             pos: 11,
+             not_null: true
+           }}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.title",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "title", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"title\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 4, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.updated_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_events", column: "updated_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"updated_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 15, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_events.uuid",
+        owner: :phoenix_kit_bookings,
+        check: {:catalog, %{table: "phoenix_kit_bookings_events", column: "uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD COLUMN IF NOT EXISTS \"uuid\" uuid DEFAULT __SCHEMA__.uuid_generate_v7() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "__SCHEMA__.uuid_generate_v7()", type: "uuid", pos: 1, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
         id: "column:phoenix_kit_bookings_holds.ends_at",
         owner: :phoenix_kit_bookings,
         check:
@@ -770,6 +1148,601 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         revisions: [
           {1, %{default: "__SCHEMA__.uuid_generate_v7()", type: "uuid", pos: 1, not_null: true}}
         ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.bio",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_host_profiles", column: "bio", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"bio\" text",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "text", pos: 5, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.headline",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "headline", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"headline\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 4, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.inserted_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "inserted_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"inserted_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 12, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.name",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "name", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"name\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 2, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.photo_url",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "photo_url", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"photo_url\" text",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "text", pos: 6, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.position",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "position", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"position\" integer DEFAULT 0 NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "0", type: "integer", pos: 10, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.provider_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "provider_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"provider_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 8, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.settings",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "settings", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"settings\" jsonb DEFAULT '{}'::jsonb NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "'{}'::jsonb", type: "jsonb", pos: 11, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.slug",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "slug", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"slug\" character varying(160)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(160)", pos: 3, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.status",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "status", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"status\" character varying(20) DEFAULT 'active'::character varying NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1,
+           %{
+             default: "'active'::character varying",
+             type: "character varying(20)",
+             pos: 9,
+             not_null: true
+           }}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.updated_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "updated_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"updated_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 13, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.user_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "user_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"user_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 7, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_host_profiles.uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_host_profiles", column: "uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD COLUMN IF NOT EXISTS \"uuid\" uuid DEFAULT __SCHEMA__.uuid_generate_v7() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "__SCHEMA__.uuid_generate_v7()", type: "uuid", pos: 1, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.active",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "active", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"active\" boolean DEFAULT true NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "true", type: "boolean", pos: 11, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.description",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "description", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"description\" text",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "text", pos: 4, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.entitlement",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "entitlement", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"entitlement\" character varying(20) DEFAULT 'everyone'::character varying NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1,
+           %{
+             default: "'everyone'::character varying",
+             type: "character varying(20)",
+             pos: 7,
+             not_null: true
+           }}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.flag_key",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "flag_key", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"flag_key\" character varying(100)",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: nil, type: "character varying(100)", pos: 10, not_null: false}}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.inserted_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "inserted_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"inserted_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 13, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.name",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "name", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"name\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 3, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.position",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "position", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"position\" integer DEFAULT 0 NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "0", type: "integer", pos: 12, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.price",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "price", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"price\" numeric(12,2)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "numeric(12,2)", pos: 5, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.price_per",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "price_per", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"price_per\" character varying(10)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(10)", pos: 6, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.role_name",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "role_name", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"role_name\" character varying(100)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(100)", pos: 9, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.service_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "service_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"service_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 2, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.updated_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "updated_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"updated_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 14, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.user_uuids",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "user_uuids", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"user_uuids\" uuid[] DEFAULT '{}'::uuid[] NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "'{}'::uuid[]", type: "uuid[]", pos: 8, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_price_options.uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_price_options", column: "uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD COLUMN IF NOT EXISTS \"uuid\" uuid DEFAULT __SCHEMA__.uuid_generate_v7() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "__SCHEMA__.uuid_generate_v7()", type: "uuid", pos: 1, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.active",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "active", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"active\" boolean DEFAULT true NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "true", type: "boolean", pos: 10, not_null: true}}],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.customer_email",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "customer_email", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"customer_email\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 8, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.customer_name",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "customer_name", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"customer_name\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "character varying(255)", pos: 7, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.day_of_week",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "day_of_week", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"day_of_week\" integer",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "integer", pos: 3, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.end_time",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "end_time", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"end_time\" time without time zone",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "time without time zone", pos: 5, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.inserted_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "inserted_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"inserted_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 11, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.notes",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "notes", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"notes\" text",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "text", pos: 9, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.service_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "service_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"service_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 2, not_null: true}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.start_time",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "start_time", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"start_time\" time without time zone",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "time without time zone", pos: 4, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.updated_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "updated_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"updated_at\" timestamp with time zone DEFAULT now() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "now()", type: "timestamp with time zone", pos: 12, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.user_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "user_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"user_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 6, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_regular_slots.uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_regular_slots", column: "uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD COLUMN IF NOT EXISTS \"uuid\" uuid DEFAULT __SCHEMA__.uuid_generate_v7() NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: "__SCHEMA__.uuid_generate_v7()", type: "uuid", pos: 1, not_null: true}}
+        ],
+        presence: :required,
+        backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_services.bookable_online",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_services", column: "bookable_online", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_services ADD COLUMN IF NOT EXISTS \"bookable_online\" boolean DEFAULT true NOT NULL",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: "true", type: "boolean", pos: 34, not_null: true}}],
         presence: :required,
         backfill: :default
       },
@@ -908,6 +1881,78 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         revisions: [{1, %{default: "false", type: "boolean", pos: 9, not_null: true}}],
         presence: :required,
         backfill: :default
+      },
+      %{
+        id: "column:phoenix_kit_bookings_services.host_profile_uuid",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_services", column: "host_profile_uuid", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_services ADD COLUMN IF NOT EXISTS \"host_profile_uuid\" uuid",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "uuid", pos: 38, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_services.host_ref",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_services", column: "host_ref", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_services ADD COLUMN IF NOT EXISTS \"host_ref\" character varying(255)",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: nil, type: "character varying(255)", pos: 33, not_null: false}}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_services.ical_sync_error",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_services", column: "ical_sync_error", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_services ADD COLUMN IF NOT EXISTS \"ical_sync_error\" text",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "text", pos: 37, not_null: false}}],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_services.ical_synced_at",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{table: "phoenix_kit_bookings_services", column: "ical_synced_at", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_services ADD COLUMN IF NOT EXISTS \"ical_synced_at\" timestamp with time zone",
+        since: 1,
+        class: :column,
+        revisions: [
+          {1, %{default: nil, type: "timestamp with time zone", pos: 36, not_null: false}}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "column:phoenix_kit_bookings_services.ical_url",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog, %{table: "phoenix_kit_bookings_services", column: "ical_url", kind: :column}},
+        create:
+          "ALTER TABLE __SCHEMA__.phoenix_kit_bookings_services ADD COLUMN IF NOT EXISTS \"ical_url\" text",
+        since: 1,
+        class: :column,
+        revisions: [{1, %{default: nil, type: "text", pos: 35, not_null: false}}],
+        presence: :required,
+        backfill: nil
       },
       %{
         id: "column:phoenix_kit_bookings_services.inserted_at",
@@ -1467,6 +2512,37 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: :default
       },
       %{
+        id: "index:phoenix_kit_bookings_availability_rules_external_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_availability_rules_external_index",
+             table: "phoenix_kit_bookings_availability_rules",
+             kind: :index
+           }},
+        create:
+          "CREATE UNIQUE INDEX IF NOT EXISTS phoenix_kit_bookings_availability_rules_external_index ON __SCHEMA__.phoenix_kit_bookings_availability_rules USING btree (service_uuid, external_source, external_id)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_availability_rules",
+             keys: ["service_uuid", "external_source", "external_id"],
+             unique: true,
+             method: "btree",
+             definition:
+               "CREATE UNIQUE INDEX phoenix_kit_bookings_availability_rules_external_index ON __SCHEMA__.phoenix_kit_bookings_availability_rules USING btree (service_uuid, external_source, external_id)",
+             predicate: nil,
+             opclasses: ["uuid_ops", "text_ops", "text_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id: "index:phoenix_kit_bookings_availability_rules_service_index",
         owner: :phoenix_kit_bookings,
         check:
@@ -1522,6 +2598,68 @@ defmodule PhoenixKitBookings.ExpectedSchema do
                "CREATE INDEX phoenix_kit_bookings_bookings_customer_email_index ON __SCHEMA__.phoenix_kit_bookings_bookings USING btree (customer_email)",
              predicate: nil,
              opclasses: ["text_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_bookings_event_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_bookings_event_index",
+             table: "phoenix_kit_bookings_bookings",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_bookings_event_index ON __SCHEMA__.phoenix_kit_bookings_bookings USING btree (event_uuid)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_bookings",
+             keys: ["event_uuid"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_bookings_event_index ON __SCHEMA__.phoenix_kit_bookings_bookings USING btree (event_uuid)",
+             predicate: nil,
+             opclasses: ["uuid_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_bookings_external_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_bookings_external_index",
+             table: "phoenix_kit_bookings_bookings",
+             kind: :index
+           }},
+        create:
+          "CREATE UNIQUE INDEX IF NOT EXISTS phoenix_kit_bookings_bookings_external_index ON __SCHEMA__.phoenix_kit_bookings_bookings USING btree (service_uuid, external_source, external_id)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_bookings",
+             keys: ["service_uuid", "external_source", "external_id"],
+             unique: true,
+             method: "btree",
+             definition:
+               "CREATE UNIQUE INDEX phoenix_kit_bookings_bookings_external_index ON __SCHEMA__.phoenix_kit_bookings_bookings USING btree (service_uuid, external_source, external_id)",
+             predicate: nil,
+             opclasses: ["uuid_ops", "text_ops", "text_ops"],
              name_template: nil
            }}
         ],
@@ -1653,6 +2791,99 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: nil
       },
       %{
+        id: "index:phoenix_kit_bookings_events_host_profile_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_events_host_profile_index",
+             table: "phoenix_kit_bookings_events",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_events_host_profile_index ON __SCHEMA__.phoenix_kit_bookings_events USING btree (host_profile_uuid)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_events",
+             keys: ["host_profile_uuid"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_events_host_profile_index ON __SCHEMA__.phoenix_kit_bookings_events USING btree (host_profile_uuid)",
+             predicate: nil,
+             opclasses: ["uuid_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_events_service_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_events_service_index",
+             table: "phoenix_kit_bookings_events",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_events_service_index ON __SCHEMA__.phoenix_kit_bookings_events USING btree (service_uuid)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_events",
+             keys: ["service_uuid"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_events_service_index ON __SCHEMA__.phoenix_kit_bookings_events USING btree (service_uuid)",
+             predicate: nil,
+             opclasses: ["uuid_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_events_starts_at_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_events_starts_at_index",
+             table: "phoenix_kit_bookings_events",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_events_starts_at_index ON __SCHEMA__.phoenix_kit_bookings_events USING btree (starts_at)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_events",
+             keys: ["starts_at"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_events_starts_at_index ON __SCHEMA__.phoenix_kit_bookings_events USING btree (starts_at)",
+             predicate: nil,
+             opclasses: ["timestamptz_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id: "index:phoenix_kit_bookings_holds_service_expires_index",
         owner: :phoenix_kit_bookings,
         check:
@@ -1677,6 +2908,161 @@ defmodule PhoenixKitBookings.ExpectedSchema do
                "CREATE INDEX phoenix_kit_bookings_holds_service_expires_index ON __SCHEMA__.phoenix_kit_bookings_holds USING btree (service_uuid, expires_at)",
              predicate: nil,
              opclasses: ["uuid_ops", "timestamptz_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_host_profiles_slug_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_host_profiles_slug_index",
+             table: "phoenix_kit_bookings_host_profiles",
+             kind: :index
+           }},
+        create:
+          "CREATE UNIQUE INDEX IF NOT EXISTS phoenix_kit_bookings_host_profiles_slug_index ON __SCHEMA__.phoenix_kit_bookings_host_profiles USING btree (slug)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_host_profiles",
+             keys: ["slug"],
+             unique: true,
+             method: "btree",
+             definition:
+               "CREATE UNIQUE INDEX phoenix_kit_bookings_host_profiles_slug_index ON __SCHEMA__.phoenix_kit_bookings_host_profiles USING btree (slug)",
+             predicate: nil,
+             opclasses: ["text_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_price_options_service_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_price_options_service_index",
+             table: "phoenix_kit_bookings_price_options",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_price_options_service_index ON __SCHEMA__.phoenix_kit_bookings_price_options USING btree (service_uuid)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_price_options",
+             keys: ["service_uuid"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_price_options_service_index ON __SCHEMA__.phoenix_kit_bookings_price_options USING btree (service_uuid)",
+             predicate: nil,
+             opclasses: ["uuid_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_regular_slots_service_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_regular_slots_service_index",
+             table: "phoenix_kit_bookings_regular_slots",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_regular_slots_service_index ON __SCHEMA__.phoenix_kit_bookings_regular_slots USING btree (service_uuid, day_of_week)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_regular_slots",
+             keys: ["service_uuid", "day_of_week"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_regular_slots_service_index ON __SCHEMA__.phoenix_kit_bookings_regular_slots USING btree (service_uuid, day_of_week)",
+             predicate: nil,
+             opclasses: ["uuid_ops", "int4_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_services_host_profile_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_services_host_profile_index",
+             table: "phoenix_kit_bookings_services",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_services_host_profile_index ON __SCHEMA__.phoenix_kit_bookings_services USING btree (host_profile_uuid)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_services",
+             keys: ["host_profile_uuid"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_services_host_profile_index ON __SCHEMA__.phoenix_kit_bookings_services USING btree (host_profile_uuid)",
+             predicate: nil,
+             opclasses: ["uuid_ops"],
+             name_template: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "index:phoenix_kit_bookings_services_host_ref_index",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_services_host_ref_index",
+             table: "phoenix_kit_bookings_services",
+             kind: :index
+           }},
+        create:
+          "CREATE INDEX IF NOT EXISTS phoenix_kit_bookings_services_host_ref_index ON __SCHEMA__.phoenix_kit_bookings_services USING btree (host_ref)",
+        since: 1,
+        class: :index,
+        revisions: [
+          {1,
+           %{
+             table: "phoenix_kit_bookings_services",
+             keys: ["host_ref"],
+             unique: false,
+             method: "btree",
+             definition:
+               "CREATE INDEX phoenix_kit_bookings_services_host_ref_index ON __SCHEMA__.phoenix_kit_bookings_services USING btree (host_ref)",
+             predicate: nil,
+             opclasses: ["text_ops"],
              name_template: nil
            }}
         ],
@@ -1839,6 +3225,37 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: nil
       },
       %{
+        id: "constraint:phoenix_kit_bookings_availability_rules.bookings_rule_source",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_rule_source",
+             table: "phoenix_kit_bookings_availability_rules",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_rule_source'\n      AND t.relname = 'phoenix_kit_bookings_availability_rules'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_availability_rules ADD CONSTRAINT bookings_rule_source CHECK (((source)::text = ANY ((ARRAY['manual'::character varying, 'import'::character varying])::text[])));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["source"],
+             definition:
+               "CHECK (((source)::text = ANY ((ARRAY['manual'::character varying, 'import'::character varying])::text[])))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id:
           "constraint:phoenix_kit_bookings_availability_rules.phoenix_kit_bookings_availability_rules_pkey",
         owner: :phoenix_kit_bookings,
@@ -1859,6 +3276,37 @@ defmodule PhoenixKitBookings.ExpectedSchema do
              type: "p",
              columns: ["uuid"],
              definition: "PRIMARY KEY (uuid)",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_bookings.bookings_customer_required",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_customer_required",
+             table: "phoenix_kit_bookings_bookings",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_customer_required'\n      AND t.relname = 'phoenix_kit_bookings_bookings'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD CONSTRAINT bookings_customer_required CHECK ((((source)::text = 'import'::text) OR ((customer_name IS NOT NULL) AND (customer_email IS NOT NULL))));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["source", "customer_name", "customer_email"],
+             definition:
+               "CHECK ((((source)::text = 'import'::text) OR ((customer_name IS NOT NULL) AND (customer_email IS NOT NULL))))",
              name_template: nil,
              foreign_table: nil,
              foreign_columns: nil,
@@ -1906,7 +3354,7 @@ defmodule PhoenixKitBookings.ExpectedSchema do
           {:catalog,
            %{name: "bookings_source", table: "phoenix_kit_bookings_bookings", kind: :constraint}},
         create:
-          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_source'\n      AND t.relname = 'phoenix_kit_bookings_bookings'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD CONSTRAINT bookings_source CHECK (((source)::text = ANY ((ARRAY['public'::character varying, 'admin'::character varying])::text[])));\n  END IF;\nEND\n$$",
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_source'\n      AND t.relname = 'phoenix_kit_bookings_bookings'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD CONSTRAINT bookings_source CHECK (((source)::text = ANY ((ARRAY['public'::character varying, 'admin'::character varying, 'import'::character varying])::text[])));\n  END IF;\nEND\n$$",
         since: 1,
         class: :constraint,
         revisions: [
@@ -1915,7 +3363,7 @@ defmodule PhoenixKitBookings.ExpectedSchema do
              type: "c",
              columns: ["source"],
              definition:
-               "CHECK (((source)::text = ANY ((ARRAY['public'::character varying, 'admin'::character varying])::text[])))",
+               "CHECK (((source)::text = ANY ((ARRAY['public'::character varying, 'admin'::character varying, 'import'::character varying])::text[])))",
              name_template: nil,
              foreign_table: nil,
              foreign_columns: nil,
@@ -2045,6 +3493,127 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: nil
       },
       %{
+        id: "constraint:phoenix_kit_bookings_events.bookings_event_capacity",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_event_capacity",
+             table: "phoenix_kit_bookings_events",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_event_capacity'\n      AND t.relname = 'phoenix_kit_bookings_events'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD CONSTRAINT bookings_event_capacity CHECK (((capacity IS NULL) OR (capacity >= 1)));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["capacity"],
+             definition: "CHECK (((capacity IS NULL) OR (capacity >= 1)))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_events.bookings_event_order",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_event_order",
+             table: "phoenix_kit_bookings_events",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_event_order'\n      AND t.relname = 'phoenix_kit_bookings_events'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD CONSTRAINT bookings_event_order CHECK ((starts_at < ends_at));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["starts_at", "ends_at"],
+             definition: "CHECK ((starts_at < ends_at))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_events.bookings_event_status",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_event_status",
+             table: "phoenix_kit_bookings_events",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_event_status'\n      AND t.relname = 'phoenix_kit_bookings_events'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD CONSTRAINT bookings_event_status CHECK (((status)::text = ANY ((ARRAY['scheduled'::character varying, 'cancelled'::character varying])::text[])));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["status"],
+             definition:
+               "CHECK (((status)::text = ANY ((ARRAY['scheduled'::character varying, 'cancelled'::character varying])::text[])))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_events.phoenix_kit_bookings_events_pkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_events_pkey",
+             table: "phoenix_kit_bookings_events",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_events_pkey'\n      AND t.relname = 'phoenix_kit_bookings_events'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD CONSTRAINT phoenix_kit_bookings_events_pkey PRIMARY KEY (uuid);\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "p",
+             columns: ["uuid"],
+             definition: "PRIMARY KEY (uuid)",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id: "constraint:phoenix_kit_bookings_holds.bookings_hold_time_shape",
         owner: :phoenix_kit_bookings,
         check:
@@ -2087,6 +3656,252 @@ defmodule PhoenixKitBookings.ExpectedSchema do
            }},
         create:
           "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_holds_pkey'\n      AND t.relname = 'phoenix_kit_bookings_holds'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_holds ADD CONSTRAINT phoenix_kit_bookings_holds_pkey PRIMARY KEY (uuid);\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "p",
+             columns: ["uuid"],
+             definition: "PRIMARY KEY (uuid)",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_host_profiles.bookings_host_profile_status",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_host_profile_status",
+             table: "phoenix_kit_bookings_host_profiles",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_host_profile_status'\n      AND t.relname = 'phoenix_kit_bookings_host_profiles'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD CONSTRAINT bookings_host_profile_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["status"],
+             definition:
+               "CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_host_profiles.phoenix_kit_bookings_host_profiles_pkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_host_profiles_pkey",
+             table: "phoenix_kit_bookings_host_profiles",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_host_profiles_pkey'\n      AND t.relname = 'phoenix_kit_bookings_host_profiles'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD CONSTRAINT phoenix_kit_bookings_host_profiles_pkey PRIMARY KEY (uuid);\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "p",
+             columns: ["uuid"],
+             definition: "PRIMARY KEY (uuid)",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_price_options.bookings_price_option_entitlement",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_price_option_entitlement",
+             table: "phoenix_kit_bookings_price_options",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_price_option_entitlement'\n      AND t.relname = 'phoenix_kit_bookings_price_options'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD CONSTRAINT bookings_price_option_entitlement CHECK (((entitlement)::text = ANY ((ARRAY['everyone'::character varying, 'users'::character varying, 'role'::character varying, 'flag'::character varying])::text[])));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["entitlement"],
+             definition:
+               "CHECK (((entitlement)::text = ANY ((ARRAY['everyone'::character varying, 'users'::character varying, 'role'::character varying, 'flag'::character varying])::text[])))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_price_options.bookings_price_option_price",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_price_option_price",
+             table: "phoenix_kit_bookings_price_options",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_price_option_price'\n      AND t.relname = 'phoenix_kit_bookings_price_options'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD CONSTRAINT bookings_price_option_price CHECK ((price >= (0)::numeric));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["price"],
+             definition: "CHECK ((price >= (0)::numeric))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_price_options.bookings_price_option_price_per",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_price_option_price_per",
+             table: "phoenix_kit_bookings_price_options",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_price_option_price_per'\n      AND t.relname = 'phoenix_kit_bookings_price_options'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD CONSTRAINT bookings_price_option_price_per CHECK (((price_per IS NULL) OR ((price_per)::text = ANY ((ARRAY['booking'::character varying, 'hour'::character varying, 'day'::character varying, 'night'::character varying])::text[]))));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["price_per"],
+             definition:
+               "CHECK (((price_per IS NULL) OR ((price_per)::text = ANY ((ARRAY['booking'::character varying, 'hour'::character varying, 'day'::character varying, 'night'::character varying])::text[]))))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_price_options.phoenix_kit_bookings_price_options_pkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_price_options_pkey",
+             table: "phoenix_kit_bookings_price_options",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_price_options_pkey'\n      AND t.relname = 'phoenix_kit_bookings_price_options'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD CONSTRAINT phoenix_kit_bookings_price_options_pkey PRIMARY KEY (uuid);\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "p",
+             columns: ["uuid"],
+             definition: "PRIMARY KEY (uuid)",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id: "constraint:phoenix_kit_bookings_regular_slots.bookings_regular_slot_day",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "bookings_regular_slot_day",
+             table: "phoenix_kit_bookings_regular_slots",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'bookings_regular_slot_day'\n      AND t.relname = 'phoenix_kit_bookings_regular_slots'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD CONSTRAINT bookings_regular_slot_day CHECK (((day_of_week >= 1) AND (day_of_week <= 7)));\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "c",
+             columns: ["day_of_week"],
+             definition: "CHECK (((day_of_week >= 1) AND (day_of_week <= 7)))",
+             name_template: nil,
+             foreign_table: nil,
+             foreign_columns: nil,
+             on_delete: nil,
+             on_update: nil
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_regular_slots.phoenix_kit_bookings_regular_slots_pkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_regular_slots_pkey",
+             table: "phoenix_kit_bookings_regular_slots",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_regular_slots_pkey'\n      AND t.relname = 'phoenix_kit_bookings_regular_slots'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD CONSTRAINT phoenix_kit_bookings_regular_slots_pkey PRIMARY KEY (uuid);\n  END IF;\nEND\n$$",
         since: 1,
         class: :constraint,
         revisions: [
@@ -2444,6 +4259,70 @@ defmodule PhoenixKitBookings.ExpectedSchema do
       },
       %{
         id:
+          "constraint:phoenix_kit_bookings_bookings.phoenix_kit_bookings_bookings_event_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_bookings_event_uuid_fkey",
+             table: "phoenix_kit_bookings_bookings",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_bookings_event_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_bookings'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD CONSTRAINT phoenix_kit_bookings_bookings_event_uuid_fkey FOREIGN KEY (event_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_events(uuid) ON DELETE SET NULL;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["event_uuid"],
+             definition:
+               "FOREIGN KEY (event_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_events(uuid) ON DELETE SET NULL",
+             name_template: nil,
+             foreign_table: "phoenix_kit_bookings_events",
+             foreign_columns: ["uuid"],
+             on_delete: "n",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_bookings.phoenix_kit_bookings_bookings_price_option_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_bookings_price_option_uuid_fkey",
+             table: "phoenix_kit_bookings_bookings",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_bookings_price_option_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_bookings'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_bookings ADD CONSTRAINT phoenix_kit_bookings_bookings_price_option_uuid_fkey FOREIGN KEY (price_option_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_price_options(uuid) ON DELETE SET NULL;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["price_option_uuid"],
+             definition:
+               "FOREIGN KEY (price_option_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_price_options(uuid) ON DELETE SET NULL",
+             name_template: nil,
+             foreign_table: "phoenix_kit_bookings_price_options",
+             foreign_columns: ["uuid"],
+             on_delete: "n",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
           "constraint:phoenix_kit_bookings_bookings.phoenix_kit_bookings_bookings_service_uuid_fkey",
         owner: :phoenix_kit_bookings,
         check:
@@ -2539,6 +4418,70 @@ defmodule PhoenixKitBookings.ExpectedSchema do
         backfill: nil
       },
       %{
+        id:
+          "constraint:phoenix_kit_bookings_events.phoenix_kit_bookings_events_host_profile_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_events_host_profile_uuid_fkey",
+             table: "phoenix_kit_bookings_events",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_events_host_profile_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_events'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD CONSTRAINT phoenix_kit_bookings_events_host_profile_uuid_fkey FOREIGN KEY (host_profile_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_host_profiles(uuid) ON DELETE SET NULL;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["host_profile_uuid"],
+             definition:
+               "FOREIGN KEY (host_profile_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_host_profiles(uuid) ON DELETE SET NULL",
+             name_template: nil,
+             foreign_table: "phoenix_kit_bookings_host_profiles",
+             foreign_columns: ["uuid"],
+             on_delete: "n",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_events.phoenix_kit_bookings_events_service_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_events_service_uuid_fkey",
+             table: "phoenix_kit_bookings_events",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_events_service_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_events'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_events ADD CONSTRAINT phoenix_kit_bookings_events_service_uuid_fkey FOREIGN KEY (service_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_services(uuid) ON DELETE CASCADE;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["service_uuid"],
+             definition:
+               "FOREIGN KEY (service_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_services(uuid) ON DELETE CASCADE",
+             name_template: nil,
+             foreign_table: "phoenix_kit_bookings_services",
+             foreign_columns: ["uuid"],
+             on_delete: "c",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
         id: "constraint:phoenix_kit_bookings_holds.phoenix_kit_bookings_holds_service_uuid_fkey",
         owner: :phoenix_kit_bookings,
         check:
@@ -2563,6 +4506,166 @@ defmodule PhoenixKitBookings.ExpectedSchema do
              foreign_table: "phoenix_kit_bookings_services",
              foreign_columns: ["uuid"],
              on_delete: "c",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_host_profiles.phoenix_kit_bookings_host_profiles_user_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_host_profiles_user_uuid_fkey",
+             table: "phoenix_kit_bookings_host_profiles",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_host_profiles_user_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_host_profiles'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_host_profiles ADD CONSTRAINT phoenix_kit_bookings_host_profiles_user_uuid_fkey FOREIGN KEY (user_uuid) REFERENCES __SCHEMA__.phoenix_kit_users(uuid) ON DELETE SET NULL;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["user_uuid"],
+             definition:
+               "FOREIGN KEY (user_uuid) REFERENCES __SCHEMA__.phoenix_kit_users(uuid) ON DELETE SET NULL",
+             name_template: nil,
+             foreign_table: "phoenix_kit_users",
+             foreign_columns: ["uuid"],
+             on_delete: "n",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_price_options.phoenix_kit_bookings_price_options_service_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_price_options_service_uuid_fkey",
+             table: "phoenix_kit_bookings_price_options",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_price_options_service_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_price_options'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_price_options ADD CONSTRAINT phoenix_kit_bookings_price_options_service_uuid_fkey FOREIGN KEY (service_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_services(uuid) ON DELETE CASCADE;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["service_uuid"],
+             definition:
+               "FOREIGN KEY (service_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_services(uuid) ON DELETE CASCADE",
+             name_template: nil,
+             foreign_table: "phoenix_kit_bookings_services",
+             foreign_columns: ["uuid"],
+             on_delete: "c",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_regular_slots.phoenix_kit_bookings_regular_slots_service_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_regular_slots_service_uuid_fkey",
+             table: "phoenix_kit_bookings_regular_slots",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_regular_slots_service_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_regular_slots'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD CONSTRAINT phoenix_kit_bookings_regular_slots_service_uuid_fkey FOREIGN KEY (service_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_services(uuid) ON DELETE CASCADE;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["service_uuid"],
+             definition:
+               "FOREIGN KEY (service_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_services(uuid) ON DELETE CASCADE",
+             name_template: nil,
+             foreign_table: "phoenix_kit_bookings_services",
+             foreign_columns: ["uuid"],
+             on_delete: "c",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_regular_slots.phoenix_kit_bookings_regular_slots_user_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_regular_slots_user_uuid_fkey",
+             table: "phoenix_kit_bookings_regular_slots",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_regular_slots_user_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_regular_slots'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_regular_slots ADD CONSTRAINT phoenix_kit_bookings_regular_slots_user_uuid_fkey FOREIGN KEY (user_uuid) REFERENCES __SCHEMA__.phoenix_kit_users(uuid) ON DELETE SET NULL;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["user_uuid"],
+             definition:
+               "FOREIGN KEY (user_uuid) REFERENCES __SCHEMA__.phoenix_kit_users(uuid) ON DELETE SET NULL",
+             name_template: nil,
+             foreign_table: "phoenix_kit_users",
+             foreign_columns: ["uuid"],
+             on_delete: "n",
+             on_update: "a"
+           }}
+        ],
+        presence: :required,
+        backfill: nil
+      },
+      %{
+        id:
+          "constraint:phoenix_kit_bookings_services.phoenix_kit_bookings_services_host_profile_uuid_fkey",
+        owner: :phoenix_kit_bookings,
+        check:
+          {:catalog,
+           %{
+             name: "phoenix_kit_bookings_services_host_profile_uuid_fkey",
+             table: "phoenix_kit_bookings_services",
+             kind: :constraint
+           }},
+        create:
+          "DO $$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_constraint c\n    JOIN pg_class t ON t.oid = c.conrelid\n    JOIN pg_namespace n ON n.oid = t.relnamespace\n    WHERE c.conname = 'phoenix_kit_bookings_services_host_profile_uuid_fkey'\n      AND t.relname = 'phoenix_kit_bookings_services'\n      AND n.nspname = '__SCHEMA__'\n  ) THEN\n    ALTER TABLE __SCHEMA__.phoenix_kit_bookings_services ADD CONSTRAINT phoenix_kit_bookings_services_host_profile_uuid_fkey FOREIGN KEY (host_profile_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_host_profiles(uuid) ON DELETE SET NULL;\n  END IF;\nEND\n$$",
+        since: 1,
+        class: :constraint,
+        revisions: [
+          {1,
+           %{
+             type: "f",
+             columns: ["host_profile_uuid"],
+             definition:
+               "FOREIGN KEY (host_profile_uuid) REFERENCES __SCHEMA__.phoenix_kit_bookings_host_profiles(uuid) ON DELETE SET NULL",
+             name_template: nil,
+             foreign_table: "phoenix_kit_bookings_host_profiles",
+             foreign_columns: ["uuid"],
+             on_delete: "n",
              on_update: "a"
            }}
         ],

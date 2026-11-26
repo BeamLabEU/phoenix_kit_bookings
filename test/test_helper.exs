@@ -62,7 +62,8 @@ repo_available =
       PhoenixKitBookings.Test.Repo,
       [
         {1, PhoenixKitBookings.Test.SchemaMigration},
-        {2, PhoenixKitBookings.Test.SchemaMigrationV2}
+        {2, PhoenixKitBookings.Test.SchemaMigrationV2},
+        {3, PhoenixKitBookings.Test.SchemaMigrationV3}
       ],
       :up,
       all: true,
