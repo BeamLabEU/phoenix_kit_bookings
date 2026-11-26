@@ -595,14 +595,16 @@ schema (the conformance test enforces it).
   occupancy, not bookability: notice and max-advance are not applied.
 - **Events** bypass the service's availability rules; their seats still
   occupy the service for its own picker. A sign-up takes its times and
-  price from the event row under lock, and is refused while the service's
-  OTHER bookings and holds fill all its seats at that time
-  (`Bookings.service_full_for_event?/2`) unless the event has
+  price from the event row under lock, and its seats count against the
+  service's: a sign-up is refused unless the event's seats taken plus this
+  one fit beside the service's other bookings and holds at the busiest
+  moment (`Bookings.service_full_for_event?/3`), unless the event has
   `ignore_service_capacity` (kept in its `settings`). `update_event/3`
   locks the service rows, then the event row (a sign-up's order), and
   judges the stored row: its (effective) capacity cannot drop below the
   seats taken; new times or another service MOVE its active bookings in the
-  same transaction (refused if the service is full there), mailing each
+  same transaction, re-priced (refused if they do not all fit there, or the
+  destination is a day/night service), mailing each
   customer a "Booking moved" `.ics` and rescheduling the reminder (a
   reminder job carries the start it was made for; an outdated one sends
   nothing); a status change to `cancelled` cancels its bookings.
@@ -616,6 +618,8 @@ schema (the conformance test enforces it).
   not seen.
 - A regular-slot conflict across the fall-back hour flags a span up to an
   hour wider than the booking (advisory only).
+- `Imports`' `:fetched_at` compares wall clocks: two app nodes with skewed
+  clocks can rank two overlapping reads the wrong way round.
 - `HTTPFetcher` no longer uses core's test-only `RemoteFetch`
   `:unsafe_resolver`; a public resolver option there is a core question.
 
