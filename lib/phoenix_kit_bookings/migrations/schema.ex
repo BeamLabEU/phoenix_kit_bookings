@@ -665,9 +665,10 @@ defmodule PhoenixKitBookings.Migrations.Schema do
   defp prefix_str(prefix) when prefix in [nil, "public"], do: ""
   defp prefix_str(prefix), do: "#{prefix}."
 
-  # The schema a prefix string names ("" is public).
+  # The schema a prefix string names ("" is public), as the catalogue
+  # stores it: the prefix is interpolated unquoted, so PostgreSQL folds it.
   defp schema_name(""), do: "public"
-  defp schema_name(prefix_str), do: String.trim_trailing(prefix_str, ".")
+  defp schema_name(prefix_str), do: prefix_str |> String.trim_trailing(".") |> String.downcase()
 
   # Always schema-qualified, `public` included.
   #
