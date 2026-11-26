@@ -199,6 +199,9 @@ defmodule PhoenixKitBookings.ICalImport do
   def describe(:not_a_calendar), do: gettext("The URL did not return an iCal calendar.")
   def describe(:too_large), do: gettext("The feed is larger than 5 MB.")
 
+  def describe(:too_many_events),
+    do: gettext("The feed has more than 20 000 events in the coming year.")
+
   def describe(:no_url), do: gettext("No feed URL is set.")
 
   def describe(:blocked_host),

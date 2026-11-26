@@ -263,4 +263,136 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
              END:VEVENT
              """)
   end
+
+  describe "review fixes" do
+    test "escapes decode in one pass" do
+      %{events: [event]} =
+        parse("""
+        BEGIN:VEVENT
+        UID:e
+        DTSTART:20260310T090000Z
+        DTEND:20260310T100000Z
+        SUMMARY:C:\\\\new\; a\\, b\\nc
+        END:VEVENT
+        """)
+
+      assert event.summary == "C:\\new; a, b\nc"
+    end
+
+    test "a cancelled or transparent override removes its instance instead of bringing it back" do
+      %{events: events} =
+        parse("""
+        BEGIN:VEVENT
+        UID:r
+        DTSTART:20260101T100000Z
+        DTEND:20260101T110000Z
+        RRULE:FREQ=DAILY;COUNT=3
+        END:VEVENT
+        BEGIN:VEVENT
+        UID:r
+        RECURRENCE-ID:20260102T100000Z
+        DTSTART:20260102T100000Z
+        DTEND:20260102T110000Z
+        STATUS:CANCELLED
+        END:VEVENT
+        BEGIN:VEVENT
+        UID:r
+        RECURRENCE-ID:20260103T100000Z
+        DTSTART:20260103T100000Z
+        DTEND:20260103T110000Z
+        TRANSP:TRANSPARENT
+        END:VEVENT
+        """)
+
+      assert Enum.map(events, fn %{range: {:datetime, s, _}} -> s end) == [
+               ~U[2026-01-01 10:00:00Z]
+             ]
+    end
+
+    test "WKST decides which weeks an INTERVAL=2 rule skips" do
+      %{events: events} =
+        parse("""
+        BEGIN:VEVENT
+        UID:w
+        DTSTART:20260104T100000Z
+        DURATION:PT1H
+        RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=SU,MO;WKST=SU
+        END:VEVENT
+        """)
+
+      assert Enum.map(events, fn %{range: {:datetime, s, _}} -> DateTime.to_date(s) end) == [
+               ~D[2026-01-04],
+               ~D[2026-01-05],
+               ~D[2026-01-18],
+               ~D[2026-01-19]
+             ]
+    end
+
+    test "a start inside the spring-forward gap reads with the offset before it" do
+      %{events: [%{range: {:datetime, s, e}}]} =
+        parse("""
+        BEGIN:VEVENT
+        UID:g
+        DTSTART;TZID=America/New_York:20260308T023000
+        DURATION:PT1H
+        END:VEVENT
+        """)
+
+      assert s == ~U[2026-03-08 07:30:00Z]
+      assert e == ~U[2026-03-08 08:30:00Z]
+    end
+
+    test "a body without END:VCALENDAR is not a calendar (a cut-off feed must not empty the import)" do
+      assert {:error, :not_a_calendar} =
+               Parser.parse("BEGIN:VCALENDAR\r\n", from: @from, until: @until)
+
+      assert {:error, :not_a_calendar} =
+               Parser.parse(
+                 "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a\r\nDTSTART:20260310T090000Z\r\n",
+                 from: @from,
+                 until: @until
+               )
+    end
+
+    test "lowercase component names are read" do
+      assert {:ok, %{events: [_]}} =
+               Parser.parse(
+                 "begin:vcalendar\nbegin:vevent\nuid:a\ndtstart:20260310T090000Z\n" <>
+                   "dtend:20260310T100000Z\nend:vevent\nend:vcalendar\n",
+                 from: @from,
+                 until: @until
+               )
+    end
+
+    test "a feed expanding past the feed-wide cap is refused, not truncated" do
+      body =
+        Enum.map_join(1..11, "", fn n ->
+          "BEGIN:VEVENT\r\nUID:many-#{n}\r\nDTSTART:20260101T#{String.pad_leading("#{n}", 2, "0")}0000Z\r\n" <>
+            "DURATION:PT30M\r\nRRULE:FREQ=DAILY;COUNT=2000\r\nEND:VEVENT\r\n"
+        end)
+
+      assert {:error, :too_many_events} =
+               Parser.parse(cal(body), from: @from, until: ~U[2032-01-01 00:00:00Z])
+    end
+
+    test "an absurd DURATION is skipped at once instead of stalling the date arithmetic" do
+      task =
+        Task.async(fn ->
+          parse("""
+          BEGIN:VEVENT
+          UID:long
+          DTSTART:20260310T090000Z
+          DURATION:PT99999999999999999999S
+          END:VEVENT
+          BEGIN:VEVENT
+          UID:ok
+          DTSTART:20260311T090000Z
+          DURATION:P1W
+          END:VEVENT
+          """)
+        end)
+
+      assert %{events: [%{uid: "ok"}]} = Task.await(task, 5_000)
+    end
+  end
 end

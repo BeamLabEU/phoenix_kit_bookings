@@ -23,9 +23,15 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     left out.
   - `RRULE` with `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`,
     `UNTIL`, and `BYDAY` (plain weekdays) on weekly rules; `EXDATE`; and
-    `RECURRENCE-ID` overrides (the moved instance replaces the original).
-    Occurrences are generated in the event's own wall clock and expanded
-    only inside the requested window.
+    `RECURRENCE-ID` overrides (the moved instance replaces the original; a
+    cancelled or transparent override just removes it). Weeks start on
+    `WKST`. Occurrences are generated in the event's own wall clock and
+    expanded only inside the requested window.
+  - A body without both `BEGIN:VCALENDAR` and `END:VCALENDAR` (a page, or a
+    feed cut off in transit) is `{:error, :not_a_calendar}`, as is one the
+    reader trips over; a feed expanding to more than 20 000 occurrences in
+    the window is `{:error, :too_many_events}`. Neither imports anything,
+    so neither deletes what an earlier sync imported.
 
   ## Limits
 
@@ -42,6 +48,12 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   """
 
   @max_occurrences 2_000
+  # Occurrences a whole feed may expand to; more is refused, not truncated,
+  # because a truncated list would delete the imported rows past the cut.
+  @max_feed_occurrences 20_000
+  # The longest event read (two years): date arithmetic on a DURATION of
+  # 10^20 seconds runs for minutes, so a longer one is skipped as malformed.
+  @max_length_seconds 2 * 366 * 86_400
   # Candidates walked per rule at most (a daily rule over 270 years).
   @max_steps 100_000
 
@@ -60,21 +72,33 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     until = Keyword.fetch!(opts, :until)
     tz = Keyword.get(opts, :tz, "Etc/UTC")
 
-    if String.contains?(text, "BEGIN:VCALENDAR") do
-      {events, unsupported} =
-        text
-        |> unfold()
-        |> Enum.map(&parse_line/1)
-        |> Enum.reject(&is_nil/1)
-        |> vevents()
-        |> Enum.map(&to_event(&1, tz))
-        |> Enum.reject(&is_nil/1)
-        |> expand_all(from, until)
-
-      {:ok, %{events: events, unsupported: unsupported}}
+    # A body cut off in transit still starts like a calendar; read as one it
+    # would list fewer events, and the sync would delete the missing ones.
+    if Regex.match?(~r/BEGIN:VCALENDAR/i, text) and Regex.match?(~r/END:VCALENDAR/i, text) do
+      do_parse(text, from, until, tz)
     else
       {:error, :not_a_calendar}
     end
+  end
+
+  defp do_parse(text, from, until, tz) do
+    {events, unsupported} =
+      text
+      |> unfold()
+      |> Enum.map(&parse_line/1)
+      |> Enum.reject(&is_nil/1)
+      |> vevents()
+      |> Enum.map(&to_event(&1, tz))
+      |> Enum.reject(&is_nil/1)
+      |> expand_all(from, until)
+
+    if length(events) > @max_feed_occurrences,
+      do: {:error, :too_many_events},
+      else: {:ok, %{events: events, unsupported: unsupported}}
+  rescue
+    # Whatever a malformed feed trips (a date past year 9999, …) is a feed
+    # that cannot be read, not a crash of the sync.
+    _ -> {:error, :not_a_calendar}
   end
 
   # ── Lexing ───────────────────────────────────────────────────────────
@@ -93,7 +117,9 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     case split_value(line) do
       {head, value} ->
         [name | params] = split_params(head)
-        {String.upcase(name), parse_params(params), value}
+        name = String.upcase(name)
+        value = if name in ["BEGIN", "END"], do: String.upcase(String.trim(value)), else: value
+        {name, parse_params(params), value}
 
       nil ->
         nil
@@ -160,11 +186,11 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
 
     with {_, _, uid} <- get.("UID") || {nil, nil, nil},
          false <- is_nil(uid) or uid == "",
-         false <- busy_free?(get),
          {_, start_params, start_value} <- get.("DTSTART"),
          {:ok, start} <- parse_time(start_value, start_params, tz) do
       %{
         uid: uid,
+        busy?: not busy_free?(get),
         summary: get_text(get.("SUMMARY")),
         start: start,
         length: event_length(start, get.("DTEND"), get.("DURATION"), tz),
@@ -189,12 +215,12 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   defp get_value({_, _, value}), do: value
   defp get_value(_), do: nil
 
+  # One pass, so the `\\` of `C:\\new` is a backslash and not half of `\n`.
   defp get_text({_, _, value}) do
-    value
-    |> String.replace(~r/\\[nN]/, "\n")
-    |> String.replace("\\,", ",")
-    |> String.replace("\;", ";")
-    |> String.replace("\\\\", "\\")
+    Regex.replace(~r/\\([\\;,nN])/, value, fn
+      _, c when c in ["n", "N"] -> "\n"
+      _, c -> c
+    end)
   end
 
   defp get_text(_), do: nil
@@ -315,7 +341,8 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
          ) do
       [_ | parts] ->
         [w, d, h, m, s] = Enum.map(parts ++ List.duplicate("", 5 - length(parts)), &to_int/1)
-        w * 604_800 + d * 86_400 + h * 3600 + m * 60 + s
+        seconds = w * 604_800 + d * 86_400 + h * 3600 + m * 60 + s
+        if seconds > @max_length_seconds, do: 0, else: seconds
 
       _ ->
         0
@@ -330,8 +357,11 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   defp expand_all(events, from, until) do
     {masters, overrides} = Enum.split_with(events, &is_nil(&1.recurrence_id))
 
-    # A RECURRENCE-ID instance replaces the master's occurrence at that time.
+    # A RECURRENCE-ID instance replaces the master's occurrence at that time,
+    # also when the override is cancelled or transparent (then it is just gone).
     moved = MapSet.new(overrides, &{&1.uid, instant_key(&1.recurrence_id)})
+    masters = Enum.filter(masters, & &1.busy?)
+    overrides = Enum.filter(overrides, & &1.busy?)
 
     {occurrences, unsupported} =
       Enum.reduce(masters, {[], 0}, fn event, {acc, unsupported} ->
@@ -489,15 +519,20 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   defp start_zone(_), do: "Etc/UTC"
 
   # Every candidate start in order, from DTSTART on.
-  defp candidates(start, %{"FREQ" => "WEEKLY", "BYDAY" => days}, interval) do
-    weekdays = days |> String.split(",") |> Enum.map(&@weekdays[&1]) |> Enum.sort()
+  # Weeks begin on WKST (Monday by default), which matters once INTERVAL > 1.
+  defp candidates(start, %{"FREQ" => "WEEKLY", "BYDAY" => days} = rule, interval) do
+    wkst = Map.get(@weekdays, Map.get(rule, "WKST", "MO"), 1)
+
+    offsets =
+      days |> String.split(",") |> Enum.map(&Integer.mod(@weekdays[&1] - wkst, 7)) |> Enum.sort()
+
     first_date = start_date(start)
-    week_monday = Date.add(first_date, 1 - Date.day_of_week(first_date))
+    week_start = Date.add(first_date, -Integer.mod(Date.day_of_week(first_date) - wkst, 7))
 
     Stream.iterate(0, &(&1 + 1))
     |> Stream.flat_map(fn week ->
-      monday = Date.add(week_monday, week * 7 * interval)
-      Enum.map(weekdays, &with_date(start, Date.add(monday, &1 - 1)))
+      first = Date.add(week_start, week * 7 * interval)
+      Enum.map(offsets, &with_date(start, Date.add(first, &1)))
     end)
     |> Stream.reject(&(Date.compare(start_date(&1), first_date) == :lt))
   end
@@ -556,8 +591,9 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   defp instant_key({:date, date}), do: {:date, date}
   defp instant_key({:local, _, _} = time), do: {:utc, to_utc(time)}
 
-  # A wall clock in its zone, resolved at that instant. A gap (spring
-  # forward) takes the later side; an ambiguous hour the first.
+  # A wall clock in its zone, resolved at that instant. A clock inside a gap
+  # (spring forward) is read with the offset before the gap, as RFC 5545
+  # §3.3.5 says; an ambiguous hour takes its first occurrence.
   defp to_utc({:local, naive, zone}) do
     case DateTime.from_naive(naive, zone, Tz.TimeZoneDatabase) do
       {:ok, dt} ->
@@ -566,8 +602,10 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
       {:ambiguous, first, _second} ->
         DateTime.shift_zone!(first, "Etc/UTC", Tz.TimeZoneDatabase)
 
-      {:gap, _before, after_gap} ->
-        DateTime.shift_zone!(after_gap, "Etc/UTC", Tz.TimeZoneDatabase)
+      {:gap, before, _after} ->
+        naive
+        |> DateTime.from_naive!("Etc/UTC")
+        |> DateTime.add(-(before.utc_offset + before.std_offset), :second)
 
       {:error, _} ->
         DateTime.from_naive!(naive, "Etc/UTC")
