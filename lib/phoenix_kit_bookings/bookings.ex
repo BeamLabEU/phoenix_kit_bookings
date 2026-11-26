@@ -404,6 +404,10 @@ defmodule PhoenixKitBookings.Bookings do
     end
   end
 
+  defp insert_validated({:error, reason, message}, _changeset, _eff, _units, _range, _opts) do
+    repo().rollback({:rejected, reason, message})
+  end
+
   # A price × a long range can exceed the column; that is a refusal, not a
   # database error.
   defp check_total!(nil), do: nil
@@ -412,10 +416,6 @@ defmodule PhoenixKitBookings.Bookings do
     if Decimal.compare(total, @max_total) == :gt,
       do: repo().rollback({:rejected, :total_too_large, @total_too_large}),
       else: total
-  end
-
-  defp insert_validated({:error, reason, message}, _changeset, _eff, _units, _range, _opts) do
-    repo().rollback({:rejected, reason, message})
   end
 
   # Somebody else's usual time: book it anyway, but say so on the row.

@@ -36,18 +36,6 @@ defmodule PhoenixKitBookings.Workers.ReminderWorker do
   moment already in the past, or Oban not running (module test suite) all
   no-op.
   """
-  # Jobs from before the start was recorded carry none and still fire.
-  defp same_start?(nil, _starts_at), do: true
-
-  defp same_start?(iso, %DateTime{} = starts_at) when is_binary(iso) do
-    case DateTime.from_iso8601(iso) do
-      {:ok, at, _} -> DateTime.compare(at, starts_at) == :eq
-      _ -> true
-    end
-  end
-
-  defp same_start?(_iso, _starts_at), do: true
-
   def schedule(%Booking{starts_at: %DateTime{} = starts_at} = booking, %{
         reminder_minutes: minutes
       })
@@ -70,4 +58,16 @@ defmodule PhoenixKitBookings.Workers.ReminderWorker do
   end
 
   def schedule(_booking, _service), do: :ok
+
+  # Jobs from before the start was recorded carry none and still fire.
+  defp same_start?(nil, _starts_at), do: true
+
+  defp same_start?(iso, %DateTime{} = starts_at) when is_binary(iso) do
+    case DateTime.from_iso8601(iso) do
+      {:ok, at, _} -> DateTime.compare(at, starts_at) == :eq
+      _ -> true
+    end
+  end
+
+  defp same_start?(_iso, _starts_at), do: true
 end
