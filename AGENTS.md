@@ -574,15 +574,20 @@ schema (the conformance test enforces it).
 - **iCal** (`ICalImport` + `ICalImport.Parser`): own small parser (limits in
   its moduledoc); the fetcher is `config :phoenix_kit_bookings, :ical_fetcher`
   (default `HTTPFetcher`; tests swap it). The URL is admin input fetched by
-  the server, so `HTTPFetcher` runs on core's `Storage.RemoteFetch`: every
-  address the host resolves to (and every redirect hop's) must be public
-  (`PhoenixKit.Utils.PublicAddress`), the connection goes to the checked
-  address, ports 80/443, the body is capped at 5 MB while streaming. A LAN
-  feed is let through only by `config :phoenix_kit_bookings,
-  ical_allowed_hosts: [...]` (+ `ical_allowed_ports:`). The service form
-  refuses `localhost` and non-public IP literals up front. A cut-off body
-  (no `END:VCALENDAR`) or one over 20 000 occurrences is an error and
-  deletes nothing.
+  the server, so `HTTPFetcher` (on Mint, the way core's `Storage.RemoteFetch`
+  works) checks that every address the host resolves to, and every redirect
+  hop's, is public (`PhoenixKit.Utils.PublicAddress`), connects to the
+  checked address, allows ports 80/443, caps the body at 5 MB while
+  streaming. A LAN feed is let through only by `config :phoenix_kit_bookings,
+  ical_allowed_hosts: [...]` (+ `ical_allowed_ports:`). Credentials in the
+  URL go as HTTP Basic auth to its own origin only (a redirect `Location`
+  with credentials is refused); the form shows them redacted
+  (`HTTPFetcher.redact/1`) and never logs them. The service form refuses
+  `localhost` and non-public IP literals up front. A cut-off body (no
+  `END:VCALENDAR`) or one over 20 000 occurrences is an error and deletes
+  nothing. Syncs of one service are serialised by its row lock, and a read
+  that began before the last applied one is dropped (`Imports`'
+  `:fetched_at`, kept per source in the service's `settings`).
 - **Price options** are re-judged inside the locked create; the public flow
   offers only entitled ones and drops anything else the client sends.
 - **Regular slots** never block: flag + activity + owner email.
@@ -590,10 +595,29 @@ schema (the conformance test enforces it).
   occupancy, not bookability: notice and max-advance are not applied.
 - **Events** bypass the service's availability rules; their seats still
   occupy the service for its own picker. A sign-up takes its times and
-  price from the event row under lock. `update_event/3` judges the stored
-  row under its lock: with active bookings an event keeps its service and
-  times, and its (effective) capacity cannot drop below the seats taken; a
-  status change to `cancelled` cancels its bookings.
+  price from the event row under lock, and is refused while the service's
+  OTHER bookings and holds fill all its seats at that time
+  (`Bookings.service_full_for_event?/2`) unless the event has
+  `ignore_service_capacity` (kept in its `settings`). `update_event/3`
+  locks the service rows, then the event row (a sign-up's order), and
+  judges the stored row: its (effective) capacity cannot drop below the
+  seats taken; new times or another service MOVE its active bookings in the
+  same transaction (refused if the service is full there), mailing each
+  customer a "Booking moved" `.ics` and rescheduling the reminder (a
+  reminder job carries the start it was made for; an outdated one sends
+  nothing); a status change to `cancelled` cancels its bookings.
+- **Totals**: a price or a stamped total beyond `NUMERIC(12,2)` is a
+  validation error / `:total_too_large`, never a database raise.
+
+### Accepted races (decided 2026-11-26)
+
+- `Policy` re-reads the service/event before authorizing; an ownership
+  change committed in the milliseconds between that read and the write is
+  not seen.
+- A regular-slot conflict across the fall-back hour flags a span up to an
+  hour wider than the booking (advisory only).
+- `HTTPFetcher` no longer uses core's test-only `RemoteFetch`
+  `:unsafe_resolver`; a public resolver option there is a core question.
 
 Feature behaviour lives in the `@moduledoc`s (`Engine`, `Bookings`,
 `Policy`, `BookingFlow`, `Migrations.Schema`, `BookingWidgetLive`). The
@@ -631,8 +655,9 @@ publish has succeeded.
   invoice-later). Totals are already stored; billing plugs into
   `create_booking`'s success path once decided.
 - Two-way calendar sync (Google/Outlook OAuth): blocked on provider
-  credentials. iCal import: `RDATE`, ordinal `BYDAY`, `BYSETPOS` etc. not
-  expanded.
+  credentials. iCal import: `RDATE`, `BYSETPOS`, `BYMONTH`, yearly ordinal
+  `BYDAY` and VTIMEZONEs beyond fixed offsets / yearly BYMONTH+BYDAY
+  observances are not expanded.
 - Recurring bookings: pick the data model (series table vs rrule) before
   building.
 - Viewer-timezone slot display: unblocks when a service is not a physical
