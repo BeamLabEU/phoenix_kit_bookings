@@ -555,9 +555,25 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
   # Back to V2: V3's tables and columns go. Imported bookings have no place in
   # V2 (its source CHECK and NOT NULL customer columns refuse them), so they
-  # are deleted first; every other row survives.
+  # are deleted first. Imported availability rules go too: without their
+  # `source` column they would pass for the owner's own rules, and a later
+  # V3 sync could no longer find them to replace. Every other row survives.
   defp down_to_v2(p) do
     execute("DELETE FROM #{p}phoenix_kit_bookings_bookings WHERE source = 'import'")
+
+    execute("""
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = '#{schema_name(p)}'
+          AND table_name = 'phoenix_kit_bookings_availability_rules'
+          AND column_name = 'source'
+      ) THEN
+        DELETE FROM #{p}phoenix_kit_bookings_availability_rules WHERE source = 'import';
+      END IF;
+    END $$;
+    """)
 
     execute("""
     ALTER TABLE #{p}phoenix_kit_bookings_bookings
@@ -648,6 +664,10 @@ defmodule PhoenixKitBookings.Migrations.Schema do
 
   defp prefix_str(prefix) when prefix in [nil, "public"], do: ""
   defp prefix_str(prefix), do: "#{prefix}."
+
+  # The schema a prefix string names ("" is public).
+  defp schema_name(""), do: "public"
+  defp schema_name(prefix_str), do: String.trim_trailing(prefix_str, ".")
 
   # Always schema-qualified, `public` included.
   #

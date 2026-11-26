@@ -137,6 +137,48 @@ defmodule PhoenixKitBookings.MigrationsTest do
     assert index?("phoenix_kit_bookings_events")
   end
 
+  defmodule DownToV1 do
+    use Ecto.Migration
+    def up, do: Schema.down(prefix: "public", version: 1)
+    def down, do: :ok
+  end
+
+  test "down on existing data: imported rows go, the owner's rows stay, V2 → V1 still runs" do
+    service = slot_service_fixture()
+    business_hours_rule_fixture(service)
+    starts_at = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+
+    {:ok, _} =
+      PhoenixKitBookings.Imports.sync_rules(service, "ical", [
+        %{external_id: "closed-1", date: Date.add(Date.utc_today(), 5), available: false}
+      ])
+
+    {:ok, _} =
+      PhoenixKitBookings.Imports.sync_bookings(service, "ical", [
+        %{external_id: "busy-1", range: {starts_at, DateTime.add(starts_at, 3600)}}
+      ])
+
+    count = fn table ->
+      %{rows: [[n]]} = Repo.query!("SELECT count(*) FROM public.#{table}")
+      n
+    end
+
+    assert count.("phoenix_kit_bookings_availability_rules") == 2
+    assert count.("phoenix_kit_bookings_bookings") == 1
+
+    Runner.run(Repo, [], 99_004, DownToV2, :forward, :up, :up, log: false)
+
+    assert count.("phoenix_kit_bookings_availability_rules") == 1
+    assert count.("phoenix_kit_bookings_bookings") == 0
+
+    Runner.run(Repo, [], 99_005, DownToV1, :forward, :up, :up, log: false)
+    assert Schema.migrated_version_runtime(prefix: "public") == 1
+    assert count.("phoenix_kit_bookings_availability_rules") == 1
+
+    Runner.run(Repo, [], 99_006, UpAgain, :forward, :up, :up, log: false)
+    assert Schema.migrated_version_runtime(prefix: "public") == 3
+  end
+
   test "an invalid prefix raises instead of reading as not installed" do
     assert_raise ArgumentError, fn -> Schema.migrated_version_runtime(prefix: "x; DROP") end
   end
