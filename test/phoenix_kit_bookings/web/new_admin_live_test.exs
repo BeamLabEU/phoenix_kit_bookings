@@ -175,6 +175,27 @@ defmodule PhoenixKitBookings.Web.NewAdminLiveTest do
       assert Events.get_event(event.uuid).status == "cancelled"
     end
 
+    test "the form saves the ignore-the-service's-capacity switch", %{conn: conn} do
+      service = slot_service_fixture()
+      {:ok, view, _} = live(conn, "/en/admin/bookings/events")
+      day = Date.add(Date.utc_today(), 5) |> Date.to_iso8601()
+
+      view
+      |> form("#bookings-event-form", %{
+        "event" => %{
+          "service_uuid" => service.uuid,
+          "title" => "Hall class",
+          "starts_local" => "#{day}T18:00",
+          "ends_local" => "#{day}T19:00",
+          "ignore_service_capacity" => "true"
+        }
+      })
+      |> render_submit()
+
+      assert [event] = Events.list_events(service_uuids: [service.uuid])
+      assert PhoenixKitBookings.Schemas.Event.ignore_service_capacity?(event)
+    end
+
     test "an own-services user cannot add events to someone else's service", %{conn: conn} do
       service = slot_service_fixture()
       mine_owner = user_fixture()

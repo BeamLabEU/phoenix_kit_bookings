@@ -550,6 +550,7 @@ defmodule PhoenixKitBookings.Bookings do
 
   @event_unavailable "This event is not taking sign-ups"
   @event_full "This event is fully booked"
+  @service_full "The service is fully booked at the event's time"
 
   @doc """
   Books one seat at a scheduled `event`: an ordinary booking of the event's
@@ -645,8 +646,54 @@ defmodule PhoenixKitBookings.Bookings do
       repo().rollback({:rejected, :at_capacity, @event_full})
     end
 
+    if service_full_for_event?(locked_service, locked_event) do
+      repo().rollback({:rejected, :at_capacity, @service_full})
+    end
+
     locked_event
   end
+
+  @doc """
+  Whether the service's OWN bookings and holds (everything but this event's
+  sign-ups) fill all its seats at some moment of the event — the room is
+  taken, so the event cannot seat anyone. False for an event that ignores
+  the service's capacity (`Event.ignore_service_capacity?/1`) and for a
+  day/night service. Called under the service lock by the sign-up and by
+  `Events.update_event/3` for a moved event.
+  """
+  def service_full_for_event?(%Service{} = service, %Event{} = event) do
+    if Event.ignore_service_capacity?(event) or service.time_unit != "minutes" do
+      false
+    else
+      window = conflict_window(service, {event.starts_at, event.ends_at})
+      seats = Services.effective_seats(service)
+
+      taken =
+        service.uuid
+        |> list_occupancy(window)
+        |> Enum.reject(&(&1.event_uuid == event.uuid))
+        |> peak_overlap(window)
+
+      taken >= seats
+    end
+  end
+
+  # The most rows that overlap one instant of the window.
+  defp peak_overlap(rows, {from, until}) do
+    rows
+    |> Enum.flat_map(fn %{starts_at: s, ends_at: e} ->
+      [{max_dt(s, from), 1}, {min_dt(e, until), -1}]
+    end)
+    |> Enum.sort_by(fn {at, delta} -> {DateTime.to_unix(at, :microsecond), delta} end)
+    |> Enum.reduce({0, 0}, fn {_at, delta}, {current, peak} ->
+      current = current + delta
+      {current, max(current, peak)}
+    end)
+    |> elem(1)
+  end
+
+  defp max_dt(a, b), do: if(DateTime.compare(a, b) == :lt, do: b, else: a)
+  defp min_dt(a, b), do: if(DateTime.compare(a, b) == :gt, do: b, else: a)
 
   defp event_total(%Event{price: nil}, service, range), do: Pricing.total(service, range)
   defp event_total(%Event{price: price}, _service, _range), do: Decimal.round(price, 2)

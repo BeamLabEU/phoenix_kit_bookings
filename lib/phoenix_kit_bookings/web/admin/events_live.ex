@@ -72,7 +72,8 @@ defmodule PhoenixKitBookings.Web.Admin.EventsLive do
       "ends_local" => to_local_input(event.ends_at),
       "capacity" => event.capacity,
       "price" => event.price && Decimal.to_string(event.price),
-      "public" => event.public
+      "public" => event.public,
+      "ignore_service_capacity" => Event.ignore_service_capacity?(event)
     }
 
     assign(socket, editing: event, form: to_form(params, as: :event), form_errors: [])
@@ -93,7 +94,8 @@ defmodule PhoenixKitBookings.Web.Admin.EventsLive do
       "ends_at" => from_local_input(params["ends_local"]),
       "capacity" => blank(params["capacity"]),
       "price" => blank(params["price"]),
-      "public" => params["public"] in ["true", "on", true]
+      "public" => params["public"] in ["true", "on", true],
+      "ignore_service_capacity" => params["ignore_service_capacity"] in ["true", "on", true]
     }
   end
 
@@ -352,6 +354,19 @@ defmodule PhoenixKitBookings.Web.Admin.EventsLive do
                 checked={@form[:public].value in [nil, true, "true"]}
               />
               <span>{gettext("Show on the public schedule")}</span>
+            </label>
+            <input type="hidden" name="event[ignore_service_capacity]" value="false" />
+            <label class="label cursor-pointer justify-start gap-2">
+              <input
+                type="checkbox"
+                name="event[ignore_service_capacity]"
+                value="true"
+                class="checkbox checkbox-sm"
+                checked={@form[:ignore_service_capacity].value in [true, "true"]}
+              />
+              <span>
+                {gettext("Sell its seats even when the service's own bookings fill it at that time")}
+              </span>
             </label>
             <div>
               <button type="submit" class="btn btn-primary">{gettext("Save event")}</button>

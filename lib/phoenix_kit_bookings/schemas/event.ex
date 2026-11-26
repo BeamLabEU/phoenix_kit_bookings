@@ -12,6 +12,10 @@ defmodule PhoenixKitBookings.Schemas.Event do
   - `price` — nil = the service's price for the event's length.
   - `status` — `scheduled` | `cancelled`; `public: false` keeps it off the
     public schedule (bookable by link from the admin only).
+  - `ignore_service_capacity` (kept in `settings`) — by default a sign-up is
+    also refused while the service's own bookings fill all its seats at the
+    event's time; `true` lets the event sell its seats regardless (a class
+    in a hall the service's other bookings do not really share).
 
   Times are true UTC, shown in the site frame.
   """
@@ -39,6 +43,7 @@ defmodule PhoenixKitBookings.Schemas.Event do
     field(:status, :string, default: "scheduled")
     field(:public, :boolean, default: true)
     field(:settings, :map, default: %{})
+    field(:ignore_service_capacity, :boolean, virtual: true)
 
     timestamps(type: :utc_datetime)
   end
@@ -64,8 +69,10 @@ defmodule PhoenixKitBookings.Schemas.Event do
       :capacity,
       :price,
       :status,
-      :public
+      :public,
+      :ignore_service_capacity
     ])
+    |> put_ignore_service_capacity()
     |> validate_required([:service_uuid, :title, :starts_at, :ends_at, :status])
     |> validate_length(:title, max: 255)
     |> validate_length(:location, max: 255)
@@ -79,6 +86,26 @@ defmodule PhoenixKitBookings.Schemas.Event do
     |> validate_order()
     |> check_constraint(:ends_at, name: :bookings_event_order)
     |> foreign_key_constraint(:service_uuid)
+  end
+
+  @doc "Whether the event sells its seats whatever the service's own bookings take."
+  def ignore_service_capacity?(%__MODULE__{settings: settings}),
+    do: Map.get(settings || %{}, "ignore_service_capacity") == true
+
+  defp put_ignore_service_capacity(changeset) do
+    case fetch_change(changeset, :ignore_service_capacity) do
+      {:ok, value} ->
+        settings = get_field(changeset, :settings) || %{}
+
+        put_change(
+          changeset,
+          :settings,
+          Map.put(settings, "ignore_service_capacity", value == true)
+        )
+
+      :error ->
+        changeset
+    end
   end
 
   defp validate_order(changeset) do
