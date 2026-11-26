@@ -303,10 +303,14 @@ defmodule PhoenixKitBookings.Policy do
       else: {:error, :not_allowed}
   end
 
-  defp with_event_service(scope, %Event{service_uuid: service_uuid}, fun) do
-    case Services.get_service(service_uuid) do
-      nil -> {:error, :not_allowed}
-      service -> authorized(scope, service, fun)
+  # Judged on the event as stored, not the struct the caller holds: the
+  # event may have moved to another service since that page was loaded.
+  defp with_event_service(scope, %Event{uuid: uuid}, fun) do
+    with %Event{service_uuid: service_uuid} <- Events.get_event(uuid),
+         %Service{} = service <- Services.get_service(service_uuid) do
+      authorized(scope, service, fun)
+    else
+      _ -> {:error, :not_allowed}
     end
   end
 
@@ -322,6 +326,16 @@ defmodule PhoenixKitBookings.Policy do
           nil -> {:error, :not_allowed}
           service -> authorized(scope, service, fun)
         end
+    end
+  end
+
+  # A stored service is judged as it is now, not as the caller's struct
+  # says: an admin page holds its struct from mount, and the owner may have
+  # changed since.
+  defp authorized(scope, %Service{uuid: uuid}, fun) when is_binary(uuid) do
+    case Services.get_service(uuid) do
+      nil -> {:error, :not_allowed}
+      current -> if can_manage?(scope, current), do: fun.(), else: {:error, :not_allowed}
     end
   end
 

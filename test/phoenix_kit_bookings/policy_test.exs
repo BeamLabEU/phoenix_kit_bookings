@@ -169,6 +169,52 @@ defmodule PhoenixKitBookings.PolicyTest do
     end
   end
 
+  describe "stale structs" do
+    test "a service reassigned since the page loaded is judged by its current owner" do
+      user_uuid = create_real_user()
+      enable_self_service(1)
+      user = user_scope(user_uuid)
+      {:ok, service} = Policy.create_service(user, %{"name" => unique_name("Mine")})
+
+      # An admin hands it to someone else while the owner's form is open.
+      Repo.update_all(
+        from(s in PhoenixKitBookings.Schemas.Service, where: s.uuid == ^service.uuid),
+        set: [owner_uuid: create_real_user()]
+      )
+
+      assert {:error, :not_allowed} =
+               Policy.update_service(user, service, %{"name" => "Still mine"})
+
+      assert {:error, :not_allowed} = Policy.add_rule(user, service, %{"days_of_week" => [1]})
+    end
+
+    test "an event moved to another owner's service is judged where it is now" do
+      user_uuid = create_real_user()
+      enable_self_service(1)
+      user = user_scope(user_uuid)
+      {:ok, mine} = Policy.create_service(user, %{"name" => unique_name("Mine")})
+      theirs = slot_service_fixture()
+
+      starts_at = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+      {:ok, event} =
+        PhoenixKitBookings.Events.create_event(%{
+          "service_uuid" => mine.uuid,
+          "title" => "Class",
+          "starts_at" => starts_at,
+          "ends_at" => DateTime.add(starts_at, 3600)
+        })
+
+      {:ok, _moved} =
+        PhoenixKitBookings.Events.update_event(event, %{"service_uuid" => theirs.uuid})
+
+      # `event` is the struct the old page still holds.
+      assert {:error, :not_allowed} = Policy.delete_event(user, event)
+      assert {:error, :not_allowed} = Policy.cancel_event(user, event)
+      assert PhoenixKitBookings.Events.get_event(event.uuid)
+    end
+  end
+
   describe "fail-closed edges" do
     test "a scope with no user sees no services, not all of them" do
       _service = slot_service_fixture()
