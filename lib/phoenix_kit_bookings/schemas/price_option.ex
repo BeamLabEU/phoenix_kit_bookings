@@ -70,7 +70,7 @@ defmodule PhoenixKitBookings.Schemas.PriceOption do
     |> update_change(:flag_key, &blank_to_nil/1)
     |> validate_required([:name, :price, :entitlement])
     |> validate_length(:name, max: 255)
-    |> validate_number(:price, greater_than_or_equal_to: 0)
+    |> validate_number(:price, greater_than_or_equal_to: 0, less_than: 10_000_000_000)
     |> validate_inclusion(:entitlement, @entitlements)
     |> validate_inclusion(:price_per, @price_pers)
     |> validate_length(:role_name, max: 100)

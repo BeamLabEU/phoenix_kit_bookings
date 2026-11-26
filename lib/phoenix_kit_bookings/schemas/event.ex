@@ -70,7 +70,7 @@ defmodule PhoenixKitBookings.Schemas.Event do
     |> validate_length(:title, max: 255)
     |> validate_length(:location, max: 255)
     |> validate_number(:capacity, greater_than: 0)
-    |> validate_number(:price, greater_than_or_equal_to: 0)
+    |> validate_number(:price, greater_than_or_equal_to: 0, less_than: 10_000_000_000)
     |> validate_inclusion(:status, @statuses)
     |> validate_order()
     |> check_constraint(:ends_at, name: :bookings_event_order)

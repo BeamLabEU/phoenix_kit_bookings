@@ -87,6 +87,31 @@ defmodule PhoenixKitBookings.PriceOptionsTest do
     assert errors_on(changeset)[:role_name]
   end
 
+  test "a price the NUMERIC(12,2) column cannot hold is a validation error, not a raise" do
+    service = priced_service()
+
+    assert {:error, changeset} =
+             PriceOptions.create_option(service, %{"name" => "x", "price" => "10000000000"})
+
+    assert errors_on(changeset)[:price]
+
+    assert {:ok, _} =
+             PriceOptions.create_option(service, %{"name" => "y", "price" => "9999999999.99"})
+
+    starts_at = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+    assert {:error, changeset} =
+             PhoenixKitBookings.Events.create_event(%{
+               "service_uuid" => service.uuid,
+               "title" => "Gala",
+               "starts_at" => starts_at,
+               "ends_at" => DateTime.add(starts_at, 3600),
+               "price" => "10000000000"
+             })
+
+    assert errors_on(changeset)[:price]
+  end
+
   test "entitled_options/2 lists only active options the customer may use" do
     service = priced_service()
     client = user_fixture()
