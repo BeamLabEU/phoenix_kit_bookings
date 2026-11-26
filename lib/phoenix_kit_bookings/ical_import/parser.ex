@@ -16,17 +16,24 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   - Line unfolding (CRLF or LF, space or tab continuation), property
     parameters, quoted parameter values, escaped text (`\\n`, `\\,`, `\;`).
   - `DTSTART` / `DTEND` / `DURATION` as UTC (`…Z`), zoned (`TZID=` an IANA
-    id, resolved through `tz` at each instant so daylight saving is right),
+    id, resolved through `tz` at each instant so daylight saving is right,
+    or one of the feed's own `VTIMEZONE`s: fixed offsets, or STANDARD /
+    DAYLIGHT observances with a yearly `BYMONTH` + ordinal `BYDAY` rule),
     floating (read in the site zone) or all-day (`VALUE=DATE`). A missing
     end is one day for an all-day event and zero length otherwise (skipped).
+    The days and weeks of a `DURATION` are calendar days (`P1D` across a
+    clock change is 23 or 25 hours), its time part exact.
   - `STATUS:CANCELLED` and `TRANSP:TRANSPARENT` events are not busy and are
     left out.
   - `RRULE` with `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`,
-    `UNTIL`, and `BYDAY` (plain weekdays) on weekly rules; `EXDATE`; and
+    `UNTIL`, `BYDAY` (plain weekdays) on weekly rules, `BYDAY` (plain or
+    ordinal: `2TU`, `-1FR`) and `BYMONTHDAY` (negative from the month's end)
+    on monthly rules; `EXDATE`; and
     `RECURRENCE-ID` overrides (the moved instance replaces the original; a
     cancelled or transparent override just removes it). Weeks start on
     `WKST`. Occurrences are generated in the event's own wall clock and
-    expanded only inside the requested window.
+    expanded only inside the requested window; an instance whose wall
+    clock falls in a spring-forward gap is skipped and not counted.
   - A body without both `BEGIN:VCALENDAR` and `END:VCALENDAR` (a page, or a
     feed cut off in transit) is `{:error, :not_a_calendar}`, as is one the
     reader trips over; a feed expanding to more than 20 000 occurrences in
@@ -35,11 +42,11 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
 
   ## Limits
 
-  - Other RRULE parts (`BYSETPOS`, `BYMONTHDAY` lists, ordinal `BYDAY` such
-    as `2MO`, `BYHOUR`, `BYWEEKNO`, …) are not expanded: such an event
-    imports its first occurrence only, and is counted in `:unsupported`.
-  - A `TZID` that is not an IANA id (Outlook's "FLE Standard Time") is read
-    in the site zone; the feed's own `VTIMEZONE` blocks are not interpreted.
+  - Other RRULE parts (`BYSETPOS`, `BYMONTH`, `BYHOUR`, `BYWEEKNO`, ordinal
+    `BYDAY` on yearly rules, …) are not expanded: such an event imports its
+    first occurrence only, and is counted in `:unsupported`.
+  - A `TZID` that is neither an IANA id nor a `VTIMEZONE` of the shape above
+    is read in the site zone, and its event is counted in `:unsupported`.
   - `RDATE` is ignored.
 
   `parse/2` returns `{:ok, %{events: [occurrence], unsupported: n}}` where
@@ -88,12 +95,15 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     do: Enum.any?(lines, &(&1 |> String.trim() |> String.upcase() == marker))
 
   defp do_parse(lines, from, until, tz) do
+    props = lines |> Enum.map(&parse_line/1) |> Enum.reject(&is_nil/1)
+    # Times are read in a context: the default zone (floating times) and the
+    # feed's own VTIMEZONE definitions by TZID.
+    ctx = {tz, vtimezones(props)}
+
     {events, unsupported} =
-      lines
-      |> Enum.map(&parse_line/1)
-      |> Enum.reject(&is_nil/1)
+      props
       |> vevents()
-      |> Enum.map(&to_event(&1, tz))
+      |> Enum.map(&to_event(&1, ctx))
       |> Enum.reject(&is_nil/1)
       |> expand_all(from, until)
 
@@ -196,6 +206,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
       %{
         uid: uid,
         busy?: not busy_free?(get),
+        tz_fallback?: tz_fallback?(start_params["TZID"], tz),
         summary: get_text(get.("SUMMARY")),
         start: start,
         length: event_length(start, get.("DTEND"), get.("DURATION"), tz),
@@ -265,16 +276,28 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     end
   end
 
-  defp known_zone(nil, tz), do: tz
+  # A TZID is an IANA id, else one of the feed's VTIMEZONEs this reader
+  # understands ({:custom, observances}), else the default zone.
+  defp known_zone(nil, {zone, _vtz}), do: zone
 
-  defp known_zone(tzid, tz) do
-    tzid = String.trim_leading(tzid, "/")
-
-    case DateTime.from_naive(~N[2000-01-01 00:00:00], tzid, Tz.TimeZoneDatabase) do
-      {:ok, _} -> tzid
-      _ -> tz
+  defp known_zone(tzid, {zone, vtz}) do
+    case resolve_tzid(tzid, vtz) do
+      nil -> zone
+      known -> known
     end
   end
+
+  defp resolve_tzid(tzid, vtz) do
+    iana = String.trim_leading(tzid, "/")
+
+    case DateTime.from_naive(~N[2000-01-01 00:00:00], iana, Tz.TimeZoneDatabase) do
+      {:ok, _} -> iana
+      _ -> Map.get(vtz, tzid)
+    end
+  end
+
+  defp tz_fallback?(nil, _ctx), do: false
+  defp tz_fallback?(tzid, {_zone, vtz}), do: is_nil(resolve_tzid(tzid, vtz))
 
   defp parse_date(<<y::binary-4, m::binary-2, d::binary-2, _::binary>>) do
     with {y, ""} <- Integer.parse(y),
@@ -330,11 +353,30 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
             {:seconds, 0}
         end
 
+      # Days and weeks are nominal (a calendar day, 23 or 25 hours across a
+      # clock change); the time part is exact. RFC 5545 §3.3.6.
       duration ->
-        {:seconds, parse_duration(elem(duration, 2))}
+        {days, seconds} = parse_duration_parts(elem(duration, 2))
+        if days == 0, do: {:seconds, seconds}, else: {:nominal, days, seconds}
 
       true ->
         {:seconds, 0}
+    end
+  end
+
+  # A duration as {calendar days, exact seconds}, each within the cap.
+  defp parse_duration_parts(value) do
+    case Regex.run(
+           ~r/^[+-]?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/,
+           String.trim(value)
+         ) do
+      [_ | parts] ->
+        [w, d, h, m, s] = Enum.map(parts ++ List.duplicate("", 5 - length(parts)), &to_int/1)
+        days = min(w * 7 + d, div(@max_length_seconds, 86_400))
+        {days, min(h * 3600 + m * 60 + s, @max_length_seconds)}
+
+      _ ->
+        {0, 0}
     end
   end
 
@@ -381,12 +423,15 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
           end)
           |> Enum.map(&occurrence(event, &1, event.rrule != nil))
 
-        {kept ++ acc, if(supported?, do: unsupported, else: unsupported + 1)}
+        counted? = supported? and not event.tz_fallback?
+        {kept ++ acc, if(counted?, do: unsupported, else: unsupported + 1)}
       end)
 
     override_occurrences =
       Enum.map(overrides, fn event ->
-        event |> occurrence(event.start, true) |> Map.put(:recurrence_id, event.recurrence_id)
+        event
+        |> occurrence(event.start, true)
+        |> Map.put(:recurrence_id, public_instant(event.recurrence_id))
       end)
 
     events =
@@ -402,7 +447,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     %{
       uid: event.uid,
       summary: event.summary,
-      recurrence_id: if(recurring?, do: start),
+      recurrence_id: if(recurring?, do: public_instant(start)),
       range: range(start, event.length)
     }
   end
@@ -412,6 +457,15 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   defp range({:local, _, _} = start, {:seconds, n}) when n > 0 do
     starts = to_utc(start)
     {:datetime, starts, DateTime.add(starts, n, :second)}
+  end
+
+  defp range({:local, naive, zone} = start, {:nominal, days, seconds}) do
+    ends =
+      {:local, NaiveDateTime.add(naive, days * 86_400, :second), zone}
+      |> to_utc()
+      |> DateTime.add(seconds, :second)
+
+    {:datetime, to_utc(start), ends}
   end
 
   defp range(_start, _length), do: nil
@@ -453,20 +507,55 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     end)
   end
 
-  @supported_parts ~w(FREQ INTERVAL COUNT UNTIL BYDAY WKST)
+  @supported_parts ~w(FREQ INTERVAL COUNT UNTIL BYDAY BYMONTHDAY WKST)
 
   defp supported_rule?(rule) do
     Map.get(rule, "FREQ") in ~w(DAILY WEEKLY MONTHLY YEARLY) and
       Enum.all?(Map.keys(rule), &(&1 in @supported_parts)) and
-      byday_supported?(rule)
+      byday_supported?(rule) and monthday_supported?(rule)
   end
 
-  # Plain weekdays, on weekly rules only.
+  # Plain weekdays on weekly rules; plain or ordinal ones (2TU, -1FR) on
+  # monthly rules.
   defp byday_supported?(%{"BYDAY" => days, "FREQ" => "WEEKLY"}),
     do: days |> String.split(",") |> Enum.all?(&Map.has_key?(@weekdays, &1))
 
+  defp byday_supported?(%{"BYDAY" => days, "FREQ" => "MONTHLY"}),
+    do: days |> String.split(",") |> Enum.all?(&match?({:ok, _}, parse_byday(&1)))
+
   defp byday_supported?(%{"BYDAY" => _}), do: false
   defp byday_supported?(_), do: true
+
+  # Month days (negative from the end), on monthly rules.
+  defp monthday_supported?(%{"BYMONTHDAY" => days, "FREQ" => "MONTHLY"}),
+    do: match?({:ok, _}, parse_monthdays(days))
+
+  defp monthday_supported?(%{"BYMONTHDAY" => _}), do: false
+  defp monthday_supported?(_), do: true
+
+  # "2TU" -> {2, 2}, "-1FR" -> {-1, 5}, "MO" -> {nil, 1}.
+  defp parse_byday(text) do
+    case Regex.run(~r/^([+-]?\d{1,2})?(MO|TU|WE|TH|FR|SA|SU)$/, text) do
+      [_, "", day] -> {:ok, {nil, @weekdays[day]}}
+      [_, day_name] -> {:ok, {nil, @weekdays[day_name]}}
+      [_, n, day] -> ordinal(Integer.parse(n), @weekdays[day])
+      _ -> :error
+    end
+  end
+
+  defp ordinal({n, ""}, weekday) when n != 0 and n in -5..5, do: {:ok, {n, weekday}}
+  defp ordinal(_, _), do: :error
+
+  defp parse_monthdays(text) do
+    text
+    |> String.split(",")
+    |> Enum.reduce_while({:ok, []}, fn part, {:ok, acc} ->
+      case Integer.parse(part) do
+        {n, ""} when n != 0 and n in -31..31 -> {:cont, {:ok, [n | acc]}}
+        _ -> {:halt, :error}
+      end
+    end)
+  end
 
   # COUNT counts from DTSTART, so a counted rule is walked from the start; an
   # open-ended one skips what ends before the window without counting it,
@@ -484,6 +573,9 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
       |> Stream.take_while(fn candidate ->
         before_or_at?(candidate, rule_until) and starts_before?(candidate, until)
       end)
+      # An instance whose wall clock does not exist (spring forward) is
+      # ignored and not counted, RFC 5545 §3.3.10; DTSTART itself is kept.
+      |> Stream.reject(&(&1 != start and in_gap?(&1)))
 
     case count do
       nil ->
@@ -498,6 +590,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
 
   defp length_days({:days, n}), do: n
   defp length_days({:seconds, n}), do: div(n, 86_400) + 1
+  defp length_days({:nominal, days, seconds}), do: days + div(seconds, 86_400) + 2
 
   defp elem_or({value, _rest}, _default), do: value
   defp elem_or(:error, default), do: default
@@ -514,7 +607,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   defp parse_until(nil, _start), do: nil
 
   defp parse_until(value, start) do
-    case parse_time(value, %{}, start_zone(start)) do
+    case parse_time(value, %{}, {start_zone(start), %{}}) do
       {:ok, until} -> until
       _ -> nil
     end
@@ -542,6 +635,25 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     |> Stream.reject(&(Date.compare(start_date(&1), first_date) == :lt))
   end
 
+  # A monthly rule with BYDAY and/or BYMONTHDAY: the matching days of each
+  # INTERVAL-th month (both = days matching both), in order.
+  defp candidates(start, %{"FREQ" => "MONTHLY"} = rule, interval)
+       when is_map_key(rule, "BYDAY") or is_map_key(rule, "BYMONTHDAY") do
+    first_date = start_date(start)
+    {:ok, bydays} = rule |> Map.get("BYDAY") |> split_parts(&parse_byday/1)
+    {:ok, monthdays} = rule |> Map.get("BYMONTHDAY") |> monthdays_or_nil()
+
+    Stream.iterate(0, &(&1 + 1))
+    |> Stream.flat_map(fn n ->
+      %Date{year: y, month: m} = shift_months(%{first_date | day: 1}, n * interval)
+
+      y
+      |> month_matches(m, bydays, monthdays)
+      |> Enum.map(&with_date(start, &1))
+    end)
+    |> Stream.reject(&(Date.compare(start_date(&1), first_date) == :lt))
+  end
+
   defp candidates(start, %{"FREQ" => freq}, interval) do
     first_date = start_date(start)
 
@@ -549,6 +661,58 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     |> Stream.map(fn n -> step_date(first_date, freq, n * interval) end)
     |> Stream.reject(&is_nil/1)
     |> Stream.map(&with_date(start, &1))
+  end
+
+  defp split_parts(nil, _parser), do: {:ok, nil}
+
+  defp split_parts(text, parser) do
+    text
+    |> String.split(",")
+    |> Enum.reduce_while({:ok, []}, fn part, {:ok, acc} ->
+      case parser.(part) do
+        {:ok, value} -> {:cont, {:ok, [value | acc]}}
+        :error -> {:halt, :error}
+      end
+    end)
+  end
+
+  defp monthdays_or_nil(nil), do: {:ok, nil}
+  defp monthdays_or_nil(text), do: parse_monthdays(text)
+
+  defp month_matches(year, month, bydays, monthdays) do
+    last = Date.days_in_month(Date.new!(year, month, 1))
+    all = Enum.map(1..last, &Date.new!(year, month, &1))
+
+    by_day =
+      if bydays, do: MapSet.new(Enum.flat_map(bydays, &byday_dates(all, &1))), else: nil
+
+    by_monthday =
+      if monthdays,
+        do:
+          monthdays
+          |> Enum.map(fn n -> if n > 0, do: n, else: last + 1 + n end)
+          |> Enum.filter(&(&1 in 1..last))
+          |> MapSet.new(&Date.new!(year, month, &1)),
+        else: nil
+
+    all
+    |> Enum.filter(fn date ->
+      (is_nil(by_day) or MapSet.member?(by_day, date)) and
+        (is_nil(by_monthday) or MapSet.member?(by_monthday, date))
+    end)
+  end
+
+  defp byday_dates(month_days, {nil, weekday}),
+    do: Enum.filter(month_days, &(Date.day_of_week(&1) == weekday))
+
+  defp byday_dates(month_days, {n, weekday}) do
+    matching = Enum.filter(month_days, &(Date.day_of_week(&1) == weekday))
+    index = if n > 0, do: n - 1, else: length(matching) + n
+
+    case index >= 0 and Enum.at(matching, index) do
+      %Date{} = date -> [date]
+      _ -> []
+    end
   end
 
   defp step_date(date, "DAILY", n), do: Date.add(date, n)
@@ -599,6 +763,12 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   # A wall clock in its zone, resolved at that instant. A clock inside a gap
   # (spring forward) is read with the offset before the gap, as RFC 5545
   # §3.3.5 says; an ambiguous hour takes its first occurrence.
+  defp to_utc({:local, naive, {:custom, observances}}) do
+    naive
+    |> DateTime.from_naive!("Etc/UTC")
+    |> DateTime.add(-custom_offset(naive, observances), :second)
+  end
+
   defp to_utc({:local, naive, zone}) do
     case DateTime.from_naive(naive, zone, Tz.TimeZoneDatabase) do
       {:ok, dt} ->
@@ -614,6 +784,156 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
 
       {:error, _} ->
         DateTime.from_naive!(naive, "Etc/UTC")
+    end
+  end
+
+  # An instant handed out of the parser names an IANA zone: one of the feed's
+  # own VTIMEZONEs is resolved to UTC here.
+  defp public_instant({:local, _naive, {:custom, _}} = time),
+    do: {:local, time |> to_utc() |> DateTime.to_naive(), "Etc/UTC"}
+
+  defp public_instant(time), do: time
+
+  defp in_gap?({:local, naive, zone}) when is_binary(zone),
+    do: match?({:gap, _, _}, DateTime.from_naive(naive, zone, Tz.TimeZoneDatabase))
+
+  defp in_gap?(_candidate), do: false
+
+  # ── The feed's own VTIMEZONEs ────────────────────────────────────────
+  #
+  # Understood: observances (STANDARD / DAYLIGHT) with TZOFFSETTO and, for a
+  # zone with clock changes, a yearly RRULE of BYMONTH + one (ordinal)
+  # BYDAY — every zone Outlook and Google write. Anything else leaves the
+  # TZID unknown: read in the default zone, and the event counted in
+  # `:unsupported`.
+
+  defp vtimezones(props) do
+    {zones, _current, _observance} =
+      Enum.reduce(props, {%{}, nil, nil}, fn
+        {"BEGIN", _, "VTIMEZONE"}, {zones, nil, nil} ->
+          {zones, %{tzid: nil, observances: []}, nil}
+
+        {"BEGIN", _, kind}, {zones, %{} = zone, nil} when kind in ["STANDARD", "DAYLIGHT"] ->
+          {zones, zone, %{}}
+
+        {"END", _, kind}, {zones, zone, %{} = obs} when kind in ["STANDARD", "DAYLIGHT"] ->
+          {zones, %{zone | observances: [obs | zone.observances]}, nil}
+
+        {"END", _, "VTIMEZONE"}, {zones, %{tzid: tzid} = zone, nil} when is_binary(tzid) ->
+          {put_zone(zones, tzid, zone.observances), nil, nil}
+
+        {"END", _, "VTIMEZONE"}, {zones, _zone, _obs} ->
+          {zones, nil, nil}
+
+        {"TZID", _, tzid}, {zones, %{} = zone, nil} ->
+          {zones, %{zone | tzid: String.trim(tzid)}, nil}
+
+        {name, _, value}, {zones, zone, %{} = obs}
+        when name in ["DTSTART", "TZOFFSETFROM", "TZOFFSETTO", "RRULE"] ->
+          {zones, zone, Map.put(obs, name, String.trim(value))}
+
+        _prop, acc ->
+          acc
+      end)
+
+    zones
+  end
+
+  defp put_zone(zones, tzid, observances) do
+    case Enum.map(observances, &observance/1) do
+      [] ->
+        zones
+
+      parsed ->
+        if Enum.all?(parsed, &is_map/1), do: Map.put(zones, tzid, {:custom, parsed}), else: zones
+    end
+  end
+
+  defp observance(obs) do
+    with {:ok, to} <- parse_offset(obs["TZOFFSETTO"]),
+         {:ok, from} <- parse_offset(obs["TZOFFSETFROM"] || obs["TZOFFSETTO"]),
+         {:ok, dtstart} <- parse_naive(obs["DTSTART"] || "19700101T000000"),
+         {:ok, rule} <- observance_rule(obs["RRULE"]) do
+      %{to: to, from: from, dtstart: dtstart, rule: rule}
+    else
+      _ -> :unsupported
+    end
+  end
+
+  defp observance_rule(nil), do: {:ok, nil}
+
+  defp observance_rule(rrule) do
+    rule = parse_rrule(rrule)
+
+    with "YEARLY" <- rule["FREQ"],
+         {month, ""} when month in 1..12 <- Integer.parse(rule["BYMONTH"] || ""),
+         {:ok, {n, weekday}} when not is_nil(n) <- parse_byday(rule["BYDAY"] || ""),
+         true <- Enum.all?(Map.keys(rule), &(&1 in ~w(FREQ BYMONTH BYDAY UNTIL INTERVAL))) do
+      {:ok, %{month: month, nth: n, weekday: weekday}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_offset(nil), do: :error
+
+  defp parse_offset(text) do
+    case Regex.run(~r/^([+-])(\d{2})(\d{2})(\d{2})?$/, String.trim(text)) do
+      [_, sign, h, m | rest] ->
+        seconds = String.to_integer(h) * 3600 + String.to_integer(m) * 60 + seconds(rest)
+        {:ok, if(sign == "-", do: -seconds, else: seconds)}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp seconds([s]) when s != "", do: String.to_integer(s)
+  defp seconds(_), do: 0
+
+  # The offset in force at a wall clock: that of the observance with the
+  # latest onset at or before it (this year's or last year's), or, before
+  # any onset, the earliest observance's offset before it.
+  defp custom_offset(naive, observances) do
+    onsets =
+      for obs <- observances,
+          year <- [naive.year - 1, naive.year],
+          onset = onset(obs, year),
+          onset != nil,
+          NaiveDateTime.compare(onset, naive) != :gt,
+          do: {onset, obs.to}
+
+    case Enum.max_by(onsets, fn {onset, _} -> NaiveDateTime.to_gregorian_seconds(onset) end, fn ->
+           nil
+         end) do
+      {_onset, offset} ->
+        offset
+
+      nil ->
+        observances
+        |> Enum.min_by(&NaiveDateTime.to_gregorian_seconds(&1.dtstart))
+        |> Map.fetch!(:from)
+    end
+  end
+
+  # Without a rule an observance holds from its DTSTART on.
+  defp onset(%{rule: nil, dtstart: dtstart}, year),
+    do: if(dtstart.year <= year, do: dtstart)
+
+  defp onset(%{rule: rule, dtstart: dtstart}, year) do
+    if year < dtstart.year do
+      nil
+    else
+      days =
+        Enum.map(
+          1..Date.days_in_month(Date.new!(year, rule.month, 1)),
+          &Date.new!(year, rule.month, &1)
+        )
+
+      case byday_dates(days, {rule.nth, rule.weekday}) do
+        [date] -> NaiveDateTime.new!(date, NaiveDateTime.to_time(dtstart))
+        [] -> nil
+      end
     end
   end
 end

@@ -132,6 +132,25 @@ defmodule PhoenixKitBookings.ICalImport.SyncTest do
     assert Services.get_service(service.uuid).ical_sync_error == nil
   end
 
+  test "a recurring event in the feed's own VTIMEZONE imports with stable ids" do
+    service = slot_service_fixture(%{"ical_url" => "https://cal.example.com/v.ics"})
+    day = Date.utc_today() |> Date.add(2) |> Calendar.strftime("%Y%m%d")
+
+    body =
+      "BEGIN:VCALENDAR\r\nBEGIN:VTIMEZONE\r\nTZID:Office\r\nBEGIN:STANDARD\r\n" <>
+        "DTSTART:19700101T000000\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0200\r\n" <>
+        "END:STANDARD\r\nEND:VTIMEZONE\r\nBEGIN:VEVENT\r\nUID:rec\r\n" <>
+        "DTSTART;TZID=Office:#{day}T100000\r\nDURATION:PT1H\r\nRRULE:FREQ=DAILY;COUNT=2\r\n" <>
+        "END:VEVENT\r\nEND:VCALENDAR\r\n"
+
+    Process.put(:ical_response, {:ok, body})
+    assert {:ok, %{inserted: 2, unsupported: 0}} = ICalImport.sync_service(service)
+    assert {:ok, %{inserted: 0, updated: 0}} = ICalImport.sync_service(service)
+
+    [first | _] = Imports.list_imported_bookings(service.uuid, "ical")
+    assert first.external_id == "rec@#{day}T080000Z"
+  end
+
   test "no URL, no sync" do
     assert {:error, :no_url} = ICalImport.sync_service(slot_service_fixture())
     refute_received {:fetched, _}

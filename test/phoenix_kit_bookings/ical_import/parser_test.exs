@@ -231,7 +231,7 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
       UID:u
       DTSTART:20260302T090000Z
       DTEND:20260302T100000Z
-      RRULE:FREQ=MONTHLY;BYDAY=1MO
+      RRULE:FREQ=MONTHLY;BYDAY=MO,TU;BYSETPOS=1
       END:VEVENT
       """)
 
@@ -410,6 +410,153 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
       assert %{events: [long, %{uid: "ok"}]} = Task.await(task, 5_000)
       assert {:datetime, ~U[2026-03-10 09:00:00Z], ends} = long.range
       assert DateTime.diff(ends, ~U[2026-03-10 09:00:00Z]) == 100 * 366 * 86_400
+    end
+  end
+
+  describe "monthly BYDAY / BYMONTHDAY, VTIMEZONE, DST gaps, nominal days" do
+    defp starts(events), do: Enum.map(events, fn %{range: {:datetime, s, _}} -> s end)
+
+    test "ordinal BYDAY: the second Tuesday and the last Friday of each month" do
+      %{events: events, unsupported: 0} =
+        parse("""
+        BEGIN:VEVENT
+        UID:m
+        DTSTART:20260113T090000Z
+        DURATION:PT1H
+        RRULE:FREQ=MONTHLY;COUNT=4;BYDAY=2TU,-1FR
+        END:VEVENT
+        """)
+
+      assert starts(events) == [
+               ~U[2026-01-13 09:00:00Z],
+               ~U[2026-01-30 09:00:00Z],
+               ~U[2026-02-10 09:00:00Z],
+               ~U[2026-02-27 09:00:00Z]
+             ]
+    end
+
+    test "BYMONTHDAY with a negative day, and both parts together" do
+      %{events: events} =
+        parse("""
+        BEGIN:VEVENT
+        UID:d
+        DTSTART:20260115T090000Z
+        DURATION:PT1H
+        RRULE:FREQ=MONTHLY;COUNT=4;BYMONTHDAY=15,-1
+        END:VEVENT
+        """)
+
+      assert starts(events) == [
+               ~U[2026-01-15 09:00:00Z],
+               ~U[2026-01-31 09:00:00Z],
+               ~U[2026-02-15 09:00:00Z],
+               ~U[2026-02-28 09:00:00Z]
+             ]
+
+      # Friday the 13th: BYDAY and BYMONTHDAY intersect.
+      %{events: events} =
+        parse("""
+        BEGIN:VEVENT
+        UID:f13
+        DTSTART:20260213T090000Z
+        DURATION:PT1H
+        RRULE:FREQ=MONTHLY;COUNT=2;BYDAY=FR;BYMONTHDAY=13
+        END:VEVENT
+        """)
+
+      assert starts(events) == [~U[2026-02-13 09:00:00Z], ~U[2026-03-13 09:00:00Z]]
+    end
+
+    test "a VTIMEZONE with STANDARD/DAYLIGHT rules resolves both seasons" do
+      %{events: events, unsupported: 0} =
+        parse("""
+        BEGIN:VTIMEZONE
+        TZID:FLE Standard Time
+        BEGIN:STANDARD
+        DTSTART:16010101T040000
+        TZOFFSETFROM:+0300
+        TZOFFSETTO:+0200
+        RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10
+        END:STANDARD
+        BEGIN:DAYLIGHT
+        DTSTART:16010101T030000
+        TZOFFSETFROM:+0200
+        TZOFFSETTO:+0300
+        RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3
+        END:DAYLIGHT
+        END:VTIMEZONE
+        BEGIN:VEVENT
+        UID:w
+        DTSTART;TZID=FLE Standard Time:20260115T100000
+        DTEND;TZID=FLE Standard Time:20260115T110000
+        END:VEVENT
+        BEGIN:VEVENT
+        UID:s
+        DTSTART;TZID=FLE Standard Time:20260715T100000
+        DTEND;TZID=FLE Standard Time:20260715T110000
+        END:VEVENT
+        """)
+
+      assert starts(events) == [~U[2026-01-15 08:00:00Z], ~U[2026-07-15 07:00:00Z]]
+    end
+
+    test "a fixed-offset VTIMEZONE; an unknown TZID falls back and is counted" do
+      %{events: events, unsupported: 1} =
+        parse("""
+        BEGIN:VTIMEZONE
+        TZID:Custom +0530
+        BEGIN:STANDARD
+        DTSTART:19700101T000000
+        TZOFFSETFROM:+0530
+        TZOFFSETTO:+0530
+        END:STANDARD
+        END:VTIMEZONE
+        BEGIN:VEVENT
+        UID:fixed
+        DTSTART;TZID=Custom +0530:20260310T100000
+        DURATION:PT1H
+        END:VEVENT
+        BEGIN:VEVENT
+        UID:unknown
+        DTSTART;TZID=Nowhere Standard Time:20260311T100000
+        DURATION:PT1H
+        END:VEVENT
+        """)
+
+      assert starts(events) == [~U[2026-03-10 04:30:00Z], ~U[2026-03-11 10:00:00Z]]
+    end
+
+    test "a generated instance inside the spring-forward gap is skipped and not counted" do
+      %{events: events} =
+        parse("""
+        BEGIN:VEVENT
+        UID:g
+        DTSTART;TZID=America/New_York:20260307T023000
+        DURATION:PT30M
+        RRULE:FREQ=DAILY;COUNT=3
+        END:VEVENT
+        """)
+
+      # 8 March 02:30 does not exist in New York; COUNT=3 still yields three.
+      assert Enum.map(starts(events), &DateTime.to_date/1) == [
+               ~D[2026-03-07],
+               ~D[2026-03-09],
+               ~D[2026-03-10]
+             ]
+    end
+
+    test "P1D across a clock change is a calendar day, not 24 hours" do
+      %{events: [%{range: {:datetime, s, e}}]} =
+        parse("""
+        BEGIN:VEVENT
+        UID:day
+        DTSTART;TZID=America/New_York:20260307T120000
+        DURATION:P1D
+        END:VEVENT
+        """)
+
+      assert s == ~U[2026-03-07 17:00:00Z]
+      assert e == ~U[2026-03-08 16:00:00Z]
     end
   end
 end
