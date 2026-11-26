@@ -196,6 +196,62 @@ defmodule PhoenixKitBookings.EventsTest do
       assert {:ok, %{capacity: 3}} = Events.update_event(event, %{"capacity" => 3})
     end
 
+    test "rescheduling moves the bookings, mails each customer an updated .ics, and moves the reminder" do
+      import Swoosh.TestAssertions
+
+      service = slot_service_fixture(%{"reminder_minutes" => 60})
+      event = event_fixture(service)
+      {:ok, booking} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      assert {:ok, moved} =
+               Events.update_event(event, %{"starts_at" => at(3, 9), "ends_at" => at(3, 10)})
+
+      assert moved.starts_at == at(3, 9)
+      stored = Bookings.get_booking(booking.uuid)
+      assert {stored.starts_at, stored.ends_at} == {at(3, 9), at(3, 10)}
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Booking moved"
+        assert email.text_body =~ "has moved"
+        assert [%{filename: "booking.ics", data: ics}] = email.attachments
+        assert ics =~ "SEQUENCE:"
+        assert ics =~ "DTSTART:" <> Calendar.strftime(at(3, 9), "%Y%m%dT%H%M%SZ")
+      end)
+    end
+
+    test "moving to another service takes the bookings along and frees the old service" do
+      service = slot_service_fixture()
+      other = slot_service_fixture()
+      event = event_fixture(service)
+      {:ok, booking} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      assert {:ok, %{service_uuid: uuid}} =
+               Events.update_event(event, %{"service_uuid" => other.uuid}, notify: false)
+
+      assert uuid == other.uuid
+      assert Bookings.get_booking(booking.uuid).service_uuid == other.uuid
+
+      assert {:ok, _} =
+               Bookings.create_booking(service, {at(2, 18), at(2, 19)}, customer_attrs(),
+                 notify: false
+               )
+    end
+
+    test "a move is refused while the service is full at the new time; nothing moves" do
+      service = slot_service_fixture()
+      event = event_fixture(service)
+      {:ok, booking} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      {:ok, _} =
+        Bookings.create_booking(service, {at(3, 9), at(3, 10)}, customer_attrs(), notify: false)
+
+      assert {:error, cs} =
+               Events.update_event(event, %{"starts_at" => at(3, 9), "ends_at" => at(3, 10)})
+
+      assert errors_on(cs)[:starts_at] == ["the service is fully booked at the new time"]
+      assert Bookings.get_booking(booking.uuid).starts_at == at(2, 18)
+    end
+
     test "a blank capacity falls back to the service's seats, judged against the seats taken" do
       event = event_fixture(slot_service_fixture(), %{"capacity" => 2})
       {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)

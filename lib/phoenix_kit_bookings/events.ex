@@ -13,7 +13,8 @@ defmodule PhoenixKitBookings.Events do
 
   import Ecto.Query
 
-  alias PhoenixKitBookings.{Activity, Bookings, Services}
+  alias PhoenixKitBookings.{Activity, Bookings, Notifier, Services}
+  alias PhoenixKitBookings.Workers.ReminderWorker
   alias PhoenixKitBookings.Schemas.{Booking, Event, Service}
 
   @doc """
@@ -135,12 +136,23 @@ defmodule PhoenixKitBookings.Events do
   @doc """
   Updates an event. The changes are judged on the row under its lock (not
   on the caller's struct, which may be stale) against the seats already
-  taken: an event with active bookings cannot move to another service or
-  to other times (they would stay where they were), and its capacity — its
-  own, or the service's when set to blank — cannot drop below those seats.
-  A status change to `"cancelled"` is committed in the same locked write,
-  so no sign-up slips in, and then cancels the event's bookings like
-  `cancel_event/2`.
+  taken:
+
+  - its capacity — its own, or the service's when set to blank — cannot drop
+    below those seats;
+  - new times or another service MOVE its active bookings in the same
+    transaction (a unit of the old service is released), unless the
+    service is full at the new time (`Bookings.service_full_for_event?/2`);
+    each moved customer is emailed the new times with an updated `.ics`
+    and their reminder is rescheduled (both skipped with `notify: false`);
+  - a status change to `"cancelled"` is committed in the same locked write,
+    so no sign-up slips in, and then cancels the event's bookings like
+    `cancel_event/2`.
+
+  The service rows are locked before the event row, the order a sign-up
+  takes them in. Returns `{:ok, event}`, `{:error, changeset}`, or
+  `{:error, :not_found | :conflict}` (the event is gone, or moved by
+  someone else meanwhile).
   """
   def update_event(%Event{uuid: uuid}, attrs, opts \\ []) do
     uuid
@@ -150,30 +162,59 @@ defmodule PhoenixKitBookings.Events do
 
   defp locked_update(uuid, attrs) do
     repo().transaction(fn ->
+      current = get_event(uuid) || repo().rollback(:not_found)
+      lock_services([current.service_uuid, attrs["service_uuid"] || attrs[:service_uuid]])
       locked = lock_event(uuid) || repo().rollback(:not_found)
+
+      if locked.service_uuid != current.service_uuid, do: repo().rollback(:conflict)
+
       changeset = locked |> Event.changeset(attrs) |> check_taken(locked)
 
       case repo().update(changeset) do
-        {:ok, event} -> {event, locked.status != "cancelled" and event.status == "cancelled"}
-        {:error, cs} -> repo().rollback(cs)
+        {:ok, event} ->
+          moved = move_bookings(locked, event)
+          {event, locked.status != "cancelled" and event.status == "cancelled", moved}
+
+        {:error, cs} ->
+          repo().rollback(cs)
       end
     end)
   end
 
-  defp after_update({:ok, {event, true}}, opts) do
+  defp lock_services(uuids) do
+    uuids =
+      uuids
+      |> Enum.flat_map(fn uuid ->
+        case Ecto.UUID.cast(uuid || "") do
+          {:ok, valid} -> [valid]
+          :error -> []
+        end
+      end)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    from(s in Service, where: s.uuid in ^uuids, order_by: s.uuid, lock: "FOR UPDATE")
+    |> repo().all()
+  end
+
+  defp after_update({:ok, {event, true, moved}}, opts) do
+    notify_moved(moved, opts)
     cancel_bookings(event, opts)
     tap_log({:ok, event}, "bookings.event_cancelled", opts)
   end
 
   # Saving a cancelled event again also finishes a sweep an earlier
   # cancellation did not complete (cancel_bookings/2 is idempotent).
-  defp after_update({:ok, {%Event{status: "cancelled"} = event, false}}, opts) do
+  defp after_update({:ok, {%Event{status: "cancelled"} = event, false, moved}}, opts) do
+    notify_moved(moved, opts)
     cancel_bookings(event, opts)
     tap_log({:ok, event}, "bookings.event_updated", opts)
   end
 
-  defp after_update({:ok, {event, false}}, opts),
-    do: tap_log({:ok, event}, "bookings.event_updated", opts)
+  defp after_update({:ok, {event, false, moved}}, opts) do
+    notify_moved(moved, opts)
+    tap_log({:ok, event}, "bookings.event_updated", opts)
+  end
 
   defp after_update({:error, _} = error, _opts), do: error
 
@@ -183,22 +224,16 @@ defmodule PhoenixKitBookings.Events do
   defp check_taken(changeset, %Event{uuid: uuid} = locked) do
     case Bookings.event_seats_taken(uuid) do
       0 -> changeset
-      taken -> changeset |> refuse_moves() |> refuse_capacity(locked, taken)
+      taken -> changeset |> refuse_capacity(locked, taken) |> refuse_full_service()
     end
   end
 
-  defp refuse_moves(changeset) do
-    Enum.reduce([:service_uuid, :starts_at, :ends_at], changeset, fn field, cs ->
-      if Ecto.Changeset.get_change(cs, field),
-        do: Ecto.Changeset.add_error(cs, field, "cannot change while the event has bookings"),
-        else: cs
-    end)
-  end
-
   defp refuse_capacity(changeset, locked, taken) do
-    if Ecto.Changeset.changed?(changeset, :capacity) do
+    if Ecto.Changeset.changed?(changeset, :capacity) or
+         Ecto.Changeset.changed?(changeset, :service_uuid) do
       new = Ecto.Changeset.get_field(changeset, :capacity)
-      offered = new || Services.effective_seats(Services.get_service(locked.service_uuid))
+      service_uuid = Ecto.Changeset.get_field(changeset, :service_uuid) || locked.service_uuid
+      offered = new || service_seats(service_uuid)
 
       if offered < taken,
         do:
@@ -212,6 +247,99 @@ defmodule PhoenixKitBookings.Events do
     else
       changeset
     end
+  end
+
+  defp service_seats(uuid) do
+    case Services.get_service(uuid) do
+      nil -> 0
+      service -> Services.effective_seats(service)
+    end
+  end
+
+  # Bookings that move with the event must fit where it goes.
+  defp refuse_full_service(%Ecto.Changeset{valid?: false} = changeset), do: changeset
+
+  defp refuse_full_service(changeset) do
+    if moves?(changeset) do
+      event = Ecto.Changeset.apply_changes(changeset)
+
+      case Services.get_service(event.service_uuid) do
+        nil ->
+          changeset
+
+        service ->
+          if Bookings.service_full_for_event?(service, event),
+            do:
+              Ecto.Changeset.add_error(
+                changeset,
+                :starts_at,
+                "the service is fully booked at the new time"
+              ),
+            else: changeset
+      end
+    else
+      changeset
+    end
+  end
+
+  defp moves?(changeset),
+    do: Enum.any?([:service_uuid, :starts_at, :ends_at], &Ecto.Changeset.changed?(changeset, &1))
+
+  # The event's active bookings follow it; each comes back with what it was.
+  defp move_bookings(%Event{} = before, %Event{} = now) do
+    if before.starts_at == now.starts_at and before.ends_at == now.ends_at and
+         before.service_uuid == now.service_uuid do
+      []
+    else
+      rows =
+        from(b in Booking,
+          where: b.event_uuid == ^now.uuid and b.status in ["pending", "confirmed"]
+        )
+        |> repo().all()
+
+      unit_reset = if before.service_uuid != now.service_uuid, do: [unit_uuid: nil], else: []
+      stamp = DateTime.truncate(DateTime.utc_now(), :second)
+
+      {_n, moved} =
+        from(b in Booking, where: b.uuid in ^Enum.map(rows, & &1.uuid), select: b)
+        |> repo().update_all(
+          set:
+            [
+              starts_at: DateTime.truncate(now.starts_at, :second),
+              ends_at: DateTime.truncate(now.ends_at, :second),
+              service_uuid: now.service_uuid,
+              updated_at: stamp
+            ] ++ unit_reset
+        )
+
+      previous = Map.new(rows, &{&1.uuid, &1})
+      Enum.map(moved, &{&1, Map.fetch!(previous, &1.uuid)})
+    end
+  end
+
+  defp notify_moved([], _opts), do: :ok
+
+  defp notify_moved([{first, previous} | _] = moved, opts) do
+    service = Services.get_service(first.service_uuid)
+
+    for {booking, before} <- moved do
+      Activity.log("bookings.booking_rescheduled",
+        actor_uuid: opts[:actor_uuid],
+        resource_type: "booking",
+        resource_uuid: booking.uuid,
+        metadata: %{"service_uuid" => booking.service_uuid, "event_uuid" => booking.event_uuid}
+      )
+
+      if service && opts[:notify] != false do
+        Notifier.booking_rescheduled(booking, service, before)
+        ReminderWorker.schedule(booking, service)
+      end
+    end
+
+    if previous.service_uuid != first.service_uuid,
+      do: Bookings.broadcast_changed(previous.service_uuid)
+
+    :ok
   end
 
   @doc """

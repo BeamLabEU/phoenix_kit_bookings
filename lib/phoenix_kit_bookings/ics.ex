@@ -12,8 +12,12 @@ defmodule PhoenixKitBookings.ICS do
 
   use Gettext, backend: PhoenixKitBookings.Gettext
 
-  @doc "The .ics file content for a booking."
-  def booking_ics(%Booking{} = booking, %Service{} = service, manage_url) do
+  @doc """
+  The .ics file content for a booking. `sequence:` (an integer) marks a
+  revision of an earlier file — the same UID with a higher SEQUENCE makes a
+  calendar move the entry instead of adding a second one.
+  """
+  def booking_ics(%Booking{} = booking, %Service{} = service, manage_url, opts \\ []) do
     now = DateTime.utc_now()
 
     lines =
@@ -28,6 +32,7 @@ defmodule PhoenixKitBookings.ICS do
         "SUMMARY:#{escape(service.name)}",
         "STATUS:#{ical_status(booking.status)}"
       ] ++
+        sequence_lines(opts[:sequence]) ++
         dt_lines(booking) ++
         [
           "DESCRIPTION:#{escape(gettext("Manage or cancel: %{url}", url: manage_url))}",
@@ -52,6 +57,9 @@ defmodule PhoenixKitBookings.ICS do
 
     Enum.reverse([last | lines])
   end
+
+  defp sequence_lines(n) when is_integer(n) and n > 0, do: ["SEQUENCE:#{n}"]
+  defp sequence_lines(_), do: []
 
   defp dt_lines(%Booking{starts_at: %DateTime{} = starts_at} = booking) do
     ["DTSTART:#{format_dt(starts_at)}", "DTEND:#{format_dt(booking.ends_at)}"]

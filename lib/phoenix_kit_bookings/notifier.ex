@@ -66,6 +66,40 @@ defmodule PhoenixKitBookings.Notifier do
     )
   end
 
+  @doc """
+  The booking moved with its event (new times, or another service). Sends
+  the new times with an updated `.ics` (same UID, higher SEQUENCE, so the
+  customer's calendar moves the entry). `previous` is the booking as it was.
+  """
+  def booking_rescheduled(%Booking{} = booking, %Service{} = service, %Booking{} = previous) do
+    body =
+      greeting(booking) <>
+        "\n\n" <>
+        gettext("Your booking for %{service} has moved: it was %{before}, it is now %{when}.",
+          service: service.name,
+          before: Format.format_range(previous),
+          when: Format.format_range(booking)
+        ) <>
+        "\n\n" <> manage_line(booking)
+
+    ics =
+      ICS.booking_ics(booking, service, manage_url(booking),
+        sequence: DateTime.to_unix(DateTime.utc_now())
+      )
+
+    deliver(
+      booking.customer_email,
+      gettext("Booking moved — %{service}", service: service.name),
+      body,
+      [
+        Swoosh.Attachment.new({:data, ics},
+          filename: "booking.ics",
+          content_type: "text/calendar"
+        )
+      ]
+    )
+  end
+
   def reminder(%Booking{} = booking, %Service{} = service) do
     deliver(
       booking.customer_email,

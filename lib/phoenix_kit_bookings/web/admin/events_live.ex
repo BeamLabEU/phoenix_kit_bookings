@@ -156,7 +156,7 @@ defmodule PhoenixKitBookings.Web.Admin.EventsLive do
              end)
          )}
 
-      {:error, :not_found} ->
+      {:error, reason} when reason in [:not_found, :conflict] ->
         {:noreply,
          socket
          |> put_flash(
