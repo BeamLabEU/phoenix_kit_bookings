@@ -95,6 +95,12 @@ defmodule PhoenixKitBookings.PriceOptionsTest do
 
     assert errors_on(changeset)[:price]
 
+    # Rounds to 10000000000.00 in the column.
+    assert {:error, changeset} =
+             PriceOptions.create_option(service, %{"name" => "z", "price" => "9999999999.995"})
+
+    assert errors_on(changeset)[:price]
+
     assert {:ok, _} =
              PriceOptions.create_option(service, %{"name" => "y", "price" => "9999999999.99"})
 

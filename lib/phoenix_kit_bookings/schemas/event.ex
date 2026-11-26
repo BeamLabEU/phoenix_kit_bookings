@@ -70,7 +70,11 @@ defmodule PhoenixKitBookings.Schemas.Event do
     |> validate_length(:title, max: 255)
     |> validate_length(:location, max: 255)
     |> validate_number(:capacity, greater_than: 0)
-    |> validate_number(:price, greater_than_or_equal_to: 0, less_than: 10_000_000_000)
+    # NUMERIC(12,2): ten integer digits, after rounding to cents.
+    |> validate_number(:price,
+      greater_than_or_equal_to: 0,
+      less_than: Decimal.new("9999999999.995")
+    )
     |> validate_inclusion(:status, @statuses)
     |> validate_order()
     |> check_constraint(:ends_at, name: :bookings_event_order)
