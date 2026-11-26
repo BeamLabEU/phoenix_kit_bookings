@@ -35,8 +35,8 @@ defmodule PhoenixKitBookings.Bookings do
 
   import Ecto.Query
 
-  alias PhoenixKitBookings.{Activity, Engine, Notifier, PriceOptions, Pricing, RegularSlots}
-  alias PhoenixKitBookings.Services
+  alias PhoenixKitBookings.{Activity, Engine, Notifier, PriceOptions, Pricing}
+  alias PhoenixKitBookings.{RegularSlots, Services}
   alias PhoenixKitBookings.Schemas.{Booking, Event, Hold, PriceOption, Service, Unit}
   alias PhoenixKitBookings.Schemas.WaitlistEntry
   alias PhoenixKitBookings.Workers.ReminderWorker
@@ -577,27 +577,9 @@ defmodule PhoenixKitBookings.Bookings do
     result =
       repo().transaction(fn ->
         locked_service = lock_and_gate(service, opts)
-
-        locked_event =
-          repo().one(from(e in Event, where: e.uuid == ^event.uuid, lock: "FOR UPDATE"))
-
-        unless event_open?(locked_event, now) do
-          repo().rollback({:rejected, :event_unavailable, @event_unavailable})
-        end
-
-        capacity = locked_event.capacity || Services.effective_seats(locked_service)
-
-        if event_seats_taken(locked_event.uuid) >= capacity do
-          repo().rollback({:rejected, :at_capacity, @event_full})
-        end
-
+        locked_event = lock_open_event!(event, locked_service, now)
         range = {locked_event.starts_at, locked_event.ends_at}
-
-        total =
-          case locked_event.price do
-            nil -> Pricing.total(locked_service, range)
-            price -> Decimal.round(price, 2)
-          end
+        total = event_total(locked_event, locked_service, range)
 
         changeset
         |> Ecto.Changeset.change(
@@ -625,6 +607,27 @@ defmodule PhoenixKitBookings.Bookings do
         {:error, reason, message}
     end
   end
+
+  # The event row under lock: open, and with a seat left.
+  defp lock_open_event!(event, locked_service, now) do
+    locked_event =
+      repo().one(from(e in Event, where: e.uuid == ^event.uuid, lock: "FOR UPDATE"))
+
+    unless event_open?(locked_event, now) do
+      repo().rollback({:rejected, :event_unavailable, @event_unavailable})
+    end
+
+    capacity = locked_event.capacity || Services.effective_seats(locked_service)
+
+    if event_seats_taken(locked_event.uuid) >= capacity do
+      repo().rollback({:rejected, :at_capacity, @event_full})
+    end
+
+    locked_event
+  end
+
+  defp event_total(%Event{price: nil}, service, range), do: Pricing.total(service, range)
+  defp event_total(%Event{price: price}, _service, _range), do: Decimal.round(price, 2)
 
   defp event_open?(%Event{status: "scheduled", starts_at: starts_at}, now),
     do: DateTime.compare(starts_at, now) == :gt

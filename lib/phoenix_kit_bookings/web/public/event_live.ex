@@ -48,25 +48,19 @@ defmodule PhoenixKitBookings.Web.Public.EventLive do
   end
 
   defp subscribe(socket, service_uuid) do
-    if connected?(socket) and socket.assigns.subscribed != service_uuid do
-      case PhoenixKit.Config.pubsub_server() do
-        nil ->
-          socket
+    pubsub = PhoenixKit.Config.pubsub_server()
 
-        pubsub ->
-          if socket.assigns.subscribed,
-            do:
-              Phoenix.PubSub.unsubscribe(
-                pubsub,
-                Bookings.service_topic(socket.assigns.subscribed)
-              )
-
-          Phoenix.PubSub.subscribe(pubsub, Bookings.service_topic(service_uuid))
-          assign(socket, subscribed: service_uuid)
-      end
+    if (connected?(socket) and pubsub) && socket.assigns.subscribed != service_uuid do
+      resubscribe(pubsub, socket.assigns.subscribed, service_uuid)
+      assign(socket, subscribed: service_uuid)
     else
       socket
     end
+  end
+
+  defp resubscribe(pubsub, old, new) do
+    if old, do: Phoenix.PubSub.unsubscribe(pubsub, Bookings.service_topic(old))
+    Phoenix.PubSub.subscribe(pubsub, Bookings.service_topic(new))
   end
 
   defp load(%{assigns: %{event: event}} = socket) do

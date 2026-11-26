@@ -340,8 +340,10 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
 
         kept =
           starts
-          |> Enum.reject(&MapSet.member?(excluded, instant_key(&1)))
-          |> Enum.reject(&MapSet.member?(moved, {event.uid, instant_key(&1)}))
+          |> Enum.reject(fn start ->
+            key = instant_key(start)
+            MapSet.member?(excluded, key) or MapSet.member?(moved, {event.uid, key})
+          end)
           |> Enum.map(&occurrence(event, &1, event.rrule != nil))
 
         {kept ++ acc, if(supported?, do: unsupported, else: unsupported + 1)}

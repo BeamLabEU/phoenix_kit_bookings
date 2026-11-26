@@ -21,6 +21,7 @@ defmodule PhoenixKitBookings.AvailabilityView do
   """
 
   alias PhoenixKitBookings.{Bookings, Engine, Services}
+  alias PhoenixKitBookings.Engine.DayEngine
   alias PhoenixKitBookings.Schemas.Service
 
   @type status :: :free | :partial | :booked | :closed | :past
@@ -46,7 +47,7 @@ defmodule PhoenixKitBookings.AvailabilityView do
       status =
         cond do
           Date.compare(date, today) == :lt -> :past
-          not PhoenixKitBookings.Engine.DayEngine.open_date?(rules, date) -> :closed
+          not DayEngine.open_date?(rules, date) -> :closed
           true -> seat_status(Map.get(remaining, date, 0), service.seats)
         end
 

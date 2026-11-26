@@ -5,6 +5,8 @@ defmodule PhoenixKitBookings.Fixtures do
   fallbacks.
   """
 
+  alias Ecto.Adapters.SQL
+  alias PhoenixKit.Users.Auth
   alias PhoenixKitBookings.Services
 
   def unique_name(base), do: "#{base} #{System.unique_integer([:positive])}"
@@ -84,14 +86,14 @@ defmodule PhoenixKitBookings.Fixtures do
     email = Map.get(attrs, :email, "user-#{System.unique_integer([:positive])}@example.com")
 
     {:ok, %{rows: [[uuid]]}} =
-      Ecto.Adapters.SQL.query(
+      SQL.query(
         PhoenixKitBookings.Test.Repo,
         "INSERT INTO phoenix_kit_users (email, hashed_password, custom_fields, is_active, " <>
           "inserted_at, updated_at) VALUES ($1, 'x', $2, $3, NOW(), NOW()) RETURNING uuid",
         [email, Map.get(attrs, :custom_fields, %{}), Map.get(attrs, :is_active, true)]
       )
 
-    PhoenixKit.Users.Auth.get_user(Ecto.UUID.load!(uuid))
+    Auth.get_user(Ecto.UUID.load!(uuid))
   end
 
   @doc "Customer attrs for the details form."

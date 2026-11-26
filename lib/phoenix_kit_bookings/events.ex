@@ -51,33 +51,28 @@ defmodule PhoenixKitBookings.Events do
         limit: ^limit
       )
 
-    query =
-      case opts[:host_profile_uuid] do
-        nil ->
-          query
-
-        uuid ->
-          from([e, s] in query,
-            where:
-              e.host_profile_uuid == ^uuid or
-                (is_nil(e.host_profile_uuid) and s.host_profile_uuid == ^uuid)
-          )
-      end
-
-    query =
-      case opts[:service_uuid] do
-        nil -> query
-        uuid -> from(e in query, where: e.service_uuid == ^uuid)
-      end
-
-    query =
-      case opts[:until] do
-        nil -> query
-        until -> from(e in query, where: e.starts_at < ^until)
-      end
-
-    repo().all(query)
+    query
+    |> maybe_host(opts[:host_profile_uuid])
+    |> maybe_service(opts[:service_uuid])
+    |> maybe_until(opts[:until])
+    |> repo().all()
   end
+
+  defp maybe_host(query, nil), do: query
+
+  defp maybe_host(query, uuid) do
+    from([e, s] in query,
+      where:
+        e.host_profile_uuid == ^uuid or
+          (is_nil(e.host_profile_uuid) and s.host_profile_uuid == ^uuid)
+    )
+  end
+
+  defp maybe_service(query, nil), do: query
+  defp maybe_service(query, uuid), do: from(e in query, where: e.service_uuid == ^uuid)
+
+  defp maybe_until(query, nil), do: query
+  defp maybe_until(query, until), do: from(e in query, where: e.starts_at < ^until)
 
   defp maybe_services(query, nil), do: query
 

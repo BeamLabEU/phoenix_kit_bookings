@@ -1,6 +1,7 @@
 defmodule PhoenixKitBookings.PriceOptionsTest do
   use PhoenixKitBookings.DataCase, async: true
 
+  alias PhoenixKit.Users.Roles
   alias PhoenixKitBookings.{Bookings, PriceOptions}
   alias PhoenixKitBookings.Schemas.PriceOption
 
@@ -55,9 +56,9 @@ defmodule PhoenixKitBookings.PriceOptionsTest do
     test "role: holders of the core role" do
       service = priced_service()
       role_name = "Trainee #{System.unique_integer([:positive])}"
-      {:ok, _role} = PhoenixKit.Users.Roles.create_role(%{name: role_name})
+      {:ok, _role} = Roles.create_role(%{name: role_name})
       holder = user_fixture()
-      {:ok, _} = PhoenixKit.Users.Roles.assign_role(holder, role_name)
+      {:ok, _} = Roles.assign_role(holder, role_name)
       opt = option(service, %{"entitlement" => "role", "role_name" => role_name})
 
       assert PriceOptions.entitled?(opt, holder)
@@ -158,7 +159,9 @@ defmodule PhoenixKitBookings.PriceOptionsTest do
                  Bookings.create_booking(
                    service,
                    {tomorrow_at(10), tomorrow_at(11)},
-                   customer_attrs(), price_option_uuid: uuid)
+                   customer_attrs(),
+                   price_option_uuid: uuid
+                 )
       end
     end
 

@@ -95,7 +95,9 @@ defmodule PhoenixKitBookings.RegularSlotsTest do
       Bookings.create_booking(
         service,
         {at(next_weekday(3), 18), at(next_weekday(3), 19)},
-        customer_attrs(), notify: false)
+        customer_attrs(),
+        notify: false
+      )
 
     refute Map.has_key?(other_hour.metadata, "regular_slot_conflicts")
     refute Map.has_key?(other_day.metadata, "regular_slot_conflicts")

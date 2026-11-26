@@ -2,6 +2,7 @@ defmodule PhoenixKitBookings.HostRefTest do
   use PhoenixKitBookings.DataCase, async: true
 
   alias PhoenixKitBookings.Services
+  alias PhoenixKitBookings.Test.Repo
 
   test "a service is found by its host ref; trashed ones are not" do
     service = slot_service_fixture(%{"host_ref" => "machine:42"})
@@ -24,7 +25,7 @@ defmodule PhoenixKitBookings.HostRefTest do
 
   test "the ref is indexed" do
     %{rows: [[found]]} =
-      PhoenixKitBookings.Test.Repo.query!(
+      Repo.query!(
         "SELECT to_regclass('public.phoenix_kit_bookings_services_host_ref_index') IS NOT NULL"
       )
 
