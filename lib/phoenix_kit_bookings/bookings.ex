@@ -35,8 +35,10 @@ defmodule PhoenixKitBookings.Bookings do
 
   import Ecto.Query
 
-  alias PhoenixKitBookings.{Activity, Engine, Notifier, Pricing, Services}
-  alias PhoenixKitBookings.Schemas.{Booking, Hold, Service, Unit, WaitlistEntry}
+  alias PhoenixKitBookings.{Activity, Engine, Notifier, PriceOptions, Pricing, RegularSlots}
+  alias PhoenixKitBookings.Services
+  alias PhoenixKitBookings.Schemas.{Booking, Event, Hold, PriceOption, Service, Unit}
+  alias PhoenixKitBookings.Schemas.WaitlistEntry
   alias PhoenixKitBookings.Workers.ReminderWorker
 
   @admin_topic "phoenix_kit_bookings:bookings"
@@ -171,7 +173,24 @@ defmodule PhoenixKitBookings.Bookings do
   `"login_required"`), `:source` (`"public"` default | `"admin"`),
   `:actor_uuid`, `:hold_uuid` (the caller's own hold — excluded from the
   capacity check and consumed on success), `:notify` (see below),
-  `:now`/`:today` (test injection).
+  `:now`/`:today` (test injection), `:price_option_uuid` (a
+  `PriceOption` of this service; see below).
+
+  ## Price options
+
+  `price_option_uuid:` books at that option's rate. The option must belong to
+  the service and be active, and — unless `source` is `"admin"` — the
+  customer (`user_uuid`) must be entitled to it
+  (`PriceOptions.entitled?/2`), judged inside the lock. Otherwise the result
+  is `{:error, :price_option_unavailable, message}` and nothing is booked.
+  A blank value means the service's own price.
+
+  ## Regular slots
+
+  A booking that falls into an active `RegularSlot` of somebody else is
+  created as usual and flagged: `metadata["regular_slot_conflicts"]` lists
+  the slots, `bookings.regular_slot_conflict` is logged and the owner is
+  emailed. It never blocks.
 
   On success the booking carries the computed `total_price`/`currency`
   (priced services) and an auto-assigned `unit_uuid` (unit-tracked
@@ -210,6 +229,10 @@ defmodule PhoenixKitBookings.Bookings do
       service.status != "active" and source != "admin" ->
         {:error, :service_unavailable, @service_unavailable}
 
+      # Display-only services show availability; the site takes no bookings.
+      service.bookable_online == false and source == "public" ->
+        {:error, :service_unavailable, @service_unavailable}
+
       service.signup_policy == "login_required" and is_nil(user_uuid) and source != "admin" ->
         {:error, :login_required, "Please log in to book this service"}
 
@@ -244,6 +267,7 @@ defmodule PhoenixKitBookings.Bookings do
     result =
       repo().transaction(fn ->
         locked_service = lock_and_gate(service, opts)
+        option = resolve_price_option!(locked_service, opts)
         prune_expired_holds(locked_service.uuid)
 
         units = Services.list_active_units(locked_service.uuid)
@@ -264,7 +288,13 @@ defmodule PhoenixKitBookings.Bookings do
             occupancy,
             Keyword.take(opts, [:now, :today]) ++ [extra_events: extra_events]
           )
-          |> insert_validated(changeset, effective, units, range, opts)
+          |> insert_validated(
+            changeset,
+            effective,
+            units,
+            range,
+            Keyword.put(opts, :price_option, option)
+          )
 
         {booking, locked_service}
       end)
@@ -315,20 +345,49 @@ defmodule PhoenixKitBookings.Bookings do
     |> Enum.find(&(&1.uuid == service.uuid))
   end
 
+  @price_option_unavailable "That price option is not available to you"
+
+  # The option the customer sent, judged on the row read under the lock: it
+  # must be this service's, active, and (outside the admin) one the customer
+  # is entitled to. Blank = the service's own price.
+  defp resolve_price_option!(service, opts) do
+    case Keyword.get(opts, :price_option_uuid) do
+      blank when blank in [nil, ""] ->
+        nil
+
+      option_uuid ->
+        with %PriceOption{active: true} = option <-
+               PriceOptions.get_option(service.uuid, option_uuid),
+             true <-
+               Keyword.get(opts, :source, "public") == "admin" or
+                 PriceOptions.entitled?(option, Keyword.get(opts, :user_uuid)) do
+          option
+        else
+          _ ->
+            repo().rollback({:rejected, :price_option_unavailable, @price_option_unavailable})
+        end
+    end
+  end
+
   # Unit-tracked services derive capacity from their active unit count.
   defp effective_service(service, []), do: service
   defp effective_service(service, units), do: %{service | seats: length(units)}
 
   # Runs inside the locked transaction — rollback carries the outcome out.
   defp insert_validated(:ok, changeset, effective, units, range, opts) do
+    option = opts[:price_option]
+    priced = Pricing.apply_option(effective, option)
+
     changeset =
       changeset
       |> Ecto.Changeset.change(
         status: initial_status(effective, Ecto.Changeset.get_field(changeset, :source)),
         unit_uuid: pick_unit(units, effective, range),
-        total_price: Pricing.total(effective, range),
-        currency: if(effective.price, do: effective.currency)
+        total_price: Pricing.total(priced, range),
+        currency: if(priced.price, do: priced.currency),
+        price_option_uuid: option && option.uuid
       )
+      |> flag_regular_slots(effective.uuid, range)
 
     case repo().insert(changeset) do
       {:ok, booking} ->
@@ -342,6 +401,28 @@ defmodule PhoenixKitBookings.Bookings do
 
   defp insert_validated({:error, reason, message}, _changeset, _eff, _units, _range, _opts) do
     repo().rollback({:rejected, reason, message})
+  end
+
+  # Somebody else's usual time: book it anyway, but say so on the row.
+  defp flag_regular_slots(changeset, service_uuid, range) do
+    booker = %{
+      user_uuid: Ecto.Changeset.get_field(changeset, :user_uuid),
+      email: Ecto.Changeset.get_field(changeset, :customer_email)
+    }
+
+    case RegularSlots.conflicts(service_uuid, range, booker) do
+      [] ->
+        changeset
+
+      slots ->
+        metadata = Ecto.Changeset.get_field(changeset, :metadata) || %{}
+
+        Ecto.Changeset.put_change(
+          changeset,
+          :metadata,
+          Map.put(metadata, "regular_slot_conflicts", RegularSlots.conflict_metadata(slots))
+        )
+    end
   end
 
   # The first (by name) active unit not taken by an active booking. Legacy
@@ -423,11 +504,151 @@ defmodule PhoenixKitBookings.Bookings do
 
   defp after_create(booking, service, opts) do
     log_and_broadcast(booking, "bookings.booking_created", opts)
+    warn_regular_slot_conflict(booking, service, opts)
 
     if notify?(opts) do
       Notifier.booking_created(booking, service)
       ReminderWorker.schedule(booking, service)
     end
+  end
+
+  # The owner hears about it even on a quiet create: `notify: false` silences
+  # the CUSTOMER's mail, and this one goes to the owner.
+  defp warn_regular_slot_conflict(
+         %Booking{metadata: %{"regular_slot_conflicts" => [_ | _] = c}} = booking,
+         service,
+         opts
+       ) do
+    Activity.log("bookings.regular_slot_conflict",
+      actor_uuid: opts[:actor_uuid] || booking.user_uuid,
+      resource_type: "booking",
+      resource_uuid: booking.uuid,
+      metadata: %{"service_uuid" => booking.service_uuid, "slots" => length(c)}
+    )
+
+    Notifier.regular_slot_conflict(booking, service, c)
+  end
+
+  defp warn_regular_slot_conflict(_booking, _service, _opts), do: :ok
+
+  # ── Events ───────────────────────────────────────────────────────────
+
+  @event_unavailable "This event is not taking sign-ups"
+  @event_full "This event is fully booked"
+
+  @doc """
+  Books one seat at a scheduled `event`: an ordinary booking of the event's
+  service, stamped with `event_uuid`, for the event's times.
+
+  Race-proof like `create_booking/4`: the service row (and its provider's)
+  and the event row are locked, and the seats are counted under the lock.
+  The service's availability rules do not apply — the event is its own
+  availability — but its status, signup policy and approval rule do.
+  Capacity is `event.capacity`, or the service's when nil. The total is
+  `event.price`, or the service's price for the event's length.
+
+  Options as `create_booking/4` (`:user_uuid`, `:source`, `:actor_uuid`,
+  `:notify`, `:now`). Errors: `:event_unavailable` (cancelled, started or
+  gone), `:at_capacity`, plus the policy reasons.
+  """
+  def create_event_booking(%Event{} = event, customer_attrs, opts \\ []) do
+    user_uuid = Keyword.get(opts, :user_uuid)
+    source = Keyword.get(opts, :source, "public")
+    range = {event.starts_at, event.ends_at}
+
+    with %Service{} = service <- Services.get_service(event.service_uuid),
+         :ok <- policy_gate(service, user_uuid, source),
+         {:ok, changeset} <- build_changeset(service, range, customer_attrs, user_uuid, source) do
+      insert_event_locked(
+        event,
+        service,
+        Ecto.Changeset.put_change(changeset, :event_uuid, event.uuid),
+        opts
+      )
+    else
+      nil -> {:error, :event_unavailable, @event_unavailable}
+      other -> other
+    end
+  end
+
+  defp insert_event_locked(event, service, changeset, opts) do
+    now = Keyword.get(opts, :now, DateTime.utc_now())
+
+    result =
+      repo().transaction(fn ->
+        locked_service = lock_and_gate(service, opts)
+
+        locked_event =
+          repo().one(from(e in Event, where: e.uuid == ^event.uuid, lock: "FOR UPDATE"))
+
+        unless event_open?(locked_event, now) do
+          repo().rollback({:rejected, :event_unavailable, @event_unavailable})
+        end
+
+        capacity = locked_event.capacity || Services.effective_seats(locked_service)
+
+        if event_seats_taken(locked_event.uuid) >= capacity do
+          repo().rollback({:rejected, :at_capacity, @event_full})
+        end
+
+        range = {locked_event.starts_at, locked_event.ends_at}
+
+        total =
+          case locked_event.price do
+            nil -> Pricing.total(locked_service, range)
+            price -> Decimal.round(price, 2)
+          end
+
+        changeset
+        |> Ecto.Changeset.change(
+          status: initial_status(locked_service, Ecto.Changeset.get_field(changeset, :source)),
+          total_price: total,
+          currency: if(total, do: locked_service.currency)
+        )
+        |> flag_regular_slots(locked_service.uuid, range)
+        |> repo().insert()
+        |> case do
+          {:ok, booking} -> {booking, locked_service}
+          {:error, cs} -> repo().rollback({:changeset, cs})
+        end
+      end)
+
+    case result do
+      {:ok, {booking, locked_service}} ->
+        after_create(booking, locked_service, opts)
+        {:ok, booking}
+
+      {:error, {:changeset, cs}} ->
+        {:error, cs}
+
+      {:error, {:rejected, reason, message}} ->
+        {:error, reason, message}
+    end
+  end
+
+  defp event_open?(%Event{status: "scheduled", starts_at: starts_at}, now),
+    do: DateTime.compare(starts_at, now) == :gt
+
+  defp event_open?(_event, _now), do: false
+
+  @doc "Seats taken at an event (pending + confirmed bookings)."
+  def event_seats_taken(event_uuid) do
+    from(b in Booking,
+      where: b.event_uuid == ^event_uuid and b.status in ["pending", "confirmed"],
+      select: count(b.uuid)
+    )
+    |> repo().one()
+  end
+
+  @doc "Seats taken per event, for a list of event uuids."
+  def event_seats_taken_map(event_uuids) when is_list(event_uuids) do
+    from(b in Booking,
+      where: b.event_uuid in ^event_uuids and b.status in ["pending", "confirmed"],
+      group_by: b.event_uuid,
+      select: {b.event_uuid, count(b.uuid)}
+    )
+    |> repo().all()
+    |> Map.new()
   end
 
   # ── Lifecycle ────────────────────────────────────────────────────────
@@ -801,7 +1022,9 @@ defmodule PhoenixKitBookings.Bookings do
 
   defp tap_broadcast_hold(result, _service_uuid), do: result
 
-  defp broadcast_changed(service_uuid) do
+  @doc false
+  # Shared with `Imports`: a sync moves bookings the pickers and the admin show.
+  def broadcast_changed(service_uuid) do
     broadcast_to_pickers(service_uuid)
     broadcast(@admin_topic, service_uuid)
   end

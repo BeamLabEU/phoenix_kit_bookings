@@ -89,6 +89,54 @@ defmodule PhoenixKitBookings.Notifier do
     )
   end
 
+  @doc """
+  Tells the service's owner that a booking landed in somebody else's regular
+  slot. Goes to the owning user's address, else the `bookings_notify_email`
+  setting; with neither, nobody is mailed (the booking still carries the
+  flag and the activity log has it).
+  """
+  def regular_slot_conflict(%Booking{} = booking, %Service{} = service, conflicts) do
+    holders =
+      Enum.map_join(conflicts, ", ", fn c ->
+        c["holder_name"] || c["holder_email"] || "a regular customer"
+      end)
+
+    deliver(
+      owner_email(service),
+      "Regular slot booked by someone else — #{service.name}",
+      """
+      #{booking.customer_name || "Someone"} (#{booking.customer_email || "no email"}) booked
+      #{service.name}, #{Format.format_range(booking)}.
+
+      That time is usually #{holders}'s. The booking was accepted; check
+      whether the regular customer needs to hear about it.
+
+      Reservations: #{Paths.admin_reservations_url()}
+      """,
+      []
+    )
+  end
+
+  defp owner_email(%Service{owner_uuid: owner_uuid}) when is_binary(owner_uuid) do
+    case PhoenixKit.Users.Auth.get_user(owner_uuid) do
+      %{email: email} when is_binary(email) -> email
+      _ -> notify_email()
+    end
+  rescue
+    _ -> notify_email()
+  end
+
+  defp owner_email(_service), do: notify_email()
+
+  defp notify_email do
+    case PhoenixKit.Settings.get_setting("bookings_notify_email", "") do
+      email when is_binary(email) and email != "" -> email
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  end
+
   defp confirmation(booking, service, subject) do
     body = """
     Hi #{booking.customer_name},

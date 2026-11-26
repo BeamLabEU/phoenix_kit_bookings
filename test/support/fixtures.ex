@@ -76,6 +76,24 @@ defmodule PhoenixKitBookings.Fixtures do
     rule
   end
 
+  @doc """
+  A real `phoenix_kit_users` row (price-option entitlements and regular-slot
+  holders read real accounts). `custom_fields` and `is_active` can be set.
+  """
+  def user_fixture(attrs \\ %{}) do
+    email = Map.get(attrs, :email, "user-#{System.unique_integer([:positive])}@example.com")
+
+    {:ok, %{rows: [[uuid]]}} =
+      Ecto.Adapters.SQL.query(
+        PhoenixKitBookings.Test.Repo,
+        "INSERT INTO phoenix_kit_users (email, hashed_password, custom_fields, is_active, " <>
+          "inserted_at, updated_at) VALUES ($1, 'x', $2, $3, NOW(), NOW()) RETURNING uuid",
+        [email, Map.get(attrs, :custom_fields, %{}), Map.get(attrs, :is_active, true)]
+      )
+
+    PhoenixKit.Users.Auth.get_user(Ecto.UUID.load!(uuid))
+  end
+
   @doc "Customer attrs for the details form."
   def customer_attrs(attrs \\ %{}) do
     Map.merge(
