@@ -589,7 +589,11 @@ schema (the conformance test enforces it).
 - **Availability view** (`AvailabilityView`, `AvailabilityCalendar`) shows
   occupancy, not bookability: notice and max-advance are not applied.
 - **Events** bypass the service's availability rules; their seats still
-  occupy the service for its own picker.
+  occupy the service for its own picker. A sign-up takes its times and
+  price from the event row under lock. `update_event/3` judges the stored
+  row under its lock: with active bookings an event keeps its service and
+  times, and its (effective) capacity cannot drop below the seats taken; a
+  status change to `cancelled` cancels its bookings.
 
 Feature behaviour lives in the `@moduledoc`s (`Engine`, `Bookings`,
 `Policy`, `BookingFlow`, `Migrations.Schema`, `BookingWidgetLive`). The
