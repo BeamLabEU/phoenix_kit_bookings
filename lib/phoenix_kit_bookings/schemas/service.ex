@@ -34,6 +34,7 @@ defmodule PhoenixKitBookings.Schemas.Service do
   import Ecto.Changeset
 
   alias PhoenixKit.Utils.Slug
+  alias PhoenixKitBookings.ICalImport.HTTPFetcher
 
   @statuses ~w(active inactive trashed)
   @time_units ~w(minutes day night)
@@ -215,19 +216,24 @@ defmodule PhoenixKitBookings.Schemas.Service do
 
   # http(s) or webcal (a feed link calendars hand out; fetched over https).
   defp validate_ical_url(changeset) do
-    validate_change(changeset, :ical_url, fn :ical_url, url ->
-      case URI.parse(url) do
-        %URI{scheme: scheme, host: host}
-        when scheme in ["http", "https", "webcal"] and is_binary(host) and host != "" ->
-          if PhoenixKitBookings.ICalImport.HTTPFetcher.obviously_internal?(url),
-            do: [ical_url: "must not point to a private or local address"],
-            else: []
-
-        _ ->
-          [ical_url: "must be an http(s) or webcal URL"]
-      end
-    end)
+    validate_change(changeset, :ical_url, fn :ical_url, url -> ical_url_errors(url) end)
   end
+
+  defp ical_url_errors(url) do
+    cond do
+      not feed_url?(URI.parse(url)) ->
+        [ical_url: "must be an http(s) or webcal URL"]
+
+      HTTPFetcher.obviously_internal?(url) ->
+        [ical_url: "must not point to a private or local address"]
+
+      true ->
+        []
+    end
+  end
+
+  defp feed_url?(%URI{scheme: scheme, host: host}),
+    do: scheme in ["http", "https", "webcal"] and is_binary(host) and host != ""
 
   defp validate_duration_bounds(changeset) do
     min = get_field(changeset, :min_duration)

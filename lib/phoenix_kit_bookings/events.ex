@@ -143,43 +143,39 @@ defmodule PhoenixKitBookings.Events do
   `cancel_event/2`.
   """
   def update_event(%Event{uuid: uuid}, attrs, opts \\ []) do
-    result =
-      repo().transaction(fn ->
-        case lock_event(uuid) do
-          nil ->
-            repo().rollback(:not_found)
-
-          locked ->
-            changeset = locked |> Event.changeset(attrs) |> check_taken(locked)
-
-            case repo().update(changeset) do
-              {:ok, event} ->
-                {event, locked.status != "cancelled" and event.status == "cancelled"}
-
-              {:error, cs} ->
-                repo().rollback(cs)
-            end
-        end
-      end)
-
-    case result do
-      {:ok, {event, true}} ->
-        cancel_bookings(event, opts)
-        tap_log({:ok, event}, "bookings.event_cancelled", opts)
-
-      # Saving a cancelled event again also finishes a sweep an earlier
-      # cancellation did not complete (cancel_bookings/2 is idempotent).
-      {:ok, {%Event{status: "cancelled"} = event, false}} ->
-        cancel_bookings(event, opts)
-        tap_log({:ok, event}, "bookings.event_updated", opts)
-
-      {:ok, {event, false}} ->
-        tap_log({:ok, event}, "bookings.event_updated", opts)
-
-      {:error, _} = error ->
-        error
-    end
+    uuid
+    |> locked_update(attrs)
+    |> after_update(opts)
   end
+
+  defp locked_update(uuid, attrs) do
+    repo().transaction(fn ->
+      locked = lock_event(uuid) || repo().rollback(:not_found)
+      changeset = locked |> Event.changeset(attrs) |> check_taken(locked)
+
+      case repo().update(changeset) do
+        {:ok, event} -> {event, locked.status != "cancelled" and event.status == "cancelled"}
+        {:error, cs} -> repo().rollback(cs)
+      end
+    end)
+  end
+
+  defp after_update({:ok, {event, true}}, opts) do
+    cancel_bookings(event, opts)
+    tap_log({:ok, event}, "bookings.event_cancelled", opts)
+  end
+
+  # Saving a cancelled event again also finishes a sweep an earlier
+  # cancellation did not complete (cancel_bookings/2 is idempotent).
+  defp after_update({:ok, {%Event{status: "cancelled"} = event, false}}, opts) do
+    cancel_bookings(event, opts)
+    tap_log({:ok, event}, "bookings.event_updated", opts)
+  end
+
+  defp after_update({:ok, {event, false}}, opts),
+    do: tap_log({:ok, event}, "bookings.event_updated", opts)
+
+  defp after_update({:error, _} = error, _opts), do: error
 
   defp lock_event(uuid),
     do: repo().one(from(e in Event, where: e.uuid == ^uuid, lock: "FOR UPDATE"))

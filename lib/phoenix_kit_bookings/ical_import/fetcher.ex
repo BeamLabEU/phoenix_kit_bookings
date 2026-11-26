@@ -140,12 +140,14 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcher do
         {:ok, ip}
 
       {:error, _} ->
-        Enum.find_value([:inet, :inet6], {:error, :nxdomain}, fn family ->
-          case :inet.getaddr(charlist, family) do
-            {:ok, ip} -> {:ok, ip}
-            {:error, _} -> nil
-          end
-        end)
+        Enum.find_value([:inet, :inet6], {:error, :nxdomain}, &getaddr(charlist, &1))
+    end
+  end
+
+  defp getaddr(charlist, family) do
+    case :inet.getaddr(charlist, family) do
+      {:ok, ip} -> {:ok, ip}
+      {:error, _} -> nil
     end
   end
 
