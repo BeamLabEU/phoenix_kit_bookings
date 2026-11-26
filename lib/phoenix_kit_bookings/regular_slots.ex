@@ -82,7 +82,7 @@ defmodule PhoenixKitBookings.RegularSlots do
       until_t =
         if date == DateTime.to_date(end_f), do: DateTime.to_time(end_f), else: ~T[23:59:59]
 
-      {date, from_t, until_t}
+      unwind({date, from_t, until_t})
     end)
   end
 
@@ -93,6 +93,22 @@ defmodule PhoenixKitBookings.RegularSlots do
   end
 
   defp day_pieces(_range, _tz), do: []
+
+  # On a fall-back night the wall clock runs an hour backwards, so a short
+  # range across it can end at an earlier clock time than it started. What it
+  # covers is then the repeated hour, which lies within an hour either side
+  # of those two clocks: flag on that span rather than on none.
+  defp unwind({date, from_t, until_t} = piece) do
+    if Time.compare(until_t, from_t) == :lt do
+      lo = Time.add(until_t, -3600)
+      hi = Time.add(from_t, 3600)
+      lo = if Time.compare(lo, until_t) == :gt, do: ~T[00:00:00], else: lo
+      hi = if Time.compare(hi, from_t) == :lt, do: ~T[23:59:59], else: hi
+      {date, lo, hi}
+    else
+      piece
+    end
+  end
 
   defp touches?(%RegularSlot{day_of_week: dow} = slot, {date, from_t, until_t}) do
     Date.day_of_week(date) == dow and times_overlap?(slot, from_t, until_t)

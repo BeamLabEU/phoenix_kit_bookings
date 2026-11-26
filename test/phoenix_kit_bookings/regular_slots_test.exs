@@ -140,4 +140,24 @@ defmodule PhoenixKitBookings.RegularSlotsTest do
 
     assert errors_on(cs)[:end_time]
   end
+
+  test "a short range across the fall-back hour still touches a slot in that hour",
+       %{service: service} do
+    {:ok, sunday} =
+      RegularSlots.create_slot(service, %{
+        "day_of_week" => 7,
+        "start_time" => "03:55:00",
+        "end_time" => "03:59:00",
+        "customer_email" => "holder@example.com"
+      })
+
+    # Europe/Tallinn falls back 04:00 EEST -> 03:00 EET on 2027-10-31: this
+    # range runs 03:50 (+03) to 03:10 (+02) on the wall clock.
+    range = {~U[2027-10-31 00:50:00Z], ~U[2027-10-31 01:10:00Z]}
+
+    conflicts =
+      RegularSlots.conflicts(service.uuid, range, %{email: "other@example.com"}, "Europe/Tallinn")
+
+    assert Enum.any?(conflicts, &(&1.uuid == sunday.uuid))
+  end
 end
