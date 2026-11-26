@@ -139,6 +139,34 @@ defmodule PhoenixKitBookings.ICalImport.SyncTest do
     assert errors_on(cs)[:ical_url]
   end
 
+  test "the URL may not name localhost or a private address literal" do
+    for url <- [
+          "http://localhost/x.ics",
+          "http://127.0.0.1/x.ics",
+          "https://169.254.169.254/latest",
+          "webcal://[::1]/x.ics"
+        ] do
+      assert {:error, cs} = Services.create_service(%{"name" => "x", "ical_url" => url}), url
+      assert errors_on(cs)[:ical_url] == ["must not point to a private or local address"]
+    end
+  end
+
+  test "the default fetcher refuses a stored URL whose host resolves inside, and says so" do
+    Application.delete_env(:phoenix_kit_bookings, :ical_fetcher)
+    service = slot_service_fixture(%{"ical_url" => "https://cal.example.com/x.ics"})
+
+    # Stored before any check (an older row, or written around the changeset).
+    {1, _} =
+      PhoenixKit.RepoHelper.repo().update_all(
+        from(s in PhoenixKitBookings.Schemas.Service, where: s.uuid == ^service.uuid),
+        set: [ical_url: "http://localhost/x.ics"]
+      )
+
+    service = Services.get_service(service.uuid)
+    assert {:error, :blocked_host} = ICalImport.sync_service(service)
+    assert Services.get_service(service.uuid).ical_sync_error =~ "private or local network"
+  end
+
   describe "ICalSyncWorker" do
     test "a service job syncs that service" do
       service = slot_service_fixture(%{"ical_url" => "https://cal.example.com/w.ics"})

@@ -198,7 +198,26 @@ defmodule PhoenixKitBookings.ICalImport do
   @doc "A sync failure in words (stored on the service, shown in the admin)."
   def describe(:not_a_calendar), do: gettext("The URL did not return an iCal calendar.")
   def describe(:too_large), do: gettext("The feed is larger than 5 MB.")
+
   def describe(:no_url), do: gettext("No feed URL is set.")
+
+  def describe(:blocked_host),
+    do:
+      gettext(
+        "The feed's address is on a private or local network; only public addresses are fetched."
+      )
+
+  def describe(:nxdomain), do: gettext("The feed's host name could not be found.")
+  def describe(:invalid_url), do: gettext("The feed URL is not valid.")
+
+  def describe(:scheme_not_allowed),
+    do: gettext("The feed URL must use http or https (an https feed cannot redirect to http).")
+
+  def describe(:port_not_allowed), do: gettext("The feed URL uses a port that is not allowed.")
+  def describe(:too_many_redirects), do: gettext("The feed redirected too many times.")
+  def describe(:timeout), do: gettext("The feed did not answer in time.")
+
+  def describe({:connect_failed, _}), do: gettext("The feed's server could not be reached.")
 
   def describe({:http_status, status}),
     do: gettext("The feed answered HTTP %{status}.", status: status)

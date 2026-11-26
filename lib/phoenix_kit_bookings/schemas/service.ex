@@ -219,7 +219,9 @@ defmodule PhoenixKitBookings.Schemas.Service do
       case URI.parse(url) do
         %URI{scheme: scheme, host: host}
         when scheme in ["http", "https", "webcal"] and is_binary(host) and host != "" ->
-          []
+          if PhoenixKitBookings.ICalImport.HTTPFetcher.obviously_internal?(url),
+            do: [ical_url: "must not point to a private or local address"],
+            else: []
 
         _ ->
           [ical_url: "must be an http(s) or webcal URL"]
