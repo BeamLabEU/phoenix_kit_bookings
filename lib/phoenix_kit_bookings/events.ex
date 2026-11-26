@@ -133,64 +133,81 @@ defmodule PhoenixKitBookings.Events do
   end
 
   @doc """
-  Updates an event. Judged under the event's row lock against the seats
-  already taken: an event with active bookings cannot move to another
-  service, and its capacity cannot drop below those seats. A status change
-  to `"cancelled"` goes through `cancel_event/2`, so its bookings are
-  cancelled too.
+  Updates an event. The changes are judged on the row under its lock (not
+  on the caller's struct, which may be stale) against the seats already
+  taken: an event with active bookings cannot move to another service or
+  to other times (they would stay where they were), and its capacity — its
+  own, or the service's when set to blank — cannot drop below those seats.
+  A status change to `"cancelled"` is committed in the same locked write,
+  so no sign-up slips in, and then cancels the event's bookings like
+  `cancel_event/2`.
   """
-  def update_event(%Event{} = event, attrs, opts \\ []) do
-    changeset = Event.changeset(event, attrs)
+  def update_event(%Event{uuid: uuid}, attrs, opts \\ []) do
+    result =
+      repo().transaction(fn ->
+        case lock_event(uuid) do
+          nil ->
+            repo().rollback(:not_found)
 
-    case Ecto.Changeset.get_change(changeset, :status) do
-      "cancelled" ->
-        with {:ok, updated} <- locked_update(Ecto.Changeset.delete_change(changeset, :status)) do
-          tap_log({:ok, updated}, "bookings.event_updated", opts)
-          cancel_event(updated, opts)
+          locked ->
+            changeset = locked |> Event.changeset(attrs) |> check_taken(locked)
+
+            case repo().update(changeset) do
+              {:ok, event} ->
+                {event, locked.status != "cancelled" and event.status == "cancelled"}
+
+              {:error, cs} ->
+                repo().rollback(cs)
+            end
         end
+      end)
 
-      _ ->
-        changeset |> locked_update() |> tap_log("bookings.event_updated", opts)
+    case result do
+      {:ok, {event, true}} ->
+        cancel_bookings(event, opts)
+        tap_log({:ok, event}, "bookings.event_cancelled", opts)
+
+      {:ok, {event, false}} ->
+        tap_log({:ok, event}, "bookings.event_updated", opts)
+
+      {:error, _} = error ->
+        error
     end
   end
 
-  defp locked_update(%Ecto.Changeset{data: %Event{uuid: uuid}} = changeset) do
-    repo().transaction(fn ->
-      repo().one(from(e in Event, where: e.uuid == ^uuid, lock: "FOR UPDATE"))
-      taken = Bookings.event_seats_taken(uuid)
+  defp lock_event(uuid),
+    do: repo().one(from(e in Event, where: e.uuid == ^uuid, lock: "FOR UPDATE"))
 
-      case changeset |> check_taken(taken) |> repo().update() do
-        {:ok, event} -> event
-        {:error, cs} -> repo().rollback(cs)
-      end
+  defp check_taken(changeset, %Event{uuid: uuid} = locked) do
+    case Bookings.event_seats_taken(uuid) do
+      0 -> changeset
+      taken -> changeset |> refuse_moves() |> refuse_capacity(locked, taken)
+    end
+  end
+
+  defp refuse_moves(changeset) do
+    Enum.reduce([:service_uuid, :starts_at, :ends_at], changeset, fn field, cs ->
+      if Ecto.Changeset.get_change(cs, field),
+        do: Ecto.Changeset.add_error(cs, field, "cannot change while the event has bookings"),
+        else: cs
     end)
   end
 
-  defp check_taken(changeset, 0), do: changeset
+  defp refuse_capacity(changeset, locked, taken) do
+    if Ecto.Changeset.changed?(changeset, :capacity) do
+      new = Ecto.Changeset.get_field(changeset, :capacity)
+      offered = new || Services.effective_seats(Services.get_service(locked.service_uuid))
 
-  defp check_taken(changeset, taken) do
-    changeset
-    |> then(fn cs ->
-      if Ecto.Changeset.get_change(cs, :service_uuid),
+      if offered < taken,
         do:
           Ecto.Changeset.add_error(
-            cs,
-            :service_uuid,
-            "cannot change while the event has bookings"
-          ),
-        else: cs
-    end)
-    |> then(fn cs ->
-      case Ecto.Changeset.get_change(cs, :capacity) do
-        capacity when is_integer(capacity) and capacity < taken ->
-          Ecto.Changeset.add_error(cs, :capacity, "is below the %{count} seats already booked",
-            count: taken
-          )
-
-        _ ->
-          cs
-      end
-    end)
+            changeset,
+            :capacity,
+            "is below the %{count} seats already booked", count: taken),
+        else: changeset
+    else
+      changeset
+    end
   end
 
   @doc """
@@ -200,16 +217,15 @@ defmodule PhoenixKitBookings.Events do
   def cancel_event(%Event{} = event, opts \\ []) do
     with {:ok, cancelled} <-
            event |> Ecto.Changeset.change(status: "cancelled") |> repo().update() do
-      from(b in Booking,
-        where: b.event_uuid == ^event.uuid and b.status in ["pending", "confirmed"]
-      )
-      |> repo().all()
-      |> Enum.each(
-        &Bookings.cancel_booking(&1, Keyword.put_new(opts, :reason, "event cancelled"))
-      )
-
+      cancel_bookings(cancelled, opts)
       tap_log({:ok, cancelled}, "bookings.event_cancelled", opts)
     end
+  end
+
+  defp cancel_bookings(%Event{uuid: uuid}, opts) do
+    from(b in Booking, where: b.event_uuid == ^uuid and b.status in ["pending", "confirmed"])
+    |> repo().all()
+    |> Enum.each(&Bookings.cancel_booking(&1, Keyword.put_new(opts, :reason, "event cancelled")))
   end
 
   @doc "Deletes an event; its bookings stay (their `event_uuid` is cleared)."

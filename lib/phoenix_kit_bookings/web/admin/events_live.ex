@@ -148,8 +148,21 @@ defmodule PhoenixKitBookings.Web.Admin.EventsLive do
         {:noreply,
          assign(socket,
            form: to_form(params, as: :event),
-           form_errors: Enum.map(changeset.errors, fn {field, {msg, _}} -> "#{field}: #{msg}" end)
+           form_errors:
+             Enum.map(changeset.errors, fn {field, {msg, opts}} ->
+               "#{field}: #{interpolate(msg, opts)}"
+             end)
          )}
+
+      {:error, :not_found} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           gettext("This event does not exist or is no longer on the schedule.")
+         )
+         |> new_form()
+         |> load()}
     end
   end
 
@@ -348,5 +361,11 @@ defmodule PhoenixKitBookings.Web.Admin.EventsLive do
       </div>
     </div>
     """
+  end
+
+  defp interpolate(msg, opts) do
+    Enum.reduce(opts, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
+    end)
   end
 end

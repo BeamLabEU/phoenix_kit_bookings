@@ -137,6 +137,31 @@ defmodule PhoenixKitBookings.EventsTest do
       assert {:error, cs} = Events.update_event(event, %{"service_uuid" => other.uuid})
       assert errors_on(cs)[:service_uuid] == ["cannot change while the event has bookings"]
       assert Events.get_event(event.uuid).service_uuid == event.service_uuid
+
+      assert {:error, cs} = Events.update_event(event, %{"starts_at" => at(2, 17)})
+      assert errors_on(cs)[:starts_at] == ["cannot change while the event has bookings"]
+    end
+
+    test "a blank capacity falls back to the service's seats, judged against the seats taken" do
+      event = event_fixture(slot_service_fixture(), %{"capacity" => 2})
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      # The fixture service has one seat.
+      assert {:error, cs} = Events.update_event(event, %{"capacity" => nil})
+      assert errors_on(cs)[:capacity] == ["is below the 2 seats already booked"]
+    end
+
+    test "an update is judged on the stored row, not on a stale struct" do
+      stale =
+        event_fixture(slot_service_fixture(), %{"starts_at" => at(4, 10), "ends_at" => at(4, 11)})
+
+      {:ok, _} = Events.update_event(stale, %{"starts_at" => at(4, 12), "ends_at" => at(4, 13)})
+
+      # Valid against the stored 12:00-13:00, invalid against the stale 11:00 end.
+      assert {:ok, moved} = Events.update_event(stale, %{"starts_at" => at(4, 11)})
+      assert moved.starts_at == at(4, 11)
+      assert moved.ends_at == at(4, 13)
     end
 
     test "an event without bookings can move" do
