@@ -50,6 +50,24 @@ defmodule PhoenixKitBookings.Web.NewAdminLiveTest do
       assert saved.ical_url == "https://cal.example.com/x.ics"
     end
 
+    test "a feed password is shown redacted and kept when the field is saved unchanged",
+         %{conn: conn} do
+      stored = "https://user:s3cret@cal.example.com/x.ics"
+      service = slot_service_fixture(%{"ical_url" => stored})
+      {:ok, view, html} = live(conn, "/en/admin/bookings/services/#{service.uuid}/edit")
+
+      refute html =~ "s3cret"
+      assert html =~ "user:*****@cal.example.com"
+
+      view
+      |> form("#bookings-service-form", %{
+        "service" => %{"ical_url" => "https://user:*****@cal.example.com/x.ics"}
+      })
+      |> render_submit()
+
+      assert Services.get_service(service.uuid).ical_url == stored
+    end
+
     test "adds a price option for chosen accounts and a regular slot", %{conn: conn} do
       service = slot_service_fixture()
       client = user_fixture()

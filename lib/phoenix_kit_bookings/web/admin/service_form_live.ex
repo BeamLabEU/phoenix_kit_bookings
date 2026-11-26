@@ -12,6 +12,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
   alias PhoenixKit.Users.Auth
   alias PhoenixKitBookings.{HostProfiles, ICalImport, Paths, Policy, PriceOptions, Pricing}
   alias PhoenixKitBookings.{RegularSlots, Services}
+  alias PhoenixKitBookings.ICalImport.HTTPFetcher
   alias PhoenixKitBookings.Schemas.{PriceOption, Service}
   alias PhoenixKitBookings.Web.Format
 
@@ -152,12 +153,12 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
   @impl true
   def handle_event("validate", %{"service" => params}, socket) do
-    changeset = Service.changeset(socket.assigns.service, params)
+    changeset = Service.changeset(socket.assigns.service, unredact(params, socket))
     {:noreply, assign(socket, form: to_form(changeset, action: :validate))}
   end
 
   def handle_event("save", %{"service" => params}, socket) do
-    save(socket, socket.assigns.action, params)
+    save(socket, socket.assigns.action, unredact(params, socket))
   end
 
   def handle_event("add_rule", %{"rule" => params}, socket) do
@@ -167,20 +168,6 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
       :invalid_days ->
         {:noreply, put_flash(socket, :error, gettext("Pick the weekdays from the list."))}
-    end
-  end
-
-  defp add_rule(socket, attrs) do
-    case Policy.add_rule(scope(socket), socket.assigns.service, attrs) do
-      {:ok, _rule} ->
-        {:noreply,
-         socket |> put_flash(:info, gettext("Availability rule added.")) |> load_rules()}
-
-      {:error, :not_allowed} ->
-        {:noreply, put_flash(socket, :error, gettext("You can't edit that service."))}
-
-      {:error, changeset} ->
-        {:noreply, put_flash(socket, :error, rule_error(changeset))}
     end
   end
 
@@ -310,6 +297,27 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
        socket |> put_flash(:info, gettext("Availability rule removed.")) |> load_rules()}
     else
       _ -> {:noreply, put_flash(socket, :error, gettext("Could not remove that rule."))}
+    end
+  end
+
+  # The feed URL field shows a stored password as `*****`; submitted
+  # unchanged, it means "keep the stored one".
+  defp unredact(%{"ical_url" => url} = params, socket),
+    do: Map.put(params, "ical_url", HTTPFetcher.unredact(url, socket.assigns.service.ical_url))
+
+  defp unredact(params, _socket), do: params
+
+  defp add_rule(socket, attrs) do
+    case Policy.add_rule(scope(socket), socket.assigns.service, attrs) do
+      {:ok, _rule} ->
+        {:noreply,
+         socket |> put_flash(:info, gettext("Availability rule added.")) |> load_rules()}
+
+      {:error, :not_allowed} ->
+        {:noreply, put_flash(socket, :error, gettext("You can't edit that service."))}
+
+      {:error, changeset} ->
+        {:noreply, put_flash(socket, :error, rule_error(changeset))}
     end
   end
 
@@ -715,6 +723,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
             </p>
             <.input
               field={@form[:ical_url]}
+              value={HTTPFetcher.redact(@form[:ical_url].value)}
               type="url"
               label={gettext("Calendar feed URL")}
               placeholder="https://example.com/calendar.ics"

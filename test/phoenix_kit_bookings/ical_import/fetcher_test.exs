@@ -21,6 +21,34 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcherTest do
       |> send_resp(302, "")
     end
 
+    # 200 only with the Basic credentials user / p@ss:word.
+    def call(%{request_path: "/private"} = conn, _opts) do
+      expected = "Basic " <> Base.encode64("user:p@ss:word")
+
+      case get_req_header(conn, "authorization") do
+        [^expected] -> send_resp(conn, 200, feed())
+        _ -> send_resp(conn, 401, "")
+      end
+    end
+
+    def call(%{request_path: "/to-localhost-private"} = conn, _opts) do
+      conn
+      |> put_resp_header("location", "http://localhost:#{conn.port}/private")
+      |> send_resp(302, "")
+    end
+
+    def call(%{request_path: "/to-private"} = conn, _opts) do
+      conn
+      |> put_resp_header("location", "/private")
+      |> send_resp(302, "")
+    end
+
+    def call(%{request_path: "/to-credentials"} = conn, _opts) do
+      conn
+      |> put_resp_header("location", "http://user:x@127.0.0.1:#{conn.port}/feed.ics")
+      |> send_resp(302, "")
+    end
+
     def call(%{request_path: "/to-self"} = conn, _opts) do
       conn
       |> put_resp_header("location", "/feed.ics")
@@ -95,9 +123,8 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcherTest do
       end
     end
 
-    test "refuses a port outside 80/443 and credentials in the URL" do
+    test "refuses a port outside 80/443" do
       assert HTTPFetcher.fetch("http://example.com:5432/feed.ics") == {:error, :port_not_allowed}
-      assert HTTPFetcher.fetch("https://user:pw@example.com/feed.ics") == {:error, :invalid_url}
     end
   end
 
@@ -124,6 +151,29 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcherTest do
                {:error, :blocked_host}
     end
 
+    test "credentials in the URL go as Basic auth to its own origin only" do
+      port = start_server()
+      Application.put_env(:phoenix_kit_bookings, :ical_allowed_hosts, ["127.0.0.1", "localhost"])
+      base = "http://user:p%40ss%3Aword@127.0.0.1:#{port}"
+
+      assert HTTPFetcher.fetch(base <> "/private") == {:ok, @feed}
+      # Same origin after a redirect: still sent.
+      assert HTTPFetcher.fetch(base <> "/to-private") == {:ok, @feed}
+      # Another host: not sent.
+      assert HTTPFetcher.fetch(base <> "/to-localhost-private") == {:error, {:http_status, 401}}
+      # Without them: refused by the server.
+      assert HTTPFetcher.fetch("http://127.0.0.1:#{port}/private") ==
+               {:error, {:http_status, 401}}
+    end
+
+    test "a redirect Location carrying credentials is refused" do
+      port = start_server()
+      Application.put_env(:phoenix_kit_bookings, :ical_allowed_hosts, ["127.0.0.1"])
+
+      assert HTTPFetcher.fetch("http://127.0.0.1:#{port}/to-credentials") ==
+               {:error, :invalid_url}
+    end
+
     test "cuts a streamed body off at 5 MB" do
       port = start_server()
       Application.put_env(:phoenix_kit_bookings, :ical_allowed_hosts, ["127.0.0.1"])
@@ -134,6 +184,25 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcherTest do
     test "still refuses a port the config does not name" do
       Application.put_env(:phoenix_kit_bookings, :ical_allowed_hosts, ["127.0.0.1"])
       assert HTTPFetcher.fetch("http://127.0.0.1:6379/") == {:error, :port_not_allowed}
+    end
+  end
+
+  describe "redact/1 and unredact/2" do
+    test "hide the password, and an unchanged redacted field keeps the stored one" do
+      stored = "https://user:s3cret@cal.example.com/x.ics"
+      shown = HTTPFetcher.redact(stored)
+
+      assert shown == "https://user:*****@cal.example.com/x.ics"
+      refute shown =~ "s3cret"
+
+      assert HTTPFetcher.redact("https://cal.example.com/x.ics") ==
+               "https://cal.example.com/x.ics"
+
+      assert HTTPFetcher.redact(nil) == nil
+
+      assert HTTPFetcher.unredact(shown, stored) == stored
+      assert HTTPFetcher.unredact("https://other.example.com/y.ics", stored) =~ "other"
+      assert HTTPFetcher.unredact(shown, nil) == shown
     end
   end
 

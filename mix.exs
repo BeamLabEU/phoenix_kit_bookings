@@ -96,6 +96,10 @@ defmodule PhoenixKitBookings.MixProject do
       # TimeSlots) and calendar UI components.
       pk_dep(:phoenix_live_calendar, "~> 0.5"),
 
+      # The iCal feed fetch (ICalImport.HTTPFetcher) connects to the address it
+      # checked; core already depends on it.
+      {:mint, "~> 1.6"},
+
       # LiveView is needed for the admin and public pages.
       {:phoenix_live_view, "~> 1.1"},
 
