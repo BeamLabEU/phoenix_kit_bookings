@@ -241,7 +241,7 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcher do
 
     if bytes > @max_bytes,
       do: {:done, {:error, :too_large}},
-      else: handle(rest, ref, %{state | body: [state.body | data], bytes: bytes})
+      else: handle(rest, ref, %{state | body: [state.body, data], bytes: bytes})
   end
 
   def handle([{:done, ref} | _rest], ref, %{status: 200} = state),
