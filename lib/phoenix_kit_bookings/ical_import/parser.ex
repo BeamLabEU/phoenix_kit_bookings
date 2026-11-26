@@ -693,20 +693,21 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     by_day =
       if bydays, do: MapSet.new(Enum.flat_map(bydays, &byday_dates(all, &1))), else: nil
 
-    by_monthday =
-      if monthdays,
-        do:
-          monthdays
-          |> Enum.map(fn n -> if n > 0, do: n, else: last + 1 + n end)
-          |> Enum.filter(&(&1 in 1..last))
-          |> MapSet.new(&Date.new!(year, month, &1)),
-        else: nil
+    by_monthday = if monthdays, do: monthday_dates(monthdays, year, month, last), else: nil
 
     all
     |> Enum.filter(fn date ->
       (is_nil(by_day) or MapSet.member?(by_day, date)) and
         (is_nil(by_monthday) or MapSet.member?(by_monthday, date))
     end)
+  end
+
+  # Month days as dates; a negative one counts from the end (-1 = last).
+  defp monthday_dates(monthdays, year, month, last) do
+    monthdays
+    |> Enum.map(&if(&1 > 0, do: &1, else: last + 1 + &1))
+    |> Enum.filter(&(&1 in 1..last))
+    |> MapSet.new(&Date.new!(year, month, &1))
   end
 
   defp byday_dates(month_days, {nil, weekday}),

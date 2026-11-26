@@ -11,8 +11,8 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
   alias PhoenixKit.Users.Auth
   alias PhoenixKitBookings.{HostProfiles, ICalImport, Paths, Policy, PriceOptions, Pricing}
-  alias PhoenixKitBookings.{RegularSlots, Services}
   alias PhoenixKitBookings.ICalImport.HTTPFetcher
+  alias PhoenixKitBookings.{RegularSlots, Services}
   alias PhoenixKitBookings.Schemas.{PriceOption, Service}
   alias PhoenixKitBookings.Web.Format
 

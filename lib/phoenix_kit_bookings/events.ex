@@ -14,8 +14,8 @@ defmodule PhoenixKitBookings.Events do
   import Ecto.Query
 
   alias PhoenixKitBookings.{Activity, Bookings, Notifier, Services}
-  alias PhoenixKitBookings.Workers.ReminderWorker
   alias PhoenixKitBookings.Schemas.{Booking, Event, Service}
+  alias PhoenixKitBookings.Workers.ReminderWorker
 
   @doc """
   Events for the admin, by start. Options: `:service_uuids` (restrict to

@@ -188,21 +188,22 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcher do
         finish(conn, {:error, :timeout})
 
       timeout ->
-        case Mint.HTTP.recv(conn, 0, timeout) do
-          {:ok, conn, responses} ->
-            case handle(responses, ref, state) do
-              {:cont, state} -> receive_loop(conn, ref, state, deadline)
-              {:done, result} -> finish(conn, result)
-            end
-
-          {:error, conn, %Mint.TransportError{reason: :timeout}, _} ->
-            finish(conn, {:error, :timeout})
-
-          {:error, conn, error, _} ->
-            finish(conn, {:error, {:connect_failed, error}})
-        end
+        conn |> Mint.HTTP.recv(0, timeout) |> received(ref, state, deadline)
     end
   end
+
+  defp received({:ok, conn, responses}, ref, state, deadline) do
+    case handle(responses, ref, state) do
+      {:cont, state} -> receive_loop(conn, ref, state, deadline)
+      {:done, result} -> finish(conn, result)
+    end
+  end
+
+  defp received({:error, conn, %Mint.TransportError{reason: :timeout}, _}, _ref, _state, _dl),
+    do: finish(conn, {:error, :timeout})
+
+  defp received({:error, conn, error, _}, _ref, _state, _deadline),
+    do: finish(conn, {:error, {:connect_failed, error}})
 
   @doc false
   # One batch of Mint responses folded into the download state.

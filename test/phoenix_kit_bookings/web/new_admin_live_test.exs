@@ -12,6 +12,8 @@ defmodule PhoenixKitBookings.Web.NewAdminLiveTest do
     Services
   }
 
+  alias PhoenixKitBookings.Schemas.Event
+
   defmodule FakeFetcher do
     @moduledoc false
     @behaviour PhoenixKitBookings.ICalImport.Fetcher
@@ -211,7 +213,7 @@ defmodule PhoenixKitBookings.Web.NewAdminLiveTest do
       |> render_submit()
 
       assert [event] = Events.list_events(service_uuids: [service.uuid])
-      assert PhoenixKitBookings.Schemas.Event.ignore_service_capacity?(event)
+      assert Event.ignore_service_capacity?(event)
     end
 
     test "an own-services user cannot add events to someone else's service", %{conn: conn} do
