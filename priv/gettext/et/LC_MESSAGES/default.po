@@ -65,7 +65,7 @@ msgstr[0] "Praeguses broneerimisaknas on %{count} vaba päev."
 msgstr[1] "Praeguses broneerimisaknas on %{count} vaba päeva."
 
 #: lib/phoenix_kit_bookings/web/public/event_card.ex:73
-#: lib/phoenix_kit_bookings/web/public/event_live.ex:190
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "%{count} place left"
 msgid_plural "%{count} places left"
@@ -275,6 +275,7 @@ msgstr "august"
 
 #: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:731
 #: lib/phoenix_kit_bookings/web/public/host_live.ex:121
+#: lib/phoenix_kit_bookings/web/public/services_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr "Saadavus"
@@ -738,7 +739,7 @@ msgstr "Muuda teenust"
 
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:623
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:760
-#: lib/phoenix_kit_bookings/web/public/event_live.ex:207
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-post"
@@ -849,7 +850,7 @@ msgstr "Täis"
 msgid "Full days · %{stay} · %{units}"
 msgstr "Terved päevad · %{stay} · %{units}"
 
-#: lib/phoenix_kit_bookings/web/public/event_live.ex:220
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:224
 #: lib/phoenix_kit_bookings/web/public/host_live.ex:129
 #, elixir-autogen, elixir-format
 msgid "Full schedule"
@@ -1148,7 +1149,7 @@ msgstr "Sellele vaatele ei vasta ühtki broneeringut."
 msgid "No events yet."
 msgstr "Üritusi veel pole."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:201
+#: lib/phoenix_kit_bookings/ical_import.ex:204
 #, elixir-autogen, elixir-format
 msgid "No feed URL is set."
 msgstr "Voo URL pole määratud."
@@ -1289,7 +1290,7 @@ msgid "Person %{id}"
 msgstr "Isik %{id}"
 
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:765
-#: lib/phoenix_kit_bookings/web/public/event_live.ex:212
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:216
 #, elixir-autogen, elixir-format
 msgid "Phone (optional)"
 msgstr "Telefon (valikuline)"
@@ -1565,7 +1566,7 @@ msgid "Showing the first %{count} bookings of this view."
 msgstr "Näidatakse selle vaate esimest %{count} broneeringut."
 
 #: lib/phoenix_kit_bookings/web/public/event_card.ex:84
-#: lib/phoenix_kit_bookings/web/public/event_live.ex:215
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:219
 #, elixir-autogen, elixir-format
 msgid "Sign up"
 msgstr "Registreeru"
@@ -1704,12 +1705,12 @@ msgstr "URL ei tagastanud iCal kalendrit."
 msgid "The cancellation window for this booking has passed."
 msgstr "Selle broneeringu tühistamise aeg on möödas."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:204
+#: lib/phoenix_kit_bookings/ical_import.ex:228
 #, elixir-autogen, elixir-format
 msgid "The feed answered HTTP %{status}."
 msgstr "Voog vastas HTTP koodiga %{status}."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:207
+#: lib/phoenix_kit_bookings/ical_import.ex:231
 #, elixir-autogen, elixir-format
 msgid "The feed entry %{id} could not be stored."
 msgstr "Voo kirjet %{id} ei õnnestunud salvestada."
@@ -1774,7 +1775,7 @@ msgstr "Seda broneerimislehte pole olemas või see ei võta enam broneeringuid v
 msgid "This event does not exist or is no longer on the schedule."
 msgstr "Seda üritust pole olemas või see pole enam ajakavas."
 
-#: lib/phoenix_kit_bookings/web/public/event_live.ex:185
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "This event is fully booked."
 msgstr "See üritus on täis."
@@ -2036,7 +2037,7 @@ msgid "Your booking is confirmed: %{service}, %{when}."
 msgstr "Sinu broneering on kinnitatud: %{service}, %{when}."
 
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:755
-#: lib/phoenix_kit_bookings/web/public/event_live.ex:202
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:206
 #, elixir-autogen, elixir-format
 msgid "Your name"
 msgstr "Sinu nimi"
@@ -2174,3 +2175,58 @@ msgstr "terve päev"
 msgctxt "month abbreviation"
 msgid "May"
 msgstr "mai"
+
+#: lib/phoenix_kit_bookings/web/public/event_live.ex:186
+#, elixir-autogen, elixir-format
+msgid "Sign-up for this event is not taken online."
+msgstr "Sellele sündmusele ei saa veebis registreeruda."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:216
+#, elixir-autogen, elixir-format
+msgid "The feed URL is not valid."
+msgstr "Voo URL ei ole kehtiv."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:219
+#, elixir-autogen, elixir-format
+msgid "The feed URL must use http or https (an https feed cannot redirect to http)."
+msgstr "Voo URL peab kasutama http- või https-protokolli (https-voog ei saa suunata ümber http-le)."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:221
+#, elixir-autogen, elixir-format
+msgid "The feed URL uses a port that is not allowed."
+msgstr "Voo URL kasutab porti, mis pole lubatud."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:223
+#, elixir-autogen, elixir-format
+msgid "The feed did not answer in time."
+msgstr "Voog ei vastanud õigeks ajaks."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:203
+#, elixir-autogen, elixir-format
+msgid "The feed has more than 20 000 events in the coming year."
+msgstr "Voos on eelseisval aastal üle 20 000 sündmuse."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:222
+#, elixir-autogen, elixir-format
+msgid "The feed redirected too many times."
+msgstr "Voog suunas ümber liiga mitu korda."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:211
+#, elixir-autogen, elixir-format
+msgid "The feed's address is on a private or local network; only public addresses are fetched."
+msgstr "Voo aadress on privaatses või kohalikus võrgus; laaditakse ainult avalikke aadresse."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:215
+#, elixir-autogen, elixir-format
+msgid "The feed's host name could not be found."
+msgstr "Voo hostinime ei leitud."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:225
+#, elixir-autogen, elixir-format
+msgid "The feed's server could not be reached."
+msgstr "Voo serveriga ei saanud ühendust."
+
+#: lib/phoenix_kit_bookings/ical_import.ex:207
+#, elixir-autogen, elixir-format
+msgid "The service changed during the sync; the next sync will import the feed."
+msgstr "Teenus muutus sünkroonimise ajal; järgmine sünkroonimine impordib voo."
