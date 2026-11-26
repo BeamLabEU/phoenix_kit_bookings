@@ -361,6 +361,14 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
                )
     end
 
+    test "a BOM and a folded END line still make a calendar" do
+      body =
+        "\uFEFFBEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a\r\nDTSTART:20260310T090000Z\r\n" <>
+          "DTEND:20260310T100000Z\r\nEND:VEVENT\r\nEND:VCAL\r\n ENDAR\r\n"
+
+      assert {:ok, %{events: [%{uid: "a"}]}} = Parser.parse(body, from: @from, until: @until)
+    end
+
     test "lowercase component names are read" do
       assert {:ok, %{events: [_]}} =
                Parser.parse(
@@ -382,7 +390,7 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
                Parser.parse(cal(body), from: @from, until: ~U[2032-01-01 00:00:00Z])
     end
 
-    test "an absurd DURATION is cut to two years at once instead of stalling the date arithmetic" do
+    test "an absurd DURATION is cut to a century at once instead of stalling the date arithmetic" do
       task =
         Task.async(fn ->
           parse("""
@@ -401,7 +409,7 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
 
       assert %{events: [long, %{uid: "ok"}]} = Task.await(task, 5_000)
       assert {:datetime, ~U[2026-03-10 09:00:00Z], ends} = long.range
-      assert DateTime.diff(ends, ~U[2026-03-10 09:00:00Z]) == 2 * 366 * 86_400
+      assert DateTime.diff(ends, ~U[2026-03-10 09:00:00Z]) == 100 * 366 * 86_400
     end
   end
 end
