@@ -581,8 +581,12 @@ defmodule PhoenixKitBookings.Bookings do
         range = {locked_event.starts_at, locked_event.ends_at}
         total = event_total(locked_event, locked_service, range)
 
+        # The times come from the row under lock too: the caller's struct
+        # may predate a reschedule, and the price is judged on this range.
         changeset
         |> Ecto.Changeset.change(
+          starts_at: DateTime.truncate(locked_event.starts_at, :second),
+          ends_at: DateTime.truncate(locked_event.ends_at, :second),
           status: initial_status(locked_service, Ecto.Changeset.get_field(changeset, :source)),
           total_price: total,
           currency: if(total, do: locked_service.currency)

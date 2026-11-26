@@ -132,11 +132,65 @@ defmodule PhoenixKitBookings.Events do
     |> tap_log("bookings.event_created", opts)
   end
 
+  @doc """
+  Updates an event. Judged under the event's row lock against the seats
+  already taken: an event with active bookings cannot move to another
+  service, and its capacity cannot drop below those seats. A status change
+  to `"cancelled"` goes through `cancel_event/2`, so its bookings are
+  cancelled too.
+  """
   def update_event(%Event{} = event, attrs, opts \\ []) do
-    event
-    |> Event.changeset(attrs)
-    |> repo().update()
-    |> tap_log("bookings.event_updated", opts)
+    changeset = Event.changeset(event, attrs)
+
+    case Ecto.Changeset.get_change(changeset, :status) do
+      "cancelled" ->
+        with {:ok, updated} <- locked_update(Ecto.Changeset.delete_change(changeset, :status)) do
+          tap_log({:ok, updated}, "bookings.event_updated", opts)
+          cancel_event(updated, opts)
+        end
+
+      _ ->
+        changeset |> locked_update() |> tap_log("bookings.event_updated", opts)
+    end
+  end
+
+  defp locked_update(%Ecto.Changeset{data: %Event{uuid: uuid}} = changeset) do
+    repo().transaction(fn ->
+      repo().one(from(e in Event, where: e.uuid == ^uuid, lock: "FOR UPDATE"))
+      taken = Bookings.event_seats_taken(uuid)
+
+      case changeset |> check_taken(taken) |> repo().update() do
+        {:ok, event} -> event
+        {:error, cs} -> repo().rollback(cs)
+      end
+    end)
+  end
+
+  defp check_taken(changeset, 0), do: changeset
+
+  defp check_taken(changeset, taken) do
+    changeset
+    |> then(fn cs ->
+      if Ecto.Changeset.get_change(cs, :service_uuid),
+        do:
+          Ecto.Changeset.add_error(
+            cs,
+            :service_uuid,
+            "cannot change while the event has bookings"
+          ),
+        else: cs
+    end)
+    |> then(fn cs ->
+      case Ecto.Changeset.get_change(cs, :capacity) do
+        capacity when is_integer(capacity) and capacity < taken ->
+          Ecto.Changeset.add_error(cs, :capacity, "is below the %{count} seats already booked",
+            count: taken
+          )
+
+        _ ->
+          cs
+      end
+    end)
   end
 
   @doc """

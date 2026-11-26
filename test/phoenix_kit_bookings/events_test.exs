@@ -111,6 +111,57 @@ defmodule PhoenixKitBookings.EventsTest do
     assert Bookings.get_booking(booking.uuid).status == "cancelled"
   end
 
+  describe "update_event/3 with bookings" do
+    test "a status change to cancelled cancels the bookings too" do
+      event = event_fixture(slot_service_fixture())
+      {:ok, booking} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      {:ok, updated} =
+        Events.update_event(event, %{"status" => "cancelled", "title" => "Off"}, notify: false)
+
+      assert updated.status == "cancelled"
+      assert updated.title == "Off"
+      assert Bookings.get_booking(booking.uuid).status == "cancelled"
+    end
+
+    test "capacity cannot drop below the seats taken; the service cannot change" do
+      event = event_fixture(slot_service_fixture(), %{"capacity" => 2})
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      assert {:error, cs} = Events.update_event(event, %{"capacity" => 1})
+      assert errors_on(cs)[:capacity] == ["is below the 2 seats already booked"]
+      assert {:ok, %{capacity: 3}} = Events.update_event(event, %{"capacity" => 3})
+
+      other = slot_service_fixture()
+      assert {:error, cs} = Events.update_event(event, %{"service_uuid" => other.uuid})
+      assert errors_on(cs)[:service_uuid] == ["cannot change while the event has bookings"]
+      assert Events.get_event(event.uuid).service_uuid == event.service_uuid
+    end
+
+    test "an event without bookings can move" do
+      event = event_fixture(slot_service_fixture())
+      other = slot_service_fixture()
+
+      assert {:ok, %{service_uuid: uuid}} =
+               Events.update_event(event, %{"service_uuid" => other.uuid})
+
+      assert uuid == other.uuid
+    end
+
+    test "a sign-up through a struct from before a reschedule takes the new times and price" do
+      service = slot_service_fixture(%{"price" => "30", "price_per" => "hour"})
+      stale = event_fixture(service, %{"starts_at" => at(3, 10), "ends_at" => at(3, 11)})
+      {:ok, _} = Events.update_event(stale, %{"starts_at" => at(3, 12), "ends_at" => at(3, 14)})
+
+      {:ok, booking} = Bookings.create_event_booking(stale, customer_attrs(), notify: false)
+
+      assert booking.starts_at == at(3, 12)
+      assert booking.ends_at == at(3, 14)
+      assert Decimal.equal?(booking.total_price, Decimal.new("60.00"))
+    end
+  end
+
   describe "the public schedule" do
     test "lists upcoming public events of active services, soonest first" do
       service = slot_service_fixture()
