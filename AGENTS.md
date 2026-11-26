@@ -387,7 +387,7 @@ lib/phoenix_kit_bookings/
   price_options.ex                      per-service rates + entitlement checks
   regular_slots.ex                      usual weekly holders; conflicts/4 (warn, never block)
   imports.ex                            replace-own-rows sync of imported bookings and rules
-  ical_import.ex ical_import/           feed sync, Fetcher behaviour (+ ReqFetcher), RFC 5545 Parser
+  ical_import.ex ical_import/           feed sync, Fetcher behaviour (+ HTTPFetcher), RFC 5545 Parser
   workers/ical_sync_worker.ex           Oban, `bookings_sync` queue, hourly cron sweep
   availability_view.ex                  free / partial / booked / closed per day
   events.ex host_profiles.ex            the public schedule's data
@@ -573,8 +573,16 @@ schema (the conformance test enforces it).
   sync would bring them back).
 - **iCal** (`ICalImport` + `ICalImport.Parser`): own small parser (limits in
   its moduledoc); the fetcher is `config :phoenix_kit_bookings, :ical_fetcher`
-  (default `ReqFetcher`; tests swap it, no real HTTP). The URL is admin input
-  fetched by the server (http/https/webcal only; no private-address guard).
+  (default `HTTPFetcher`; tests swap it). The URL is admin input fetched by
+  the server, so `HTTPFetcher` runs on core's `Storage.RemoteFetch`: every
+  address the host resolves to (and every redirect hop's) must be public
+  (`PhoenixKit.Utils.PublicAddress`), the connection goes to the checked
+  address, ports 80/443, the body is capped at 5 MB while streaming. A LAN
+  feed is let through only by `config :phoenix_kit_bookings,
+  ical_allowed_hosts: [...]` (+ `ical_allowed_ports:`). The service form
+  refuses `localhost` and non-public IP literals up front. A cut-off body
+  (no `END:VCALENDAR`) or one over 20 000 occurrences is an error and
+  deletes nothing.
 - **Price options** are re-judged inside the locked create; the public flow
   offers only entitled ones and drops anything else the client sends.
 - **Regular slots** never block: flag + activity + owner email.
