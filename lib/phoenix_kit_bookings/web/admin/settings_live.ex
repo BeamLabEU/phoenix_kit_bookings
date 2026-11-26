@@ -6,6 +6,7 @@ defmodule PhoenixKitBookings.Web.Admin.SettingsLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   alias PhoenixKit.Settings
   alias PhoenixKit.Utils.Routes

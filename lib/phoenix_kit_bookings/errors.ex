@@ -44,5 +44,11 @@ defmodule PhoenixKitBookings.Errors do
   def message(:invalid_waitlist, _),
     do: gettext("Please provide a valid name, email, and date to join the waitlist.")
 
+  def message(:price_option_unavailable, _),
+    do: gettext("That rate is not available to you. Please pick another.")
+
+  def message(:event_unavailable, _),
+    do: gettext("This event is not taking sign-ups.")
+
   def message(_, _), do: gettext("Something went wrong. Please try again.")
 end

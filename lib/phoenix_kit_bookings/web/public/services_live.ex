@@ -6,6 +6,7 @@ defmodule PhoenixKitBookings.Web.Public.ServicesLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   require Logger
 

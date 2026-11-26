@@ -11,6 +11,8 @@ defmodule PhoenixKitBookings.Pricing do
   Returns `nil` for unpriced services — bookings then carry no total.
   """
 
+  use Gettext, backend: PhoenixKitBookings.Gettext
+
   alias PhoenixKitBookings.Schemas.{PriceOption, Service}
 
   @doc """
@@ -66,12 +68,13 @@ defmodule PhoenixKitBookings.Pricing do
   def tag(%Service{price: nil}), do: nil
 
   def tag(%Service{} = service) do
-    per =
-      case service.price_per do
-        "booking" -> ""
-        per -> " / #{per}"
-      end
+    amount = "#{Decimal.to_string(Decimal.round(service.price, 2))} #{service.currency}"
 
-    "#{Decimal.to_string(Decimal.round(service.price, 2))} #{service.currency}#{per}"
+    case service.price_per do
+      "hour" -> gettext("%{amount} / hour", amount: amount)
+      "day" -> gettext("%{amount} / day", amount: amount)
+      "night" -> gettext("%{amount} / night", amount: amount)
+      _ -> amount
+    end
   end
 end

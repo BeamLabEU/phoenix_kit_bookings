@@ -27,6 +27,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingWidgetLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   alias PhoenixKitBookings.Web.Public.BookingFlow
   alias PhoenixKitWeb.Users.Auth

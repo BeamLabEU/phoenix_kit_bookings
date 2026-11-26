@@ -7,6 +7,7 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   alias PhoenixKitBookings.{Bookings, Errors, Pricing, Services}
   alias PhoenixKitBookings.Web.Format
@@ -84,7 +85,7 @@ defmodule PhoenixKitBookings.Web.Public.ManageLive do
               <div :if={@service} class="font-medium">{@service.name}</div>
               <div>{Format.format_range(@booking)}</div>
               <div>
-                <span class={Format.status_badge(@booking.status)}>{@booking.status}</span>
+                <span class={Format.status_badge(@booking.status)}>{Format.status_label(@booking.status)}</span>
               </div>
               <div class="text-base-content/60">{@booking.customer_name} · {@booking.customer_email}</div>
             </div>

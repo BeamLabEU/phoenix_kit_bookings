@@ -26,6 +26,8 @@ defmodule PhoenixKitBookings.ICalImport do
   than the column allows.
   """
 
+  use Gettext, backend: PhoenixKitBookings.Gettext
+
   require Logger
 
   import Ecto.Query
@@ -194,11 +196,16 @@ defmodule PhoenixKitBookings.ICalImport do
   end
 
   @doc "A sync failure in words (stored on the service, shown in the admin)."
-  def describe(:not_a_calendar), do: "The URL did not return an iCal calendar."
-  def describe(:too_large), do: "The feed is larger than 5 MB."
-  def describe(:no_url), do: "No feed URL is set."
-  def describe({:http_status, status}), do: "The feed answered HTTP #{status}."
-  def describe({:invalid_entry, id}), do: "The feed entry #{id} could not be stored."
+  def describe(:not_a_calendar), do: gettext("The URL did not return an iCal calendar.")
+  def describe(:too_large), do: gettext("The feed is larger than 5 MB.")
+  def describe(:no_url), do: gettext("No feed URL is set.")
+
+  def describe({:http_status, status}),
+    do: gettext("The feed answered HTTP %{status}.", status: status)
+
+  def describe({:invalid_entry, id}),
+    do: gettext("The feed entry %{id} could not be stored.", id: id)
+
   def describe(%{__exception__: true} = e), do: Exception.message(e)
   def describe(other), do: inspect(other)
 

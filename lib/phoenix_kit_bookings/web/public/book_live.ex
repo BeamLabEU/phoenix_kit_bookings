@@ -5,6 +5,7 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   alias PhoenixKitBookings.{Paths, Policy}
   alias PhoenixKitBookings.Web.Public.BookingFlow

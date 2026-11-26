@@ -7,21 +7,13 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
+  alias PhoenixKit.Users.Auth
   alias PhoenixKitBookings.{HostProfiles, ICalImport, Paths, Policy, PriceOptions, Pricing}
   alias PhoenixKitBookings.{RegularSlots, Services}
   alias PhoenixKitBookings.Schemas.{PriceOption, Service}
   alias PhoenixKitBookings.Web.Format
-
-  @weekdays [
-    {1, "Mon"},
-    {2, "Tue"},
-    {3, "Wed"},
-    {4, "Thu"},
-    {5, "Fri"},
-    {6, "Sat"},
-    {7, "Sun"}
-  ]
 
   @impl true
   def mount(params, _session, socket) do
@@ -155,7 +147,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
       |> Enum.join(" ")
 
     Enum.find([name, full_name, email], &(&1 not in [nil, ""])) ||
-      "Person #{String.slice(uuid, 0, 8)}"
+      gettext("Person %{id}", id: String.slice(uuid, 0, 8))
   end
 
   @impl true
@@ -382,7 +374,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
   end
 
   defp resolve_user_uuid(email) when is_binary(email) and email != "" do
-    case PhoenixKit.Users.Auth.get_user_by_email(String.trim(email)) do
+    case Auth.get_user_by_email(String.trim(email)) do
       %{uuid: uuid} -> uuid
       _ -> nil
     end
@@ -414,7 +406,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
   defp slot_hours(_), do: gettext("whole day")
 
-  defp weekday_label(num), do: Enum.find_value(@weekdays, fn {n, label} -> n == num && label end)
+  defp weekday_label(num), do: Enum.find_value(weekdays(), fn {n, label} -> n == num && label end)
 
   defp save(socket, :new, params) do
     case Policy.create_service(scope(socket), params) do
@@ -478,7 +470,17 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
     Enum.map_join(changeset.errors, "; ", fn {field, {msg, _}} -> "#{field}: #{msg}" end)
   end
 
-  defp weekdays, do: @weekdays
+  defp weekdays do
+    [
+      {1, gettext("Mon")},
+      {2, gettext("Tue")},
+      {3, gettext("Wed")},
+      {4, gettext("Thu")},
+      {5, gettext("Fri")},
+      {6, gettext("Sat")},
+      {7, gettext("Sun")}
+    ]
+  end
 
   defp time_unit_value(form), do: form[:time_unit].value || "minutes"
   defp flexible?(form), do: form[:flexible_duration].value in [true, "true"]
@@ -1039,11 +1041,11 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
     """
   end
 
-  defp rule_scope_label(%{date: %Date{} = date}), do: Calendar.strftime(date, "%d %b %Y")
+  defp rule_scope_label(%{date: %Date{} = date}), do: Format.strftime(date, "%d %b %Y")
 
   defp rule_scope_label(%{days_of_week: days}) when is_list(days) do
     Enum.map_join(days, ", ", fn num ->
-      Enum.find_value(@weekdays, fn {n, label} -> n == num && label end)
+      weekday_label(num)
     end)
   end
 

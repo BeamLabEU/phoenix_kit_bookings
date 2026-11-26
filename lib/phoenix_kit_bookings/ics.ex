@@ -10,6 +10,8 @@ defmodule PhoenixKitBookings.ICS do
 
   @max_line_octets 75
 
+  use Gettext, backend: PhoenixKitBookings.Gettext
+
   @doc "The .ics file content for a booking."
   def booking_ics(%Booking{} = booking, %Service{} = service, manage_url) do
     now = DateTime.utc_now()
@@ -28,7 +30,7 @@ defmodule PhoenixKitBookings.ICS do
       ] ++
         dt_lines(booking) ++
         [
-          "DESCRIPTION:#{escape("Manage or cancel: #{manage_url}")}",
+          "DESCRIPTION:#{escape(gettext("Manage or cancel: %{url}", url: manage_url))}",
           "END:VEVENT",
           "END:VCALENDAR"
         ]

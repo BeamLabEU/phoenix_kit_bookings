@@ -39,7 +39,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   """
 
   use Phoenix.Component
-  use Gettext, backend: PhoenixKitWeb.Gettext
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   import Phoenix.LiveView
 
@@ -873,14 +873,14 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
         do: ngettext("%{count} night", "%{count} nights", n),
         else: ngettext("%{count} day", "%{count} days", n)
 
-    "#{Calendar.strftime(starts_on, "%d %b %Y")} → #{Calendar.strftime(ends_on, "%d %b %Y")} · #{length} · #{service.name}"
+    "#{Format.strftime(starts_on, "%d %b %Y")} → #{Format.strftime(ends_on, "%d %b %Y")} · #{length} · #{service.name}"
   end
 
   defp selected_label(_service, {starts_at, ends_at}) do
     start_f = Engine.utc_to_frame(starts_at)
     end_f = Engine.utc_to_frame(ends_at)
 
-    "#{Calendar.strftime(start_f, "%d %b %Y %H:%M")} – #{Calendar.strftime(end_f, "%H:%M")}"
+    "#{Format.strftime(start_f, "%d %b %Y %H:%M")} – #{Calendar.strftime(end_f, "%H:%M")}"
   end
 
   defp selected_label(_service, _), do: ""
