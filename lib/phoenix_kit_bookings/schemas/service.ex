@@ -186,7 +186,11 @@ defmodule PhoenixKitBookings.Schemas.Service do
     |> validate_number(:max_stay, greater_than: 0)
     |> validate_number(:cancel_notice, greater_than_or_equal_to: 0)
     |> validate_number(:reminder_minutes, greater_than: 0)
-    |> validate_number(:price, greater_than_or_equal_to: 0)
+    # NUMERIC(12,2): ten integer digits, after rounding to cents.
+    |> validate_number(:price,
+      greater_than_or_equal_to: 0,
+      less_than: Decimal.new("9999999999.995")
+    )
     |> validate_inclusion(:price_per, @price_pers)
     |> validate_length(:currency, max: 10)
     |> validate_length(:host_ref, max: 255)

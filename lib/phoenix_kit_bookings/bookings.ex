@@ -49,6 +49,9 @@ defmodule PhoenixKitBookings.Bookings do
 
   @service_unavailable "This service is not currently bookable"
   @already_cancelled "This booking is already cancelled"
+  @total_too_large "The total is larger than a booking can hold"
+  # total_price is NUMERIC(12,2).
+  @max_total Decimal.new("9999999999.99")
 
   def admin_topic, do: @admin_topic
 
@@ -378,12 +381,14 @@ defmodule PhoenixKitBookings.Bookings do
     option = opts[:price_option]
     priced = Pricing.apply_option(effective, option)
 
+    total = Pricing.total(priced, range) |> check_total!()
+
     changeset =
       changeset
       |> Ecto.Changeset.change(
         status: initial_status(effective, Ecto.Changeset.get_field(changeset, :source)),
         unit_uuid: pick_unit(units, effective, range),
-        total_price: Pricing.total(priced, range),
+        total_price: total,
         currency: if(priced.price, do: priced.currency),
         price_option_uuid: option && option.uuid
       )
@@ -397,6 +402,16 @@ defmodule PhoenixKitBookings.Bookings do
       {:error, cs} ->
         repo().rollback({:changeset, cs})
     end
+  end
+
+  # A price × a long range can exceed the column; that is a refusal, not a
+  # database error.
+  defp check_total!(nil), do: nil
+
+  defp check_total!(%Decimal{} = total) do
+    if Decimal.compare(total, @max_total) == :gt,
+      do: repo().rollback({:rejected, :total_too_large, @total_too_large}),
+      else: total
   end
 
   defp insert_validated({:error, reason, message}, _changeset, _eff, _units, _range, _opts) do
@@ -579,7 +594,7 @@ defmodule PhoenixKitBookings.Bookings do
         locked_service = lock_and_gate(service, opts)
         locked_event = lock_open_event!(event, locked_service, now)
         range = {locked_event.starts_at, locked_event.ends_at}
-        total = event_total(locked_event, locked_service, range)
+        total = locked_event |> event_total(locked_service, range) |> check_total!()
 
         # The times come from the row under lock too: the caller's struct
         # may predate a reschedule, and the price is judged on this range.

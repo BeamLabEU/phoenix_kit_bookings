@@ -118,6 +118,31 @@ defmodule PhoenixKitBookings.PriceOptionsTest do
     assert errors_on(changeset)[:price]
   end
 
+  test "a service price over the column is a validation error; a total over it is a refusal" do
+    assert {:error, cs} =
+             PhoenixKitBookings.Services.create_service(%{
+               "name" => unique_name("Pricey"),
+               "price" => "9999999999.995"
+             })
+
+    assert errors_on(cs)[:price]
+
+    service =
+      slot_service_fixture(%{"price" => "9999999999", "price_per" => "hour", "duration" => 120})
+
+    starts_at = DateTime.new!(next_weekday(3), ~T[10:00:00], "Etc/UTC")
+
+    assert {:error, :total_too_large, _} =
+             Bookings.create_booking(
+               service,
+               {starts_at, DateTime.add(starts_at, 7200)},
+               customer_attrs(),
+               notify: false
+             )
+
+    assert Bookings.list_bookings(service_uuid: service.uuid) == []
+  end
+
   test "entitled_options/2 lists only active options the customer may use" do
     service = priced_service()
     client = user_fixture()

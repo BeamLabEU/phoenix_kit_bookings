@@ -50,5 +50,8 @@ defmodule PhoenixKitBookings.Errors do
   def message(:event_unavailable, _),
     do: gettext("This event is not taking sign-ups.")
 
+  def message(:total_too_large, _),
+    do: gettext("The total for this booking is too large. Please pick a shorter time.")
+
   def message(_, _), do: gettext("Something went wrong. Please try again.")
 end
