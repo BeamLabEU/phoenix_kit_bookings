@@ -26,7 +26,7 @@ msgstr "%{amount} / tund"
 msgid "%{amount} / night"
 msgstr "%{amount} / öö"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:390
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:406
 #, elixir-autogen, elixir-format
 msgid "%{count} chosen account"
 msgid_plural "%{count} chosen accounts"
@@ -88,7 +88,7 @@ msgid_plural "%{count} units"
 msgstr[0] "%{count} üksus"
 msgstr[1] "%{count} üksust"
 
-#: lib/phoenix_kit_bookings/notifier.ex:119
+#: lib/phoenix_kit_bookings/notifier.ex:153
 #, elixir-autogen, elixir-format
 msgid "%{customer} (%{email}) booked %{service}, %{when}."
 msgstr "%{customer} (%{email}) broneeris teenuse %{service}, %{when}."
@@ -98,7 +98,7 @@ msgstr "%{customer} (%{email}) broneeris teenuse %{service}, %{when}."
 msgid "%{min}–%{max}"
 msgstr "%{min}–%{max}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:418
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:434
 #, elixir-autogen, elixir-format
 msgid "%{name} created. Now add availability rules if needed."
 msgstr "%{name} on loodud. Lisa nüüd vajadusel saadavusreeglid."
@@ -123,22 +123,22 @@ msgstr "%{name} kustutati jäädavalt."
 msgid "%{name} restored."
 msgstr "%{name} taastati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:435
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:451
 #, elixir-autogen, elixir-format
 msgid "%{name} saved."
 msgstr "%{name} salvestati."
 
-#: lib/phoenix_kit_bookings/notifier.ex:78
+#: lib/phoenix_kit_bookings/notifier.ex:112
 #, elixir-autogen, elixir-format
 msgid "A reminder about your upcoming booking: %{service}, %{when}."
 msgstr "Meeldetuletus eelseisva broneeringu kohta: %{service}, %{when}."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:947
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:975
 #, elixir-autogen, elixir-format
 msgid "A role"
 msgstr "Roll"
 
-#: lib/phoenix_kit_bookings/notifier.ex:91
+#: lib/phoenix_kit_bookings/notifier.ex:125
 #, elixir-autogen, elixir-format
 msgid "A spot opened up — %{service}"
 msgstr "Koht vabanes — %{service}"
@@ -148,25 +148,25 @@ msgstr "Koht vabanes — %{service}"
 msgid "About"
 msgstr "Tutvustus"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:955
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:983
 #, elixir-autogen, elixir-format
 msgid "Account emails (chosen accounts)"
 msgstr "Kontode e-postid (valitud kontod)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:963
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:991
 #, elixir-autogen, elixir-format
 msgid "Account flag (custom field key)"
 msgstr "Konto lipp (lisavälja võti)"
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:183
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:230
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:232
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Actions"
 msgstr "Toimingud"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:837
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:892
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:865
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:920
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:235
 #, elixir-autogen, elixir-format
 msgid "Activate"
@@ -174,35 +174,35 @@ msgstr "Aktiveeri"
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:119
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:186
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:827
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:882
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:855
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:910
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr "Aktiivne"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:970
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:998
 #, elixir-autogen, elixir-format
 msgid "Add price option"
 msgstr "Lisa hinnavalik"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1031
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1059
 #, elixir-autogen, elixir-format
 msgid "Add regular slot"
 msgstr "Lisa püsiaeg"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:808
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:836
 #, elixir-autogen, elixir-format
 msgid "Add rule"
 msgstr "Lisa reegel"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:858
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:886
 #, elixir-autogen, elixir-format
 msgid "Add unit"
 msgstr "Lisa üksus"
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:155
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:213
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:215
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:141
 #, elixir-autogen, elixir-format
 msgid "All"
@@ -223,12 +223,12 @@ msgstr "Kõik"
 msgid "Anyone · needs approval"
 msgstr "Kõik · vajab kinnitust"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:633
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:660
 #, elixir-autogen, elixir-format
 msgid "Anyone — guests book with name and email"
 msgstr "Kõik — külalised broneerivad nime ja e-postiga"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:739
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:767
 #, elixir-autogen, elixir-format
 msgid "Applies to"
 msgstr "Kehtib"
@@ -248,7 +248,7 @@ msgstr "apr"
 msgid "April"
 msgstr "aprill"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:933
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:961
 #, elixir-autogen, elixir-format
 msgid "As the service"
 msgstr "Nagu teenusel"
@@ -273,14 +273,14 @@ msgstr "aug"
 msgid "August"
 msgstr "august"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:731
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:759
 #: lib/phoenix_kit_bookings/web/public/host_live.ex:121
 #: lib/phoenix_kit_bookings/web/public/services_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr "Saadavus"
 
-#: lib/phoenix_kit_bookings/notifier.ex:94
+#: lib/phoenix_kit_bookings/notifier.ex:128
 #, elixir-autogen, elixir-format
 msgid "Availability just opened up for %{service} on %{date}. First come, first served:"
 msgstr "Teenusel %{service} vabanes %{date} aeg. Kes ees, see mees:"
@@ -290,12 +290,12 @@ msgstr "Teenusel %{service} vabanes %{date} aeg. Kes ees, see mees:"
 msgid "Availability only — this service is not booked on this site."
 msgstr "Ainult saadavus — seda teenust sellel saidil ei broneerita."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:169
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Availability rule added."
 msgstr "Saadavusreegel lisati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:302
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:297
 #, elixir-autogen, elixir-format
 msgid "Availability rule removed."
 msgstr "Saadavusreegel eemaldati."
@@ -305,12 +305,12 @@ msgstr "Saadavusreegel eemaldati."
 msgid "Back"
 msgstr "Tagasi"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:496
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:523
 #, elixir-autogen, elixir-format
 msgid "Back to services"
 msgstr "Tagasi teenuste juurde"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:509
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:536
 #, elixir-autogen, elixir-format
 msgid "Basics"
 msgstr "Põhiandmed"
@@ -326,7 +326,7 @@ msgstr "Broneeri"
 msgid "Book again: %{url}"
 msgstr "Broneeri uuesti: %{url}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:620
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:647
 #, elixir-autogen, elixir-format
 msgid "Book at most (days ahead, blank = no limit)"
 msgstr "Broneerida kõige rohkem (päeva ette, tühi = piiranguta)"
@@ -337,7 +337,7 @@ msgstr "Broneerida kõige rohkem (päeva ette, tühi = piiranguta)"
 msgid "Book with us"
 msgstr "Broneeri meie juures"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:535
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:562
 #, elixir-autogen, elixir-format
 msgid "Bookable on the site (off: the public page only shows availability)"
 msgstr "Saidil broneeritav (väljas: avalik leht näitab ainult saadavust)"
@@ -352,8 +352,8 @@ msgstr "Broneeritud"
 msgid "Booked! %{range} is yours."
 msgstr "Broneeritud! %{range} on sinu."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:677
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:934
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:704
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:962
 #, elixir-autogen, elixir-format
 msgid "Booking (flat)"
 msgstr "Broneering (kindel hind)"
@@ -388,7 +388,7 @@ msgstr "Broneering kinnitati."
 msgid "Booking request received — %{service}"
 msgstr "Broneerimissoov on vastu võetud — %{service}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:542
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:569
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:190
 #, elixir-autogen, elixir-format
 msgid "Booking shape"
@@ -398,8 +398,8 @@ msgstr "Broneeringu kuju"
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:28
 #: lib/phoenix_kit_bookings/web/admin/events_live.ex:32
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:20
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:61
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:71
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:62
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:72
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:29
 #: lib/phoenix_kit_bookings/web/admin/settings_live.ex:23
 #, elixir-autogen, elixir-format
@@ -411,40 +411,40 @@ msgstr "Broneeringud"
 msgid "Bookings Settings"
 msgstr "Broneeringute seaded"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:591
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:618
 #, elixir-autogen, elixir-format
 msgid "Buffer after (minutes)"
 msgstr "Puhver pärast (minutit)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:586
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:613
 #, elixir-autogen, elixir-format
 msgid "Buffer before (minutes)"
 msgstr "Puhver enne (minutit)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:695
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:722
 #, elixir-autogen, elixir-format
 msgid "Busy times from another calendar (an .ics / webcal link) are imported as bookings marked as imported, synced hourly. A re-sync replaces only imported entries, never bookings made here."
 msgstr "Teise kalendri (.ics / webcal link) hõivatud ajad imporditakse imporditud broneeringutena ja sünkroonitakse kord tunnis. Uus sünkroonimine asendab ainult imporditud kirjeid, mitte kunagi siin tehtud broneeringuid."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:700
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:728
 #, elixir-autogen, elixir-format
 msgid "Calendar feed URL"
 msgstr "Kalendrivoo URL"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:339
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:347
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:355
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:363
 #, elixir-autogen, elixir-format
 msgid "Calendar sync failed: %{reason}"
 msgstr "Kalendri sünkroonimine ebaõnnestus: %{reason}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:324
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:340
 #, elixir-autogen, elixir-format
 msgid "Calendar synced: %{inserted} added, %{updated} updated, %{deleted} removed."
 msgstr "Kalender sünkroonitud: %{inserted} lisatud, %{updated} uuendatud, %{deleted} eemaldatud."
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:238
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:266
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:725
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:268
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:753
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Tühista"
@@ -464,7 +464,7 @@ msgstr "Kas tühistada see broneering?"
 msgid "Cancel this booking? This cannot be undone."
 msgstr "Kas tühistada see broneering? Seda ei saa tagasi võtta."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:264
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:266
 #, elixir-autogen, elixir-format
 msgid "Cancel this event? Everyone signed up is told."
 msgstr "Kas tühistada see üritus? Kõigile registreerunutele antakse teada."
@@ -474,7 +474,7 @@ msgstr "Kas tühistada see üritus? Kõigile registreerunutele antakse teada."
 msgid "Cancelled"
 msgstr "Tühistatud"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:610
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:637
 #, elixir-autogen, elixir-format
 msgid "Capacity (rooms / seats per slot)"
 msgstr "Mahutavus (tube / kohti aja kohta)"
@@ -494,7 +494,7 @@ msgstr "Saabumine"
 msgid "Check-in %{time}"
 msgstr "Saabumine %{time}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:602
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:629
 #, elixir-autogen, elixir-format
 msgid "Check-in time"
 msgstr "Saabumisaeg"
@@ -504,23 +504,23 @@ msgstr "Saabumisaeg"
 msgid "Check-out"
 msgstr "Lahkumine"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:603
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:630
 #, elixir-autogen, elixir-format
 msgid "Check-out time"
 msgstr "Lahkumisaeg"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:946
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:974
 #, elixir-autogen, elixir-format
 msgid "Chosen accounts"
 msgstr "Valitud kontod"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:751
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:779
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:127
 #, elixir-autogen, elixir-format
 msgid "Closed"
 msgstr "Suletud"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:804
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:832
 #, elixir-autogen, elixir-format
 msgid "Closed (block out)"
 msgstr "Suletud (blokeering)"
@@ -550,17 +550,17 @@ msgstr "Jätka"
 msgid "Control whether users with the base Bookings permission can set up their own bookable services."
 msgstr "Määra, kas broneeringute põhiõigusega kasutajad võivad luua oma broneeritavaid teenuseid."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:174
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:176
 #, elixir-autogen, elixir-format
 msgid "Could not cancel that event."
 msgstr "Üritust ei õnnestunud tühistada."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:183
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "Could not delete that event."
 msgstr "Üritust ei õnnestunud kustutada."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:243
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:238
 #, elixir-autogen, elixir-format
 msgid "Could not delete that price option."
 msgstr "Hinnavalikut ei õnnestunud kustutada."
@@ -570,37 +570,37 @@ msgstr "Hinnavalikut ei õnnestunud kustutada."
 msgid "Could not delete that profile."
 msgstr "Profiili ei õnnestunud kustutada."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:207
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Could not delete that unit."
 msgstr "Üksust ei õnnestunud kustutada."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:275
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "Could not remove that regular slot."
 msgstr "Püsiaega ei õnnestunud eemaldada."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:304
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:299
 #, elixir-autogen, elixir-format
 msgid "Could not remove that rule."
 msgstr "Reeglit ei õnnestunud eemaldada."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:234
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Could not update that price option."
 msgstr "Hinnavalikut ei õnnestunud uuendada."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:198
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Could not update that unit."
 msgstr "Üksust ei õnnestunud uuendada."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:300
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "Create a service first: every event is an occurrence of one."
 msgstr "Loo esmalt teenus: iga üritus on mõne teenuse toimumiskord."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:683
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:710
 #, elixir-autogen, elixir-format
 msgid "Currency"
 msgstr "Valuuta"
@@ -610,7 +610,7 @@ msgstr "Valuuta"
 msgid "Customer"
 msgstr "Klient"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:645
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:672
 #, elixir-autogen, elixir-format
 msgid "Customers may cancel until (minutes before start, 0 = anytime)"
 msgstr "Kliendid võivad tühistada kuni (minutit enne algust, 0 = igal ajal)"
@@ -622,13 +622,13 @@ msgstr "Kliendid võivad tühistada kuni (minutit enne algust, 0 = igal ajal)"
 msgid "Date"
 msgstr "Kuupäev"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:203
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Dated occurrences with their own capacity — what the public schedule lists."
 msgstr "Kindla ajaga toimumised oma mahutavusega — see, mida avalik ajakava näitab."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:679
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:936
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:706
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:964
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr "Päev"
@@ -638,13 +638,13 @@ msgstr "Päev"
 msgid "Day after the last day"
 msgstr "Viimasele päevale järgnev päev"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:550
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:577
 #, elixir-autogen, elixir-format
 msgid "Days — full-day bookings"
 msgstr "Päevad — terve päeva broneeringud"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:837
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:892
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:865
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:920
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "Deactivate"
@@ -660,26 +660,26 @@ msgstr "dets"
 msgid "December"
 msgstr "detsember"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:558
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:585
 #, elixir-autogen, elixir-format
 msgid "Default length (minutes)"
 msgstr "Vaikimisi pikkus (minutit)"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:274
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:276
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:140
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:845
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:900
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:873
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:928
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:261
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Kustuta"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:272
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:274
 #, elixir-autogen, elixir-format
 msgid "Delete this event? Its bookings stay in the reservations list."
 msgstr "Kas kustutada see üritus? Selle broneeringud jäävad broneeringute nimekirja."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:898
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:926
 #, elixir-autogen, elixir-format
 msgid "Delete this price option? Past bookings keep their total."
 msgstr "Kas kustutada see hinnavalik? Varasemad broneeringud säilitavad oma summa."
@@ -689,18 +689,18 @@ msgstr "Kas kustutada see hinnavalik? Varasemad broneeringud säilitavad oma sum
 msgid "Delete this profile? Its services and events stay."
 msgstr "Kas kustutada see profiil? Selle teenused ja üritused jäävad alles."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:843
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:871
 #, elixir-autogen, elixir-format
 msgid "Delete this unit? Past bookings keep their history."
 msgstr "Kas kustutada see üksus? Varasemad broneeringud säilitavad oma ajaloo."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:344
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:517
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:346
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:544
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr "Kirjeldus"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:967
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:995
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Kirjeldus (valikuline)"
@@ -710,9 +710,9 @@ msgstr "Kirjeldus (valikuline)"
 msgid "Each service defines its own booking shape — daily stays, fixed slots, or free-form times."
 msgstr "Iga teenus määrab oma broneeringu kuju — päevased peatumised, kindlad ajad või vabalt valitud ajad."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:257
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:259
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:132
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:77
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Muuda"
@@ -722,7 +722,7 @@ msgstr "Muuda"
 msgid "Edit Service"
 msgstr "Muuda teenust"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:292
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "Edit event"
 msgstr "Muuda üritust"
@@ -744,50 +744,50 @@ msgstr "Muuda teenust"
 msgid "Email"
 msgstr "E-post"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:331
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:333
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr "Lõpeb"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:227
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Event"
 msgstr "Üritus"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:172
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "Event cancelled."
 msgstr "Üritus tühistati."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:181
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "Event deleted."
 msgstr "Üritus kustutati."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:142
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Event saved."
 msgstr "Üritus salvestati."
 
 #: lib/phoenix_kit_bookings.ex:301
 #: lib/phoenix_kit_bookings/web/admin/events_live.ex:35
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:201
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Events"
 msgstr "Üritused"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:387
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:945
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:403
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:973
 #, elixir-autogen, elixir-format
 msgid "Everyone"
 msgstr "Kõik"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:693
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:720
 #, elixir-autogen, elixir-format
 msgid "External calendar (iCal import)"
 msgstr "Väline kalender (iCal import)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:867
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:895
 #, elixir-autogen, elixir-format
 msgid "Extra rates beside the standard price — a trainer's solo-lesson rate, a members' price. Each says who may book at it; customers see only the options they are entitled to."
 msgstr "Lisahinnad tavahinna kõrval — treeneri personaaltunni hind, liikmehind. Igaühe juures on kirjas, kes sellega broneerida võib; kliendid näevad ainult neile lubatud valikuid."
@@ -817,12 +817,12 @@ msgstr "Vaba"
 msgid "Free-form · %{min} min – %{max} · %{seats}"
 msgstr "Vaba aeg · %{min} min – %{max} · %{seats}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:568
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:595
 #, elixir-autogen, elixir-format
 msgid "Free-form: customers pick their own start and length"
 msgstr "Vaba aeg: kliendid valivad ise alguse ja pikkuse"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:479
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:506
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:137
 #, elixir-autogen, elixir-format
 msgid "Fri"
@@ -833,8 +833,8 @@ msgstr "R"
 msgid "Friday"
 msgstr "reede"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:792
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1016
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:820
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1044
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:685
 #, elixir-autogen, elixir-format
 msgid "From"
@@ -866,8 +866,8 @@ msgstr "Kõik on broneeritud? Liitu ootejärjekorraga ja saad e-kirja, kui koht 
 msgid "Headline"
 msgstr "Lühitutvustus"
 
-#: lib/phoenix_kit_bookings/notifier.ex:92
-#: lib/phoenix_kit_bookings/notifier.ex:156
+#: lib/phoenix_kit_bookings/notifier.ex:126
+#: lib/phoenix_kit_bookings/notifier.ex:190
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
 msgstr "Tere, %{name}!"
@@ -882,7 +882,7 @@ msgstr "Läbiviija profiil kustutati."
 msgid "Host profile saved."
 msgstr "Läbiviija profiil salvestati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:522
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:549
 #, elixir-autogen, elixir-format
 msgid "Host reference (optional)"
 msgstr "Viide saidi kirjele (valikuline)"
@@ -894,21 +894,21 @@ msgstr "Viide saidi kirjele (valikuline)"
 msgid "Hosts"
 msgstr "Läbiviijad"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:678
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:935
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:705
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:963
 #, elixir-autogen, elixir-format
 msgid "Hour"
 msgstr "Tund"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:740
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:768
 #, elixir-autogen, elixir-format
 msgid "Hours"
 msgstr "Kellaajad"
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:119
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:186
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:827
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:882
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:855
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:910
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:150
 #, elixir-autogen, elixir-format
 msgid "Inactive"
@@ -949,22 +949,22 @@ msgstr "juuni"
 msgid "June"
 msgstr "juuni"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:800
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:828
 #, elixir-autogen, elixir-format
 msgid "Kind"
 msgstr "Liik"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:714
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:742
 #, elixir-autogen, elixir-format
 msgid "Last sync: %{at}"
 msgstr "Viimane sünkroonimine: %{at}"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:329
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:331
 #, elixir-autogen, elixir-format
 msgid "Location (optional)"
 msgstr "Asukoht (valikuline)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:634
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:661
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:281
 #, elixir-autogen, elixir-format
 msgid "Login required"
@@ -985,8 +985,8 @@ msgstr "Halda või tühista"
 msgid "Manage or cancel this booking any time (a confirmation email with a calendar invite is on its way):"
 msgstr "Saad seda broneeringut igal ajal hallata või tühistada (kinnituskiri koos kalendrikutsega on teel):"
 
-#: lib/phoenix_kit_bookings/ics.ex:33
-#: lib/phoenix_kit_bookings/notifier.ex:159
+#: lib/phoenix_kit_bookings/ics.ex:38
+#: lib/phoenix_kit_bookings/notifier.ex:193
 #, elixir-autogen, elixir-format
 msgid "Manage or cancel: %{url}"
 msgstr "Halda või tühista: %{url}"
@@ -1001,7 +1001,7 @@ msgstr "märts"
 msgid "March"
 msgstr "märts"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:580
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:607
 #, elixir-autogen, elixir-format
 msgid "Maximum length (minutes, blank = unlimited)"
 msgstr "Suurim pikkus (minutit, tühi = piiramatu)"
@@ -1011,7 +1011,7 @@ msgstr "Suurim pikkus (minutit, tühi = piiramatu)"
 msgid "Maximum length is %{max}."
 msgstr "Suurim pikkus on %{max}."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:600
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:627
 #, elixir-autogen, elixir-format
 msgid "Maximum stay (blank = unlimited)"
 msgstr "Pikim peatumine (tühi = piiramatu)"
@@ -1021,17 +1021,17 @@ msgstr "Pikim peatumine (tühi = piiramatu)"
 msgid "May"
 msgstr "mai"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:948
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:976
 #, elixir-autogen, elixir-format
 msgid "Members with a flag"
 msgstr "Lipuga liikmed"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:396
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:412
 #, elixir-autogen, elixir-format
 msgid "Members with flag: %{flag}"
 msgstr "Lipuga liikmed: %{flag}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:575
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:602
 #, elixir-autogen, elixir-format
 msgid "Minimum length (minutes, blank = default length)"
 msgstr "Vähim pikkus (minutit, tühi = vaikimisi pikkus)"
@@ -1041,22 +1041,22 @@ msgstr "Vähim pikkus (minutit, tühi = vaikimisi pikkus)"
 msgid "Minimum length is %{min}."
 msgstr "Vähim pikkus on %{min}."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:615
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:642
 #, elixir-autogen, elixir-format
 msgid "Minimum notice (minutes)"
 msgstr "Vähim etteteatamisaeg (minutit)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:596
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:623
 #, elixir-autogen, elixir-format
 msgid "Minimum stay (blank = 1)"
 msgstr "Lühim peatumine (tühi = 1)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:548
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:575
 #, elixir-autogen, elixir-format
 msgid "Minutes — timed bookings (slots or free-form)"
 msgstr "Minutid — kellaajaga broneeringud (kindlad või vabad ajad)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:475
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:502
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:133
 #, elixir-autogen, elixir-format
 msgid "Mon"
@@ -1073,15 +1073,15 @@ msgid "Move this service to trash? Its bookings stay."
 msgstr "Kas viia see teenus prügikasti? Selle broneeringud jäävad alles."
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:172
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:510
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:915
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:537
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:943
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:189
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:613
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Nimi"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:816
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:844
 #, elixir-autogen, elixir-format
 msgid "Named units"
 msgstr "Nimega üksused"
@@ -1092,12 +1092,12 @@ msgstr "Nimega üksused"
 msgid "New Service"
 msgstr "Uus teenus"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:292
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "New event"
 msgstr "Uus üritus"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:295
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:297
 #, elixir-autogen, elixir-format
 msgid "New event instead"
 msgstr "Hoopis uus üritus"
@@ -1112,8 +1112,8 @@ msgstr "Uus läbiviija profiil"
 msgid "New profile instead"
 msgstr "Hoopis uus profiil"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:64
 #: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:65
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "New service"
 msgstr "Uus teenus"
@@ -1123,8 +1123,8 @@ msgstr "Uus teenus"
 msgid "Next month"
 msgstr "Järgmine kuu"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:680
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:937
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:707
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:965
 #, elixir-autogen, elixir-format
 msgid "Night"
 msgstr "Öö"
@@ -1134,7 +1134,7 @@ msgstr "Öö"
 msgid "Nightly stays · %{stay} · %{units}"
 msgstr "Ööbimised · %{stay} · %{units}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:549
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:576
 #, elixir-autogen, elixir-format
 msgid "Nights — hotel-style stays (checkout day not charged)"
 msgstr "Ööd — hotellilaadne peatumine (lahkumispäeva eest ei maksta)"
@@ -1144,12 +1144,12 @@ msgstr "Ööd — hotellilaadne peatumine (lahkumispäeva eest ei maksta)"
 msgid "No bookings match this view."
 msgstr "Sellele vaatele ei vasta ühtki broneeringut."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:281
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:283
 #, elixir-autogen, elixir-format
 msgid "No events yet."
 msgstr "Üritusi veel pole."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:205
+#: lib/phoenix_kit_bookings/ical_import.ex:217
 #, elixir-autogen, elixir-format
 msgid "No feed URL is set."
 msgstr "Voo URL pole määratud."
@@ -1159,7 +1159,7 @@ msgstr "Voo URL pole määratud."
 msgid "No free times on this date — try another day."
 msgstr "Sel kuupäeval vabu aegu pole — proovi mõnda teist päeva."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:529
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:556
 #, elixir-autogen, elixir-format
 msgid "No host profile"
 msgstr "Läbiviija profiil puudub"
@@ -1169,12 +1169,12 @@ msgstr "Läbiviija profiil puudub"
 msgid "No host profiles yet."
 msgstr "Läbiviijate profiile veel pole."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:657
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:684
 #, elixir-autogen, elixir-format
 msgid "No provider"
 msgstr "Teenusepakkuja puudub"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:733
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:761
 #, elixir-autogen, elixir-format
 msgid "No rules = always open. Weekly rules set opening hours; a rule with a date overrides the weekly rules on that date; a closed rule blocks the whole day, and needs no times. With only closed rules, every other day stays open."
 msgstr "Reegliteta = alati avatud. Iganädalased reeglid määravad lahtiolekuajad; kuupäevaga reegel asendab sel päeval iganädalased reeglid; suletud reegel blokeerib terve päeva ega vaja kellaaegu. Kui on ainult suletud reeglid, jäävad kõik teised päevad avatuks."
@@ -1237,18 +1237,18 @@ msgstr "oktoober"
 msgid "Only site-wide booking managers can edit host profiles."
 msgstr "Läbiviijate profiile saavad muuta ainult kogu saidi broneeringute haldurid."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:751
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:803
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:779
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:831
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr "Avatud"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:741
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:769
 #, elixir-autogen, elixir-format
 msgid "Open?"
 msgstr "Avatud?"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:818
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:846
 #, elixir-autogen, elixir-format
 msgid "Optional: name the individual rooms/chairs/courts. With units, capacity becomes the active-unit count and every booking is auto-assigned a free unit. Without units, the plain capacity number pools."
 msgstr "Valikuline: anna nimed üksikutele tubadele/toolidele/väljakutele. Üksustega on mahutavus aktiivsete üksuste arv ja igale broneeringule määratakse automaatselt vaba üksus. Üksusteta kehtib lihtsalt mahutavuse arv."
@@ -1273,8 +1273,8 @@ msgstr "Möödas"
 msgid "Pending"
 msgstr "Ootel"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:675
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:930
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:702
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:958
 #, elixir-autogen, elixir-format
 msgid "Per"
 msgstr "Ühiku kohta"
@@ -1284,7 +1284,7 @@ msgstr "Ühiku kohta"
 msgid "Permanently delete this service AND all of its bookings?"
 msgstr "Kas kustutada see teenus JA kõik selle broneeringud jäädavalt?"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:150
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Person %{id}"
 msgstr "Isik %{id}"
@@ -1300,12 +1300,12 @@ msgstr "Telefon (valikuline)"
 msgid "Photo URL"
 msgstr "Foto URL"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:228
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:230
 #, elixir-autogen, elixir-format
 msgid "Places"
 msgstr "Kohad"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:335
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:337
 #, elixir-autogen, elixir-format
 msgid "Places (blank = the service's capacity)"
 msgstr "Kohti (tühi = teenuse mahutavus)"
@@ -1325,47 +1325,47 @@ msgstr "Ootejärjekorraga liitumiseks sisesta korrektne nimi, e-post ja kuupäev
 msgid "Previous month"
 msgstr "Eelmine kuu"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:919
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:947
 #, elixir-autogen, elixir-format
 msgid "Price"
 msgstr "Hind"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:341
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:343
 #, elixir-autogen, elixir-format
 msgid "Price (blank = the service's price)"
 msgstr "Hind (tühi = teenuse hind)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:671
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:698
 #, elixir-autogen, elixir-format
 msgid "Price (blank = unpriced)"
 msgstr "Hind (tühi = hinnata)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:216
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Price option added."
 msgstr "Hinnavalik lisati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:241
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:236
 #, elixir-autogen, elixir-format
 msgid "Price option deleted."
 msgstr "Hinnavalik kustutati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:232
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Price option updated."
 msgstr "Hinnavalik uuendati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:865
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:893
 #, elixir-autogen, elixir-format
 msgid "Price options"
 msgstr "Hinnavalikud"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:665
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:692
 #, elixir-autogen, elixir-format
 msgid "Pricing"
 msgstr "Hinnastamine"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:656
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:683
 #, elixir-autogen, elixir-format
 msgid "Provider (staff person — their bookings block each other across services)"
 msgstr "Teenusepakkuja (töötaja — tema broneeringud blokeerivad üksteist kõigis teenustes)"
@@ -1375,7 +1375,7 @@ msgstr "Teenusepakkuja (töötaja — tema broneeringud blokeerivad üksteist k�
 msgid "Public profiles of the people who run your services and events. Active profiles appear on the public schedule and have a page of their own."
 msgstr "Sinu teenuste ja ürituste läbiviijate avalikud profiilid. Aktiivsed profiilid on näha avalikus ajakavas ja neil on oma leht."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:207
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:209
 #, elixir-autogen, elixir-format
 msgid "Public schedule"
 msgstr "Avalik ajakava"
@@ -1385,43 +1385,43 @@ msgstr "Avalik ajakava"
 msgid "Rate"
 msgstr "Hind"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1024
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1052
 #, elixir-autogen, elixir-format
 msgid "Regular customer's name"
 msgstr "Püsikliendi nimi"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:260
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:255
 #, elixir-autogen, elixir-format
 msgid "Regular slot added."
 msgstr "Püsiaeg lisati."
 
-#: lib/phoenix_kit_bookings/notifier.ex:118
+#: lib/phoenix_kit_bookings/notifier.ex:152
 #, elixir-autogen, elixir-format
 msgid "Regular slot booked by someone else — %{service}"
 msgstr "Püsiaja broneeris keegi teine — %{service}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:273
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "Regular slot removed."
 msgstr "Püsiaeg eemaldati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:978
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1006
 #, elixir-autogen, elixir-format
 msgid "Regular slots"
 msgstr "Püsiajad"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:650
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:677
 #, elixir-autogen, elixir-format
 msgid "Reminder email (minutes before start, blank = none)"
 msgstr "Meeldetuletuskiri (minutit enne algust, tühi = puudub)"
 
-#: lib/phoenix_kit_bookings/notifier.ex:72
+#: lib/phoenix_kit_bookings/notifier.ex:106
 #, elixir-autogen, elixir-format
 msgid "Reminder — %{service} %{when}"
 msgstr "Meeldetuletus — %{service} %{when}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:760
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:995
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:788
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1023
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr "Eemalda"
@@ -1441,7 +1441,7 @@ msgstr "Soov ajale %{range} on vastu võetud. Anname teada, kui see on kinnitatu
 msgid "Request received. You'll hear back once it's approved."
 msgstr "Soov on vastu võetud. Anname teada, kui see on kinnitatud."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:639
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:666
 #, elixir-autogen, elixir-format
 msgid "Require approval — new bookings wait as pending (RSVP)"
 msgstr "Nõua kinnitust — uued broneeringud ootavad kinnitust (RSVP)"
@@ -1452,7 +1452,7 @@ msgstr "Nõua kinnitust — uued broneeringud ootavad kinnitust (RSVP)"
 msgid "Reservations"
 msgstr "Broneeringud"
 
-#: lib/phoenix_kit_bookings/notifier.ex:131
+#: lib/phoenix_kit_bookings/notifier.ex:165
 #, elixir-autogen, elixir-format
 msgid "Reservations: %{url}"
 msgstr "Broneeringud: %{url}"
@@ -1462,27 +1462,27 @@ msgstr "Broneeringud: %{url}"
 msgid "Restore"
 msgstr "Taasta"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:959
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:987
 #, elixir-autogen, elixir-format
 msgid "Role name (a role)"
 msgstr "Rolli nimi (roll)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:393
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:409
 #, elixir-autogen, elixir-format
 msgid "Role: %{role}"
 msgstr "Roll: %{role}"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:324
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:326
 #, elixir-autogen, elixir-format
 msgid "Run by"
 msgstr "Läbiviija"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:528
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:555
 #, elixir-autogen, elixir-format
 msgid "Run by (public host profile)"
 msgstr "Läbiviija (avalik profiil)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:480
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:507
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:138
 #, elixir-autogen, elixir-format
 msgid "Sat"
@@ -1493,13 +1493,13 @@ msgstr "L"
 msgid "Saturday"
 msgstr "laupäev"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:724
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:752
 #: lib/phoenix_kit_bookings/web/admin/settings_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "Salvesta"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:357
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "Save event"
 msgstr "Salvesta üritus"
@@ -1509,7 +1509,7 @@ msgstr "Salvesta üritus"
 msgid "Save profile"
 msgstr "Salvesta profiil"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1038
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1066
 #, elixir-autogen, elixir-format
 msgid "Save the service first — then availability rules can be added here."
 msgstr "Salvesta esmalt teenus — siis saab siia saadavusreegleid lisada."
@@ -1525,14 +1525,14 @@ msgid "September"
 msgstr "september"
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:180
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:319
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:321
 #, elixir-autogen, elixir-format
 msgid "Service"
 msgstr "Teenus"
 
 #: lib/phoenix_kit_bookings.ex:300
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:63
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:74
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:64
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:75
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:32
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:169
 #: lib/phoenix_kit_bookings/web/public/host_live.ex:110
@@ -1555,7 +1555,7 @@ msgstr "Seaded"
 msgid "Settings saved."
 msgstr "Seaded salvestati."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:354
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "Show on the public schedule"
 msgstr "Näita avalikus ajakavas"
@@ -1576,7 +1576,7 @@ msgstr "Registreeru"
 msgid "Signup"
 msgstr "Registreerumine"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:628
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:655
 #, elixir-autogen, elixir-format
 msgid "Signup policy"
 msgstr "Broneerimise reeglid"
@@ -1586,7 +1586,7 @@ msgstr "Broneerimise reeglid"
 msgid "Site-wide: every service and reservation (not just own), plus the Bookings settings page"
 msgstr "Kogu sait: kõik teenused ja broneeringud (mitte ainult enda omad) ning broneeringute seadete leht"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:563
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:590
 #, elixir-autogen, elixir-format
 msgid "Slot start every (minutes, blank = length)"
 msgstr "Aeg algab iga (minutit, tühi = pikkus)"
@@ -1601,22 +1601,22 @@ msgstr "Ajad · %{duration} min iga %{interval} min järel · %{seats}"
 msgid "Slug (public URL)"
 msgstr "Lühinimi (avalik URL)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:514
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:541
 #, elixir-autogen, elixir-format
 msgid "Slug (public URL: /book/<slug>)"
 msgstr "Lühinimi (avalik URL: /book/<slug>)"
 
-#: lib/phoenix_kit_bookings/notifier.ex:120
+#: lib/phoenix_kit_bookings/notifier.ex:154
 #, elixir-autogen, elixir-format
 msgid "Someone"
 msgstr "Keegi"
 
-#: lib/phoenix_kit_bookings/errors.ex:53
+#: lib/phoenix_kit_bookings/errors.ex:56
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
 msgstr "Midagi läks valesti. Proovi uuesti."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:788
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:816
 #, elixir-autogen, elixir-format
 msgid "Specific date (optional)"
 msgstr "Kindel kuupäev (valikuline)"
@@ -1626,20 +1626,20 @@ msgstr "Kindel kuupäev (valikuline)"
 msgid "Standard"
 msgstr "Tavahind"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:330
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:332
 #, elixir-autogen, elixir-format
 msgid "Starts"
 msgstr "Algab"
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:182
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:229
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:231
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:185
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:192
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr "Olek"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:481
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:508
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:139
 #, elixir-autogen, elixir-format
 msgid "Sun"
@@ -1650,12 +1650,12 @@ msgstr "P"
 msgid "Sunday"
 msgstr "pühapäev"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:711
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:739
 #, elixir-autogen, elixir-format
 msgid "Sync now"
 msgstr "Sünkrooni kohe"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:711
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:739
 #, elixir-autogen, elixir-format
 msgid "Syncing…"
 msgstr "Sünkroonimine…"
@@ -1685,7 +1685,7 @@ msgstr "See aeg on möödas."
 msgid "That time is too soon — more advance notice is required."
 msgstr "See aeg on liiga varsti — vaja on pikemat etteteatamist."
 
-#: lib/phoenix_kit_bookings/notifier.ex:126
+#: lib/phoenix_kit_bookings/notifier.ex:160
 #, elixir-autogen, elixir-format
 msgid "That time usually belongs to %{holders}. The booking was accepted; check whether the regular customer needs to hear about it."
 msgstr "See aeg kuulub tavaliselt kliendile %{holders}. Broneering võeti vastu; vaata, kas püsikliendile on vaja sellest teada anda."
@@ -1695,7 +1695,7 @@ msgstr "See aeg kuulub tavaliselt kliendile %{holders}. Broneering võeti vastu;
 msgid "That time was just taken. Please pick another."
 msgstr "See aeg broneeriti just ära. Vali mõni teine."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:199
+#: lib/phoenix_kit_bookings/ical_import.ex:211
 #, elixir-autogen, elixir-format
 msgid "The URL did not return an iCal calendar."
 msgstr "URL ei tagastanud iCal kalendrit."
@@ -1705,17 +1705,17 @@ msgstr "URL ei tagastanud iCal kalendrit."
 msgid "The cancellation window for this booking has passed."
 msgstr "Selle broneeringu tühistamise aeg on möödas."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:229
+#: lib/phoenix_kit_bookings/ical_import.ex:241
 #, elixir-autogen, elixir-format
 msgid "The feed answered HTTP %{status}."
 msgstr "Voog vastas HTTP koodiga %{status}."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:232
+#: lib/phoenix_kit_bookings/ical_import.ex:244
 #, elixir-autogen, elixir-format
 msgid "The feed entry %{id} could not be stored."
 msgstr "Voo kirjet %{id} ei õnnestunud salvestada."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:200
+#: lib/phoenix_kit_bookings/ical_import.ex:212
 #, elixir-autogen, elixir-format
 msgid "The feed is larger than 5 MB."
 msgstr "Voog on suurem kui 5 MB."
@@ -1740,12 +1740,12 @@ msgstr "Valitud aeg on liiga lühike."
 msgid "The selected times are not valid."
 msgstr "Valitud ajad ei sobi."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:325
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:327
 #, elixir-autogen, elixir-format
 msgid "The service's host"
 msgstr "Teenuse läbiviija"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1028
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1056
 #, elixir-autogen, elixir-format
 msgid "Their email"
 msgstr "Tema e-post"
@@ -1770,7 +1770,7 @@ msgstr "See broneering ei oota enam kinnitust."
 msgid "This booking page does not exist or is no longer taking bookings."
 msgstr "Seda broneerimislehte pole olemas või see ei võta enam broneeringuid vastu."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:162
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:164
 #: lib/phoenix_kit_bookings/web/public/event_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "This event does not exist or is no longer on the schedule."
@@ -1802,7 +1802,7 @@ msgstr "Seda profiili pole olemas."
 msgid "This service is not currently taking bookings."
 msgstr "See teenus ei võta praegu broneeringuid vastu."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:478
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:505
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:136
 #, elixir-autogen, elixir-format
 msgid "Thu"
@@ -1813,18 +1813,18 @@ msgstr "N"
 msgid "Thursday"
 msgstr "neljapäev"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:546
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:573
 #, elixir-autogen, elixir-format
 msgid "Time unit"
 msgstr "Ajaühik"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:328
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Pealkiri"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:796
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1020
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:824
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1048
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:689
 #, elixir-autogen, elixir-format
 msgid "To"
@@ -1842,12 +1842,12 @@ msgstr "Sellelt aadressilt on liiga palju katseid. Proovi hiljem uuesti."
 msgid "Total:"
 msgstr "Kokku:"
 
-#: lib/phoenix_kit_bookings/notifier.ex:185
+#: lib/phoenix_kit_bookings/notifier.ex:219
 #, elixir-autogen, elixir-format
 msgid "Total: %{total}"
 msgstr "Kokku: %{total}"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:686
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:713
 #, elixir-autogen, elixir-format
 msgid "Totals are computed and stored on each booking. Payment collection is not wired yet — bookings record what is owed."
 msgstr "Summad arvutatakse ja salvestatakse iga broneeringu juurde. Maksete vastuvõtmine pole veel ühendatud — broneeringud näitavad, mis on tasumata."
@@ -1858,7 +1858,7 @@ msgstr "Summad arvutatakse ja salvestatakse iga broneeringu juurde. Maksete vast
 msgid "Trash"
 msgstr "Prügikast"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:476
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:503
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:134
 #, elixir-autogen, elixir-format
 msgid "Tue"
@@ -1869,22 +1869,22 @@ msgstr "T"
 msgid "Tuesday"
 msgstr "teisipäev"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:182
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:177
 #, elixir-autogen, elixir-format
 msgid "Unit added."
 msgstr "Üksus lisati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:205
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:200
 #, elixir-autogen, elixir-format
 msgid "Unit deleted."
 msgstr "Üksus kustutati."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:855
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:883
 #, elixir-autogen, elixir-format
 msgid "Unit name (e.g. Room 101)"
 msgstr "Üksuse nimi (nt Tuba 101)"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:196
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "Unit updated."
 msgstr "Üksus uuendati."
@@ -1895,7 +1895,7 @@ msgid "Universal booking management — day/night stays, fixed slots, and free-f
 msgstr "Universaalne broneeringute haldus — päevased ja öised peatumised, kindlad ajad ja vabad ajad. Põhiõigus hõlmab ainult kasutajale kuuluvaid teenuseid."
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:136
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:213
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "Upcoming"
 msgstr "Tulevased"
@@ -1920,7 +1920,7 @@ msgstr "Tavaliselt kliendi %{holders} aeg"
 msgid "View"
 msgstr "Vaata"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:477
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:504
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:135
 #, elixir-autogen, elixir-format
 msgid "Wed"
@@ -1931,7 +1931,7 @@ msgstr "K"
 msgid "Wednesday"
 msgstr "kolmapäev"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1008
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1036
 #, elixir-autogen, elixir-format
 msgid "Weekday"
 msgstr "Nädalapäev"
@@ -1943,7 +1943,7 @@ msgid "What's on"
 msgstr "Mis toimub"
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:179
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:226
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:228
 #, elixir-autogen, elixir-format
 msgid "When"
 msgstr "Millal"
@@ -1953,12 +1953,12 @@ msgstr "Millal"
 msgid "Where the warning goes when someone books another customer's regular slot on a service without an owner. A user-owned service warns its owner."
 msgstr "Kuhu saadetakse hoiatus, kui keegi broneerib omanikuta teenusel teise kliendi püsiaja. Kasutajale kuuluva teenuse puhul hoiatatakse selle omanikku."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:631
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:658
 #, elixir-autogen, elixir-format
 msgid "Who can book"
 msgstr "Kes saab broneerida"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:942
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:970
 #, elixir-autogen, elixir-format
 msgid "Who may book at it"
 msgstr "Kes võib sellega broneerida"
@@ -1968,7 +1968,7 @@ msgstr "Kes võib sellega broneerida"
 msgid "Who runs it"
 msgstr "Läbiviijad"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:980
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1008
 #, elixir-autogen, elixir-format
 msgid "Who usually has a time. Nobody is blocked: when someone else books into a regular slot, the booking goes through and you are warned."
 msgstr "Kellel on tavaliselt mingi aeg. Kedagi ei blokeerita: kui keegi teine broneerib püsiaja, broneering läheb läbi ja sind hoiatatakse."
@@ -1979,24 +1979,24 @@ msgstr "Kellel on tavaliselt mingi aeg. Kedagi ei blokeerita: kui keegi teine br
 msgid "With"
 msgstr "Läbiviija:"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:423
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:439
 #, elixir-autogen, elixir-format
 msgid "You can't create more services."
 msgstr "Rohkem teenuseid luua ei saa."
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:37
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:172
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:185
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:219
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:263
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:294
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:332
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:439
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:38
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:180
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:214
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:258
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:289
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:317
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:348
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:455
 #, elixir-autogen, elixir-format
 msgid "You can't edit that service."
 msgstr "Seda teenust ei saa muuta."
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:145
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "You can't manage events of that service."
 msgstr "Selle teenuse üritusi ei saa hallata."
@@ -2032,7 +2032,7 @@ msgstr "Sinu broneering %{service} (%{when}) on tühistatud."
 msgid "Your booking is cancelled."
 msgstr "Sinu broneering on tühistatud."
 
-#: lib/phoenix_kit_bookings/notifier.ex:165
+#: lib/phoenix_kit_bookings/notifier.ex:199
 #, elixir-autogen, elixir-format
 msgid "Your booking is confirmed: %{service}, %{when}."
 msgstr "Sinu broneering on kinnitatud: %{service}, %{when}."
@@ -2048,7 +2048,7 @@ msgstr "Sinu nimi"
 msgid "Your request for %{service} (%{when}) has been received and is waiting for approval. You'll get another email once it's decided."
 msgstr "Sinu soov %{service} (%{when}) on vastu võetud ja ootab kinnitust. Saad uue e-kirja, kui otsus on tehtud."
 
-#: lib/phoenix_kit_bookings/notifier.ex:113
+#: lib/phoenix_kit_bookings/notifier.ex:147
 #, elixir-autogen, elixir-format
 msgid "a regular customer"
 msgstr "püsiklient"
@@ -2069,7 +2069,7 @@ msgid "at least %{min}"
 msgstr "vähemalt %{min}"
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:177
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:515
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:542
 #, elixir-autogen, elixir-format
 msgid "auto-generated from the name when left blank"
 msgstr "tühjaks jättes luuakse nimest automaatselt"
@@ -2084,7 +2084,7 @@ msgstr "tühi = e-kirja ei saadeta"
 msgid "by admin"
 msgstr "admini poolt"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:251
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:253
 #: lib/phoenix_kit_bookings/web/format.ex:111
 #, elixir-autogen, elixir-format
 msgid "cancelled"
@@ -2100,7 +2100,7 @@ msgstr "lahkumine %{time}"
 msgid "confirmed"
 msgstr "kinnitatud"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:523
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:550
 #, elixir-autogen, elixir-format
 msgid "e.g. machine:42 — links this service to a record of your site"
 msgstr "nt machine:42 — seob teenuse sinu saidi kirjega"
@@ -2130,12 +2130,12 @@ msgstr "mitteaktiivne"
 msgid "needs approval"
 msgstr "vajab kinnitust"
 
-#: lib/phoenix_kit_bookings/notifier.ex:121
+#: lib/phoenix_kit_bookings/notifier.ex:155
 #, elixir-autogen, elixir-format
 msgid "no email"
 msgstr "e-post puudub"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:243
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:245
 #, elixir-autogen, elixir-format
 msgid "not public"
 msgstr "pole avalik"
@@ -2145,12 +2145,12 @@ msgstr "pole avalik"
 msgid "pending"
 msgstr "ootel"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:251
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:253
 #, elixir-autogen, elixir-format
 msgid "scheduled"
 msgstr "kavas"
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:247
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:249
 #, elixir-autogen, elixir-format
 msgid "service capacity"
 msgstr "teenuse mahutavus"
@@ -2165,8 +2165,8 @@ msgstr "prügikastis"
 msgid "unlimited"
 msgstr "piiramatu"
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:407
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1057
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:423
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1085
 #, elixir-autogen, elixir-format
 msgid "whole day"
 msgstr "terve päev"
@@ -2182,52 +2182,77 @@ msgstr "mai"
 msgid "Sign-up for this event is not taken online."
 msgstr "Sellele sündmusele ei saa veebis registreeruda."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:217
+#: lib/phoenix_kit_bookings/ical_import.ex:229
 #, elixir-autogen, elixir-format
 msgid "The feed URL is not valid."
 msgstr "Voo URL ei ole kehtiv."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:220
+#: lib/phoenix_kit_bookings/ical_import.ex:232
 #, elixir-autogen, elixir-format
 msgid "The feed URL must use http or https (an https feed cannot redirect to http)."
 msgstr "Voo URL peab kasutama http- või https-protokolli (https-voog ei saa suunata ümber http-le)."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:222
+#: lib/phoenix_kit_bookings/ical_import.ex:234
 #, elixir-autogen, elixir-format
 msgid "The feed URL uses a port that is not allowed."
 msgstr "Voo URL kasutab porti, mis pole lubatud."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:224
+#: lib/phoenix_kit_bookings/ical_import.ex:236
 #, elixir-autogen, elixir-format
 msgid "The feed did not answer in time."
 msgstr "Voog ei vastanud õigeks ajaks."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:203
+#: lib/phoenix_kit_bookings/ical_import.ex:215
 #, elixir-autogen, elixir-format
 msgid "The feed has more than 20 000 events in the coming year."
 msgstr "Voos on eelseisval aastal üle 20 000 sündmuse."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:223
+#: lib/phoenix_kit_bookings/ical_import.ex:235
 #, elixir-autogen, elixir-format
 msgid "The feed redirected too many times."
 msgstr "Voog suunas ümber liiga mitu korda."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:212
+#: lib/phoenix_kit_bookings/ical_import.ex:224
 #, elixir-autogen, elixir-format
 msgid "The feed's address is on a private or local network; only public addresses are fetched."
 msgstr "Voo aadress on privaatses või kohalikus võrgus; laaditakse ainult avalikke aadresse."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:216
+#: lib/phoenix_kit_bookings/ical_import.ex:228
 #, elixir-autogen, elixir-format
 msgid "The feed's host name could not be found."
 msgstr "Voo hostinime ei leitud."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:226
+#: lib/phoenix_kit_bookings/ical_import.ex:238
 #, elixir-autogen, elixir-format
 msgid "The feed's server could not be reached."
 msgstr "Voo serveriga ei saanud ühendust."
 
-#: lib/phoenix_kit_bookings/ical_import.ex:208
+#: lib/phoenix_kit_bookings/ical_import.ex:220
 #, elixir-autogen, elixir-format
 msgid "The service changed during the sync; the next sync will import the feed."
 msgstr "Teenus muutus sünkroonimise ajal; järgmine sünkroonimine impordib voo."
+
+#: lib/phoenix_kit_bookings/notifier.ex:92
+#, elixir-autogen, elixir-format
+msgid "Booking moved — %{service}"
+msgstr "Broneering on muudetud — %{service}"
+
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:170
+#, elixir-autogen, elixir-format
+msgid "Pick the weekdays from the list."
+msgstr "Vali nädalapäevad loendist."
+
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:368
+#, elixir-autogen, elixir-format
+msgid "Sell its seats even when the service's own bookings fill it at that time"
+msgstr "Müü kohti ka siis, kui teenuse enda broneeringud on sel ajal kõik kohad täitnud"
+
+#: lib/phoenix_kit_bookings/errors.ex:54
+#, elixir-autogen, elixir-format
+msgid "The total for this booking is too large. Please pick a shorter time."
+msgstr "Selle broneeringu kogusumma on liiga suur. Vali lühem aeg."
+
+#: lib/phoenix_kit_bookings/notifier.ex:78
+#, elixir-autogen, elixir-format
+msgid "Your booking for %{service} has moved: it was %{before}, it is now %{when}."
+msgstr "Sinu broneering teenusele %{service} on muudetud: varem %{before}, nüüd %{when}."

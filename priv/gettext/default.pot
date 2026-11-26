@@ -26,7 +26,7 @@ msgstr ""
 msgid "%{amount} / night"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:390
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:406
 #, elixir-autogen, elixir-format
 msgid "%{count} chosen account"
 msgid_plural "%{count} chosen accounts"
@@ -88,7 +88,7 @@ msgid_plural "%{count} units"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:119
+#: lib/phoenix_kit_bookings/notifier.ex:153
 #, elixir-autogen, elixir-format
 msgid "%{customer} (%{email}) booked %{service}, %{when}."
 msgstr ""
@@ -98,7 +98,7 @@ msgstr ""
 msgid "%{min}–%{max}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:418
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:434
 #, elixir-autogen, elixir-format
 msgid "%{name} created. Now add availability rules if needed."
 msgstr ""
@@ -123,22 +123,22 @@ msgstr ""
 msgid "%{name} restored."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:435
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:451
 #, elixir-autogen, elixir-format
 msgid "%{name} saved."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:78
+#: lib/phoenix_kit_bookings/notifier.ex:112
 #, elixir-autogen, elixir-format
 msgid "A reminder about your upcoming booking: %{service}, %{when}."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:947
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:975
 #, elixir-autogen, elixir-format
 msgid "A role"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:91
+#: lib/phoenix_kit_bookings/notifier.ex:125
 #, elixir-autogen, elixir-format
 msgid "A spot opened up — %{service}"
 msgstr ""
@@ -148,25 +148,25 @@ msgstr ""
 msgid "About"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:955
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:983
 #, elixir-autogen, elixir-format
 msgid "Account emails (chosen accounts)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:963
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:991
 #, elixir-autogen, elixir-format
 msgid "Account flag (custom field key)"
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:183
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:230
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:232
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Actions"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:837
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:892
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:865
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:920
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:235
 #, elixir-autogen, elixir-format
 msgid "Activate"
@@ -174,35 +174,35 @@ msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:119
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:186
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:827
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:882
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:855
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:910
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:970
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:998
 #, elixir-autogen, elixir-format
 msgid "Add price option"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1031
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1059
 #, elixir-autogen, elixir-format
 msgid "Add regular slot"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:808
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:836
 #, elixir-autogen, elixir-format
 msgid "Add rule"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:858
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:886
 #, elixir-autogen, elixir-format
 msgid "Add unit"
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:155
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:213
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:215
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:141
 #, elixir-autogen, elixir-format
 msgid "All"
@@ -223,12 +223,12 @@ msgstr ""
 msgid "Anyone · needs approval"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:633
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:660
 #, elixir-autogen, elixir-format
 msgid "Anyone — guests book with name and email"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:739
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:767
 #, elixir-autogen, elixir-format
 msgid "Applies to"
 msgstr ""
@@ -248,7 +248,7 @@ msgstr ""
 msgid "April"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:933
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:961
 #, elixir-autogen, elixir-format
 msgid "As the service"
 msgstr ""
@@ -273,14 +273,14 @@ msgstr ""
 msgid "August"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:731
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:759
 #: lib/phoenix_kit_bookings/web/public/host_live.ex:121
 #: lib/phoenix_kit_bookings/web/public/services_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:94
+#: lib/phoenix_kit_bookings/notifier.ex:128
 #, elixir-autogen, elixir-format
 msgid "Availability just opened up for %{service} on %{date}. First come, first served:"
 msgstr ""
@@ -290,12 +290,12 @@ msgstr ""
 msgid "Availability only — this service is not booked on this site."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:169
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Availability rule added."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:302
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:297
 #, elixir-autogen, elixir-format
 msgid "Availability rule removed."
 msgstr ""
@@ -305,12 +305,12 @@ msgstr ""
 msgid "Back"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:496
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:523
 #, elixir-autogen, elixir-format
 msgid "Back to services"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:509
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:536
 #, elixir-autogen, elixir-format
 msgid "Basics"
 msgstr ""
@@ -326,7 +326,7 @@ msgstr ""
 msgid "Book again: %{url}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:620
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:647
 #, elixir-autogen, elixir-format
 msgid "Book at most (days ahead, blank = no limit)"
 msgstr ""
@@ -337,7 +337,7 @@ msgstr ""
 msgid "Book with us"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:535
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:562
 #, elixir-autogen, elixir-format
 msgid "Bookable on the site (off: the public page only shows availability)"
 msgstr ""
@@ -352,8 +352,8 @@ msgstr ""
 msgid "Booked! %{range} is yours."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:677
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:934
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:704
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:962
 #, elixir-autogen, elixir-format
 msgid "Booking (flat)"
 msgstr ""
@@ -388,7 +388,7 @@ msgstr ""
 msgid "Booking request received — %{service}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:542
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:569
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:190
 #, elixir-autogen, elixir-format
 msgid "Booking shape"
@@ -398,8 +398,8 @@ msgstr ""
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:28
 #: lib/phoenix_kit_bookings/web/admin/events_live.ex:32
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:20
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:61
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:71
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:62
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:72
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:29
 #: lib/phoenix_kit_bookings/web/admin/settings_live.ex:23
 #, elixir-autogen, elixir-format
@@ -411,40 +411,40 @@ msgstr ""
 msgid "Bookings Settings"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:591
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:618
 #, elixir-autogen, elixir-format
 msgid "Buffer after (minutes)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:586
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:613
 #, elixir-autogen, elixir-format
 msgid "Buffer before (minutes)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:695
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:722
 #, elixir-autogen, elixir-format
 msgid "Busy times from another calendar (an .ics / webcal link) are imported as bookings marked as imported, synced hourly. A re-sync replaces only imported entries, never bookings made here."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:700
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:728
 #, elixir-autogen, elixir-format
 msgid "Calendar feed URL"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:339
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:347
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:355
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:363
 #, elixir-autogen, elixir-format
 msgid "Calendar sync failed: %{reason}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:324
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:340
 #, elixir-autogen, elixir-format
 msgid "Calendar synced: %{inserted} added, %{updated} updated, %{deleted} removed."
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:238
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:266
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:725
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:268
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:753
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -464,7 +464,7 @@ msgstr ""
 msgid "Cancel this booking? This cannot be undone."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:264
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:266
 #, elixir-autogen, elixir-format
 msgid "Cancel this event? Everyone signed up is told."
 msgstr ""
@@ -474,7 +474,7 @@ msgstr ""
 msgid "Cancelled"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:610
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:637
 #, elixir-autogen, elixir-format
 msgid "Capacity (rooms / seats per slot)"
 msgstr ""
@@ -494,7 +494,7 @@ msgstr ""
 msgid "Check-in %{time}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:602
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:629
 #, elixir-autogen, elixir-format
 msgid "Check-in time"
 msgstr ""
@@ -504,23 +504,23 @@ msgstr ""
 msgid "Check-out"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:603
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:630
 #, elixir-autogen, elixir-format
 msgid "Check-out time"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:946
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:974
 #, elixir-autogen, elixir-format
 msgid "Chosen accounts"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:751
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:779
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:127
 #, elixir-autogen, elixir-format
 msgid "Closed"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:804
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:832
 #, elixir-autogen, elixir-format
 msgid "Closed (block out)"
 msgstr ""
@@ -550,17 +550,17 @@ msgstr ""
 msgid "Control whether users with the base Bookings permission can set up their own bookable services."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:174
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:176
 #, elixir-autogen, elixir-format
 msgid "Could not cancel that event."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:183
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "Could not delete that event."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:243
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:238
 #, elixir-autogen, elixir-format
 msgid "Could not delete that price option."
 msgstr ""
@@ -570,37 +570,37 @@ msgstr ""
 msgid "Could not delete that profile."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:207
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Could not delete that unit."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:275
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "Could not remove that regular slot."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:304
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:299
 #, elixir-autogen, elixir-format
 msgid "Could not remove that rule."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:234
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Could not update that price option."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:198
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Could not update that unit."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:300
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "Create a service first: every event is an occurrence of one."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:683
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:710
 #, elixir-autogen, elixir-format
 msgid "Currency"
 msgstr ""
@@ -610,7 +610,7 @@ msgstr ""
 msgid "Customer"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:645
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:672
 #, elixir-autogen, elixir-format
 msgid "Customers may cancel until (minutes before start, 0 = anytime)"
 msgstr ""
@@ -622,13 +622,13 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:203
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Dated occurrences with their own capacity — what the public schedule lists."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:679
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:936
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:706
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:964
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr ""
@@ -638,13 +638,13 @@ msgstr ""
 msgid "Day after the last day"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:550
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:577
 #, elixir-autogen, elixir-format
 msgid "Days — full-day bookings"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:837
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:892
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:865
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:920
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "Deactivate"
@@ -660,26 +660,26 @@ msgstr ""
 msgid "December"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:558
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:585
 #, elixir-autogen, elixir-format
 msgid "Default length (minutes)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:274
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:276
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:140
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:845
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:900
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:873
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:928
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:261
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:272
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:274
 #, elixir-autogen, elixir-format
 msgid "Delete this event? Its bookings stay in the reservations list."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:898
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:926
 #, elixir-autogen, elixir-format
 msgid "Delete this price option? Past bookings keep their total."
 msgstr ""
@@ -689,18 +689,18 @@ msgstr ""
 msgid "Delete this profile? Its services and events stay."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:843
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:871
 #, elixir-autogen, elixir-format
 msgid "Delete this unit? Past bookings keep their history."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:344
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:517
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:346
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:544
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:967
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:995
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr ""
@@ -710,9 +710,9 @@ msgstr ""
 msgid "Each service defines its own booking shape — daily stays, fixed slots, or free-form times."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:257
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:259
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:132
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:77
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
@@ -722,7 +722,7 @@ msgstr ""
 msgid "Edit Service"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:292
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "Edit event"
 msgstr ""
@@ -744,50 +744,50 @@ msgstr ""
 msgid "Email"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:331
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:333
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:227
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Event"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:172
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "Event cancelled."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:181
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "Event deleted."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:142
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Event saved."
 msgstr ""
 
 #: lib/phoenix_kit_bookings.ex:301
 #: lib/phoenix_kit_bookings/web/admin/events_live.ex:35
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:201
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Events"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:387
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:945
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:403
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:973
 #, elixir-autogen, elixir-format
 msgid "Everyone"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:693
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:720
 #, elixir-autogen, elixir-format
 msgid "External calendar (iCal import)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:867
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:895
 #, elixir-autogen, elixir-format
 msgid "Extra rates beside the standard price — a trainer's solo-lesson rate, a members' price. Each says who may book at it; customers see only the options they are entitled to."
 msgstr ""
@@ -817,12 +817,12 @@ msgstr ""
 msgid "Free-form · %{min} min – %{max} · %{seats}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:568
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:595
 #, elixir-autogen, elixir-format
 msgid "Free-form: customers pick their own start and length"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:479
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:506
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:137
 #, elixir-autogen, elixir-format
 msgid "Fri"
@@ -833,8 +833,8 @@ msgstr ""
 msgid "Friday"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:792
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1016
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:820
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1044
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:685
 #, elixir-autogen, elixir-format
 msgid "From"
@@ -866,8 +866,8 @@ msgstr ""
 msgid "Headline"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:92
-#: lib/phoenix_kit_bookings/notifier.ex:156
+#: lib/phoenix_kit_bookings/notifier.ex:126
+#: lib/phoenix_kit_bookings/notifier.ex:190
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
 msgstr ""
@@ -882,7 +882,7 @@ msgstr ""
 msgid "Host profile saved."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:522
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:549
 #, elixir-autogen, elixir-format
 msgid "Host reference (optional)"
 msgstr ""
@@ -894,21 +894,21 @@ msgstr ""
 msgid "Hosts"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:678
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:935
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:705
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:963
 #, elixir-autogen, elixir-format
 msgid "Hour"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:740
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:768
 #, elixir-autogen, elixir-format
 msgid "Hours"
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:119
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:186
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:827
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:882
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:855
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:910
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:150
 #, elixir-autogen, elixir-format
 msgid "Inactive"
@@ -949,22 +949,22 @@ msgstr ""
 msgid "June"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:800
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:828
 #, elixir-autogen, elixir-format
 msgid "Kind"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:714
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:742
 #, elixir-autogen, elixir-format
 msgid "Last sync: %{at}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:329
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:331
 #, elixir-autogen, elixir-format
 msgid "Location (optional)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:634
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:661
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:281
 #, elixir-autogen, elixir-format
 msgid "Login required"
@@ -985,8 +985,8 @@ msgstr ""
 msgid "Manage or cancel this booking any time (a confirmation email with a calendar invite is on its way):"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ics.ex:33
-#: lib/phoenix_kit_bookings/notifier.ex:159
+#: lib/phoenix_kit_bookings/ics.ex:38
+#: lib/phoenix_kit_bookings/notifier.ex:193
 #, elixir-autogen, elixir-format
 msgid "Manage or cancel: %{url}"
 msgstr ""
@@ -1001,7 +1001,7 @@ msgstr ""
 msgid "March"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:580
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:607
 #, elixir-autogen, elixir-format
 msgid "Maximum length (minutes, blank = unlimited)"
 msgstr ""
@@ -1011,7 +1011,7 @@ msgstr ""
 msgid "Maximum length is %{max}."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:600
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:627
 #, elixir-autogen, elixir-format
 msgid "Maximum stay (blank = unlimited)"
 msgstr ""
@@ -1021,17 +1021,17 @@ msgstr ""
 msgid "May"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:948
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:976
 #, elixir-autogen, elixir-format
 msgid "Members with a flag"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:396
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:412
 #, elixir-autogen, elixir-format
 msgid "Members with flag: %{flag}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:575
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:602
 #, elixir-autogen, elixir-format
 msgid "Minimum length (minutes, blank = default length)"
 msgstr ""
@@ -1041,22 +1041,22 @@ msgstr ""
 msgid "Minimum length is %{min}."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:615
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:642
 #, elixir-autogen, elixir-format
 msgid "Minimum notice (minutes)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:596
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:623
 #, elixir-autogen, elixir-format
 msgid "Minimum stay (blank = 1)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:548
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:575
 #, elixir-autogen, elixir-format
 msgid "Minutes — timed bookings (slots or free-form)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:475
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:502
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:133
 #, elixir-autogen, elixir-format
 msgid "Mon"
@@ -1073,15 +1073,15 @@ msgid "Move this service to trash? Its bookings stay."
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:172
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:510
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:915
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:537
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:943
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:189
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:613
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:816
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:844
 #, elixir-autogen, elixir-format
 msgid "Named units"
 msgstr ""
@@ -1092,12 +1092,12 @@ msgstr ""
 msgid "New Service"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:292
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "New event"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:295
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:297
 #, elixir-autogen, elixir-format
 msgid "New event instead"
 msgstr ""
@@ -1112,8 +1112,8 @@ msgstr ""
 msgid "New profile instead"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:64
 #: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:65
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "New service"
 msgstr ""
@@ -1123,8 +1123,8 @@ msgstr ""
 msgid "Next month"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:680
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:937
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:707
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:965
 #, elixir-autogen, elixir-format
 msgid "Night"
 msgstr ""
@@ -1134,7 +1134,7 @@ msgstr ""
 msgid "Nightly stays · %{stay} · %{units}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:549
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:576
 #, elixir-autogen, elixir-format
 msgid "Nights — hotel-style stays (checkout day not charged)"
 msgstr ""
@@ -1144,12 +1144,12 @@ msgstr ""
 msgid "No bookings match this view."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:281
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:283
 #, elixir-autogen, elixir-format
 msgid "No events yet."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:205
+#: lib/phoenix_kit_bookings/ical_import.ex:217
 #, elixir-autogen, elixir-format
 msgid "No feed URL is set."
 msgstr ""
@@ -1159,7 +1159,7 @@ msgstr ""
 msgid "No free times on this date — try another day."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:529
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:556
 #, elixir-autogen, elixir-format
 msgid "No host profile"
 msgstr ""
@@ -1169,12 +1169,12 @@ msgstr ""
 msgid "No host profiles yet."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:657
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:684
 #, elixir-autogen, elixir-format
 msgid "No provider"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:733
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:761
 #, elixir-autogen, elixir-format
 msgid "No rules = always open. Weekly rules set opening hours; a rule with a date overrides the weekly rules on that date; a closed rule blocks the whole day, and needs no times. With only closed rules, every other day stays open."
 msgstr ""
@@ -1237,18 +1237,18 @@ msgstr ""
 msgid "Only site-wide booking managers can edit host profiles."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:751
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:803
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:779
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:831
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:741
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:769
 #, elixir-autogen, elixir-format
 msgid "Open?"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:818
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:846
 #, elixir-autogen, elixir-format
 msgid "Optional: name the individual rooms/chairs/courts. With units, capacity becomes the active-unit count and every booking is auto-assigned a free unit. Without units, the plain capacity number pools."
 msgstr ""
@@ -1273,8 +1273,8 @@ msgstr ""
 msgid "Pending"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:675
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:930
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:702
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:958
 #, elixir-autogen, elixir-format
 msgid "Per"
 msgstr ""
@@ -1284,7 +1284,7 @@ msgstr ""
 msgid "Permanently delete this service AND all of its bookings?"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:150
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Person %{id}"
 msgstr ""
@@ -1300,12 +1300,12 @@ msgstr ""
 msgid "Photo URL"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:228
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:230
 #, elixir-autogen, elixir-format
 msgid "Places"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:335
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:337
 #, elixir-autogen, elixir-format
 msgid "Places (blank = the service's capacity)"
 msgstr ""
@@ -1325,47 +1325,47 @@ msgstr ""
 msgid "Previous month"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:919
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:947
 #, elixir-autogen, elixir-format
 msgid "Price"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:341
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:343
 #, elixir-autogen, elixir-format
 msgid "Price (blank = the service's price)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:671
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:698
 #, elixir-autogen, elixir-format
 msgid "Price (blank = unpriced)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:216
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Price option added."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:241
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:236
 #, elixir-autogen, elixir-format
 msgid "Price option deleted."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:232
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Price option updated."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:865
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:893
 #, elixir-autogen, elixir-format
 msgid "Price options"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:665
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:692
 #, elixir-autogen, elixir-format
 msgid "Pricing"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:656
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:683
 #, elixir-autogen, elixir-format
 msgid "Provider (staff person — their bookings block each other across services)"
 msgstr ""
@@ -1375,7 +1375,7 @@ msgstr ""
 msgid "Public profiles of the people who run your services and events. Active profiles appear on the public schedule and have a page of their own."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:207
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:209
 #, elixir-autogen, elixir-format
 msgid "Public schedule"
 msgstr ""
@@ -1385,43 +1385,43 @@ msgstr ""
 msgid "Rate"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1024
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1052
 #, elixir-autogen, elixir-format
 msgid "Regular customer's name"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:260
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:255
 #, elixir-autogen, elixir-format
 msgid "Regular slot added."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:118
+#: lib/phoenix_kit_bookings/notifier.ex:152
 #, elixir-autogen, elixir-format
 msgid "Regular slot booked by someone else — %{service}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:273
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "Regular slot removed."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:978
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1006
 #, elixir-autogen, elixir-format
 msgid "Regular slots"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:650
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:677
 #, elixir-autogen, elixir-format
 msgid "Reminder email (minutes before start, blank = none)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:72
+#: lib/phoenix_kit_bookings/notifier.ex:106
 #, elixir-autogen, elixir-format
 msgid "Reminder — %{service} %{when}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:760
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:995
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:788
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1023
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr ""
@@ -1441,7 +1441,7 @@ msgstr ""
 msgid "Request received. You'll hear back once it's approved."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:639
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:666
 #, elixir-autogen, elixir-format
 msgid "Require approval — new bookings wait as pending (RSVP)"
 msgstr ""
@@ -1452,7 +1452,7 @@ msgstr ""
 msgid "Reservations"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:131
+#: lib/phoenix_kit_bookings/notifier.ex:165
 #, elixir-autogen, elixir-format
 msgid "Reservations: %{url}"
 msgstr ""
@@ -1462,27 +1462,27 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:959
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:987
 #, elixir-autogen, elixir-format
 msgid "Role name (a role)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:393
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:409
 #, elixir-autogen, elixir-format
 msgid "Role: %{role}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:324
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:326
 #, elixir-autogen, elixir-format
 msgid "Run by"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:528
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:555
 #, elixir-autogen, elixir-format
 msgid "Run by (public host profile)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:480
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:507
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:138
 #, elixir-autogen, elixir-format
 msgid "Sat"
@@ -1493,13 +1493,13 @@ msgstr ""
 msgid "Saturday"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:724
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:752
 #: lib/phoenix_kit_bookings/web/admin/settings_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:357
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "Save event"
 msgstr ""
@@ -1509,7 +1509,7 @@ msgstr ""
 msgid "Save profile"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1038
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1066
 #, elixir-autogen, elixir-format
 msgid "Save the service first — then availability rules can be added here."
 msgstr ""
@@ -1525,14 +1525,14 @@ msgid "September"
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:180
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:319
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:321
 #, elixir-autogen, elixir-format
 msgid "Service"
 msgstr ""
 
 #: lib/phoenix_kit_bookings.ex:300
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:63
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:74
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:64
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:75
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:32
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:169
 #: lib/phoenix_kit_bookings/web/public/host_live.ex:110
@@ -1555,7 +1555,7 @@ msgstr ""
 msgid "Settings saved."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:354
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "Show on the public schedule"
 msgstr ""
@@ -1576,7 +1576,7 @@ msgstr ""
 msgid "Signup"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:628
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:655
 #, elixir-autogen, elixir-format
 msgid "Signup policy"
 msgstr ""
@@ -1586,7 +1586,7 @@ msgstr ""
 msgid "Site-wide: every service and reservation (not just own), plus the Bookings settings page"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:563
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:590
 #, elixir-autogen, elixir-format
 msgid "Slot start every (minutes, blank = length)"
 msgstr ""
@@ -1601,22 +1601,22 @@ msgstr ""
 msgid "Slug (public URL)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:514
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:541
 #, elixir-autogen, elixir-format
 msgid "Slug (public URL: /book/<slug>)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:120
+#: lib/phoenix_kit_bookings/notifier.ex:154
 #, elixir-autogen, elixir-format
 msgid "Someone"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/errors.ex:53
+#: lib/phoenix_kit_bookings/errors.ex:56
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:788
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:816
 #, elixir-autogen, elixir-format
 msgid "Specific date (optional)"
 msgstr ""
@@ -1626,20 +1626,20 @@ msgstr ""
 msgid "Standard"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:330
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:332
 #, elixir-autogen, elixir-format
 msgid "Starts"
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:182
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:229
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:231
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:185
 #: lib/phoenix_kit_bookings/web/admin/services_live.ex:192
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:481
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:508
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:139
 #, elixir-autogen, elixir-format
 msgid "Sun"
@@ -1650,12 +1650,12 @@ msgstr ""
 msgid "Sunday"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:711
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:739
 #, elixir-autogen, elixir-format
 msgid "Sync now"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:711
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:739
 #, elixir-autogen, elixir-format
 msgid "Syncing…"
 msgstr ""
@@ -1685,7 +1685,7 @@ msgstr ""
 msgid "That time is too soon — more advance notice is required."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:126
+#: lib/phoenix_kit_bookings/notifier.ex:160
 #, elixir-autogen, elixir-format
 msgid "That time usually belongs to %{holders}. The booking was accepted; check whether the regular customer needs to hear about it."
 msgstr ""
@@ -1695,7 +1695,7 @@ msgstr ""
 msgid "That time was just taken. Please pick another."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:199
+#: lib/phoenix_kit_bookings/ical_import.ex:211
 #, elixir-autogen, elixir-format
 msgid "The URL did not return an iCal calendar."
 msgstr ""
@@ -1705,17 +1705,17 @@ msgstr ""
 msgid "The cancellation window for this booking has passed."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:229
+#: lib/phoenix_kit_bookings/ical_import.ex:241
 #, elixir-autogen, elixir-format
 msgid "The feed answered HTTP %{status}."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:232
+#: lib/phoenix_kit_bookings/ical_import.ex:244
 #, elixir-autogen, elixir-format
 msgid "The feed entry %{id} could not be stored."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:200
+#: lib/phoenix_kit_bookings/ical_import.ex:212
 #, elixir-autogen, elixir-format
 msgid "The feed is larger than 5 MB."
 msgstr ""
@@ -1740,12 +1740,12 @@ msgstr ""
 msgid "The selected times are not valid."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:325
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:327
 #, elixir-autogen, elixir-format
 msgid "The service's host"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1028
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1056
 #, elixir-autogen, elixir-format
 msgid "Their email"
 msgstr ""
@@ -1770,7 +1770,7 @@ msgstr ""
 msgid "This booking page does not exist or is no longer taking bookings."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:162
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:164
 #: lib/phoenix_kit_bookings/web/public/event_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "This event does not exist or is no longer on the schedule."
@@ -1802,7 +1802,7 @@ msgstr ""
 msgid "This service is not currently taking bookings."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:478
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:505
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:136
 #, elixir-autogen, elixir-format
 msgid "Thu"
@@ -1813,18 +1813,18 @@ msgstr ""
 msgid "Thursday"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:546
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:573
 #, elixir-autogen, elixir-format
 msgid "Time unit"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:328
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:796
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1020
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:824
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1048
 #: lib/phoenix_kit_bookings/web/public/booking_flow.ex:689
 #, elixir-autogen, elixir-format
 msgid "To"
@@ -1842,12 +1842,12 @@ msgstr ""
 msgid "Total:"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:185
+#: lib/phoenix_kit_bookings/notifier.ex:219
 #, elixir-autogen, elixir-format
 msgid "Total: %{total}"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:686
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:713
 #, elixir-autogen, elixir-format
 msgid "Totals are computed and stored on each booking. Payment collection is not wired yet — bookings record what is owed."
 msgstr ""
@@ -1858,7 +1858,7 @@ msgstr ""
 msgid "Trash"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:476
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:503
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:134
 #, elixir-autogen, elixir-format
 msgid "Tue"
@@ -1869,22 +1869,22 @@ msgstr ""
 msgid "Tuesday"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:182
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:177
 #, elixir-autogen, elixir-format
 msgid "Unit added."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:205
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:200
 #, elixir-autogen, elixir-format
 msgid "Unit deleted."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:855
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:883
 #, elixir-autogen, elixir-format
 msgid "Unit name (e.g. Room 101)"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:196
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "Unit updated."
 msgstr ""
@@ -1895,7 +1895,7 @@ msgid "Universal booking management — day/night stays, fixed slots, and free-f
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:136
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:213
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "Upcoming"
 msgstr ""
@@ -1920,7 +1920,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:477
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:504
 #: lib/phoenix_kit_bookings/web/components/availability_calendar.ex:135
 #, elixir-autogen, elixir-format
 msgid "Wed"
@@ -1931,7 +1931,7 @@ msgstr ""
 msgid "Wednesday"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1008
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1036
 #, elixir-autogen, elixir-format
 msgid "Weekday"
 msgstr ""
@@ -1943,7 +1943,7 @@ msgid "What's on"
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/bookings_live.ex:179
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:226
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:228
 #, elixir-autogen, elixir-format
 msgid "When"
 msgstr ""
@@ -1953,12 +1953,12 @@ msgstr ""
 msgid "Where the warning goes when someone books another customer's regular slot on a service without an owner. A user-owned service warns its owner."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:631
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:658
 #, elixir-autogen, elixir-format
 msgid "Who can book"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:942
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:970
 #, elixir-autogen, elixir-format
 msgid "Who may book at it"
 msgstr ""
@@ -1968,7 +1968,7 @@ msgstr ""
 msgid "Who runs it"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:980
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1008
 #, elixir-autogen, elixir-format
 msgid "Who usually has a time. Nobody is blocked: when someone else books into a regular slot, the booking goes through and you are warned."
 msgstr ""
@@ -1979,24 +1979,24 @@ msgstr ""
 msgid "With"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:423
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:439
 #, elixir-autogen, elixir-format
 msgid "You can't create more services."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:37
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:172
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:185
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:219
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:263
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:294
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:332
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:439
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:38
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:180
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:214
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:258
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:289
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:317
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:348
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:455
 #, elixir-autogen, elixir-format
 msgid "You can't edit that service."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:145
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "You can't manage events of that service."
 msgstr ""
@@ -2032,7 +2032,7 @@ msgstr ""
 msgid "Your booking is cancelled."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:165
+#: lib/phoenix_kit_bookings/notifier.ex:199
 #, elixir-autogen, elixir-format
 msgid "Your booking is confirmed: %{service}, %{when}."
 msgstr ""
@@ -2048,7 +2048,7 @@ msgstr ""
 msgid "Your request for %{service} (%{when}) has been received and is waiting for approval. You'll get another email once it's decided."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:113
+#: lib/phoenix_kit_bookings/notifier.ex:147
 #, elixir-autogen, elixir-format
 msgid "a regular customer"
 msgstr ""
@@ -2069,7 +2069,7 @@ msgid "at least %{min}"
 msgstr ""
 
 #: lib/phoenix_kit_bookings/web/admin/hosts_live.ex:177
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:515
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:542
 #, elixir-autogen, elixir-format
 msgid "auto-generated from the name when left blank"
 msgstr ""
@@ -2084,7 +2084,7 @@ msgstr ""
 msgid "by admin"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:251
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:253
 #: lib/phoenix_kit_bookings/web/format.ex:111
 #, elixir-autogen, elixir-format
 msgid "cancelled"
@@ -2100,7 +2100,7 @@ msgstr ""
 msgid "confirmed"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:523
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:550
 #, elixir-autogen, elixir-format
 msgid "e.g. machine:42 — links this service to a record of your site"
 msgstr ""
@@ -2130,12 +2130,12 @@ msgstr ""
 msgid "needs approval"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/notifier.ex:121
+#: lib/phoenix_kit_bookings/notifier.ex:155
 #, elixir-autogen, elixir-format
 msgid "no email"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:243
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:245
 #, elixir-autogen, elixir-format
 msgid "not public"
 msgstr ""
@@ -2145,12 +2145,12 @@ msgstr ""
 msgid "pending"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:251
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:253
 #, elixir-autogen, elixir-format
 msgid "scheduled"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/events_live.ex:247
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:249
 #, elixir-autogen, elixir-format
 msgid "service capacity"
 msgstr ""
@@ -2165,8 +2165,8 @@ msgstr ""
 msgid "unlimited"
 msgstr ""
 
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:407
-#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1057
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:423
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:1085
 #, elixir-autogen, elixir-format
 msgid "whole day"
 msgstr ""
@@ -2182,52 +2182,77 @@ msgstr ""
 msgid "Sign-up for this event is not taken online."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:217
+#: lib/phoenix_kit_bookings/ical_import.ex:229
 #, elixir-autogen, elixir-format
 msgid "The feed URL is not valid."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:220
+#: lib/phoenix_kit_bookings/ical_import.ex:232
 #, elixir-autogen, elixir-format
 msgid "The feed URL must use http or https (an https feed cannot redirect to http)."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:222
+#: lib/phoenix_kit_bookings/ical_import.ex:234
 #, elixir-autogen, elixir-format
 msgid "The feed URL uses a port that is not allowed."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:224
+#: lib/phoenix_kit_bookings/ical_import.ex:236
 #, elixir-autogen, elixir-format
 msgid "The feed did not answer in time."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:203
+#: lib/phoenix_kit_bookings/ical_import.ex:215
 #, elixir-autogen, elixir-format
 msgid "The feed has more than 20 000 events in the coming year."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:223
+#: lib/phoenix_kit_bookings/ical_import.ex:235
 #, elixir-autogen, elixir-format
 msgid "The feed redirected too many times."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:212
+#: lib/phoenix_kit_bookings/ical_import.ex:224
 #, elixir-autogen, elixir-format
 msgid "The feed's address is on a private or local network; only public addresses are fetched."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:216
+#: lib/phoenix_kit_bookings/ical_import.ex:228
 #, elixir-autogen, elixir-format
 msgid "The feed's host name could not be found."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:226
+#: lib/phoenix_kit_bookings/ical_import.ex:238
 #, elixir-autogen, elixir-format
 msgid "The feed's server could not be reached."
 msgstr ""
 
-#: lib/phoenix_kit_bookings/ical_import.ex:208
+#: lib/phoenix_kit_bookings/ical_import.ex:220
 #, elixir-autogen, elixir-format
 msgid "The service changed during the sync; the next sync will import the feed."
+msgstr ""
+
+#: lib/phoenix_kit_bookings/notifier.ex:92
+#, elixir-autogen, elixir-format
+msgid "Booking moved — %{service}"
+msgstr ""
+
+#: lib/phoenix_kit_bookings/web/admin/service_form_live.ex:170
+#, elixir-autogen, elixir-format
+msgid "Pick the weekdays from the list."
+msgstr ""
+
+#: lib/phoenix_kit_bookings/web/admin/events_live.ex:368
+#, elixir-autogen, elixir-format
+msgid "Sell its seats even when the service's own bookings fill it at that time"
+msgstr ""
+
+#: lib/phoenix_kit_bookings/errors.ex:54
+#, elixir-autogen, elixir-format
+msgid "The total for this booking is too large. Please pick a shorter time."
+msgstr ""
+
+#: lib/phoenix_kit_bookings/notifier.ex:78
+#, elixir-autogen, elixir-format
+msgid "Your booking for %{service} has moved: it was %{before}, it is now %{when}."
 msgstr ""
