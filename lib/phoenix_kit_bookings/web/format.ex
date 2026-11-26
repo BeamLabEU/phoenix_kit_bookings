@@ -4,6 +4,8 @@ defmodule PhoenixKitBookings.Web.Format do
   ranges in the site frame, service mode summaries, status badge classes.
   """
 
+  use Gettext, backend: PhoenixKitBookings.Gettext
+
   alias PhoenixKitBookings.Engine
   alias PhoenixKitBookings.Schemas.{Booking, Service}
 
@@ -56,6 +58,21 @@ defmodule PhoenixKitBookings.Web.Format do
   end
 
   def format_range(_), do: "—"
+
+  @doc "An instant as a site-frame date and time (\"26 Nov 2026 14:05\")."
+  def format_instant(%DateTime{} = dt),
+    do: dt |> Engine.utc_to_frame() |> Calendar.strftime("%d %b %Y %H:%M")
+
+  def format_instant(_), do: "—"
+
+  @doc "The site-frame date of an instant."
+  def frame_date(%DateTime{} = dt), do: dt |> Engine.utc_to_frame() |> DateTime.to_date()
+
+  @doc "A booking status in words."
+  def status_label("pending"), do: gettext("pending")
+  def status_label("confirmed"), do: gettext("confirmed")
+  def status_label("cancelled"), do: gettext("cancelled")
+  def status_label(other), do: other
 
   @doc "daisyUI badge class per booking status."
   def status_badge("pending"), do: "badge badge-warning"

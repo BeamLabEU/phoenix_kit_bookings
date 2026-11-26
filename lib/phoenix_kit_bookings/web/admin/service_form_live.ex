@@ -8,9 +8,10 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
 
   use PhoenixKitWeb, :live_view
 
-  alias PhoenixKitBookings.{Paths, Policy}
-  alias PhoenixKitBookings.Schemas.Service
-  alias PhoenixKitBookings.Services
+  alias PhoenixKitBookings.{HostProfiles, ICalImport, Paths, Policy, PriceOptions, Pricing}
+  alias PhoenixKitBookings.{RegularSlots, Services}
+  alias PhoenixKitBookings.Schemas.{PriceOption, Service}
+  alias PhoenixKitBookings.Web.Format
 
   @weekdays [
     {1, "Mon"},
@@ -51,6 +52,8 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
          action: action,
          service: service,
          providers: provider_options(),
+         host_profiles: host_profile_options(),
+         syncing: false,
          form: to_form(Service.changeset(service, %{}))
        )
        |> load_rules()}
@@ -85,12 +88,22 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
   end
 
   defp load_rules(%{assigns: %{service: %Service{uuid: nil}}} = socket),
-    do: assign(socket, rules: [], units: [])
+    do: assign(socket, rules: [], units: [], price_options: [], regular_slots: [])
 
   defp load_rules(%{assigns: %{service: service}} = socket) do
     socket
-    |> assign(rules: Services.list_rules(service.uuid))
+    |> assign(
+      rules: Services.list_rules(service.uuid),
+      price_options: PriceOptions.list_options(service.uuid),
+      regular_slots: RegularSlots.list_slots(service.uuid)
+    )
     |> load_units()
+  end
+
+  defp host_profile_options do
+    Enum.map(HostProfiles.list_profiles(), &{&1.name, &1.uuid})
+  rescue
+    _ -> []
   end
 
   defp load_units(%{assigns: %{service: %Service{uuid: nil}}} = socket),
@@ -203,6 +216,93 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
     end
   end
 
+  def handle_event("add_price_option", %{"price_option" => params}, socket) do
+    attrs = normalize_option_params(params)
+
+    case Policy.add_price_option(scope(socket), socket.assigns.service, attrs) do
+      {:ok, _option} ->
+        {:noreply, socket |> put_flash(:info, gettext("Price option added.")) |> load_rules()}
+
+      {:error, :not_allowed} ->
+        {:noreply, put_flash(socket, :error, gettext("You can't edit that service."))}
+
+      {:error, changeset} ->
+        {:noreply, put_flash(socket, :error, rule_error(changeset))}
+    end
+  end
+
+  def handle_event("toggle_price_option", %{"uuid" => uuid}, socket) do
+    with %PriceOption{} = option <- Enum.find(socket.assigns.price_options, &(&1.uuid == uuid)),
+         {:ok, _} <-
+           Policy.update_price_option(scope(socket), socket.assigns.service, option, %{
+             "active" => !option.active
+           }) do
+      {:noreply, socket |> put_flash(:info, gettext("Price option updated.")) |> load_rules()}
+    else
+      _ -> {:noreply, put_flash(socket, :error, gettext("Could not update that price option."))}
+    end
+  end
+
+  def handle_event("delete_price_option", %{"uuid" => uuid}, socket) do
+    with %PriceOption{} = option <- Enum.find(socket.assigns.price_options, &(&1.uuid == uuid)),
+         {:ok, _} <- Policy.delete_price_option(scope(socket), socket.assigns.service, option) do
+      {:noreply, socket |> put_flash(:info, gettext("Price option deleted.")) |> load_rules()}
+    else
+      _ -> {:noreply, put_flash(socket, :error, gettext("Could not delete that price option."))}
+    end
+  end
+
+  def handle_event("add_regular_slot", %{"regular_slot" => params}, socket) do
+    attrs = %{
+      "day_of_week" => params["day_of_week"],
+      "start_time" => presence(params["start_time"]),
+      "end_time" => presence(params["end_time"]),
+      "customer_name" => presence(params["customer_name"]),
+      "customer_email" => presence(params["customer_email"]),
+      "user_uuid" => resolve_user_uuid(params["customer_email"]),
+      "notes" => presence(params["notes"])
+    }
+
+    case Policy.add_regular_slot(scope(socket), socket.assigns.service, attrs) do
+      {:ok, _slot} ->
+        {:noreply, socket |> put_flash(:info, gettext("Regular slot added.")) |> load_rules()}
+
+      {:error, :not_allowed} ->
+        {:noreply, put_flash(socket, :error, gettext("You can't edit that service."))}
+
+      {:error, changeset} ->
+        {:noreply, put_flash(socket, :error, rule_error(changeset))}
+    end
+  end
+
+  def handle_event("delete_regular_slot", %{"uuid" => uuid}, socket) do
+    with %{} = slot <- Enum.find(socket.assigns.regular_slots, &(&1.uuid == uuid)),
+         {:ok, _} <- Policy.delete_regular_slot(scope(socket), socket.assigns.service, slot) do
+      {:noreply, socket |> put_flash(:info, gettext("Regular slot removed.")) |> load_rules()}
+    else
+      _ -> {:noreply, put_flash(socket, :error, gettext("Could not remove that regular slot."))}
+    end
+  end
+
+  # The feed is fetched off the LiveView process: a slow calendar server must
+  # not freeze the form.
+  def handle_event("sync_ical", _params, %{assigns: %{syncing: true}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("sync_ical", _params, socket) do
+    scope = scope(socket)
+    service = socket.assigns.service
+
+    if Policy.can_manage?(scope, service) do
+      {:noreply,
+       socket
+       |> assign(syncing: true)
+       |> start_async(:sync_ical, fn -> Policy.sync_ical(scope, service) end)}
+    else
+      {:noreply, put_flash(socket, :error, gettext("You can't edit that service."))}
+    end
+  end
+
   def handle_event("delete_rule", %{"uuid" => uuid}, socket) do
     with %{} = rule <- Enum.find(socket.assigns.rules, &(&1.uuid == uuid)),
          {:ok, _} <- Policy.delete_rule(scope(socket), socket.assigns.service, rule) do
@@ -212,6 +312,109 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
       _ -> {:noreply, put_flash(socket, :error, gettext("Could not remove that rule."))}
     end
   end
+
+  @impl true
+  def handle_async(:sync_ical, result, socket) do
+    socket =
+      socket
+      |> assign(syncing: false)
+      |> assign(
+        service: Services.get_service(socket.assigns.service.uuid) || socket.assigns.service
+      )
+      |> load_rules()
+
+    case result do
+      {:ok, {:ok, stats}} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           gettext("Calendar synced: %{inserted} added, %{updated} updated, %{deleted} removed.",
+             inserted: stats.inserted,
+             updated: stats.updated,
+             deleted: stats.deleted
+           )
+         )}
+
+      {:ok, {:error, :not_allowed}} ->
+        {:noreply, put_flash(socket, :error, gettext("You can't edit that service."))}
+
+      {:ok, {:error, reason}} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("Calendar sync failed: %{reason}", reason: ICalImport.describe(reason))
+         )}
+
+      {:exit, reason} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("Calendar sync failed: %{reason}", reason: inspect(reason))
+         )}
+    end
+  end
+
+  # A "users" option lists accounts by email, one per line or comma.
+  defp normalize_option_params(params) do
+    %{
+      "name" => params["name"],
+      "description" => presence(params["description"]),
+      "price" => params["price"],
+      "price_per" => presence(params["price_per"]),
+      "entitlement" => params["entitlement"] || "everyone",
+      "role_name" => presence(params["role_name"]),
+      "flag_key" => presence(params["flag_key"]),
+      "user_uuids" => resolve_user_uuids(params["user_emails"])
+    }
+  end
+
+  defp resolve_user_uuids(nil), do: []
+
+  defp resolve_user_uuids(text) do
+    text
+    |> String.split([",", "\n", " "], trim: true)
+    |> Enum.map(&resolve_user_uuid/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  defp resolve_user_uuid(email) when is_binary(email) and email != "" do
+    case PhoenixKit.Users.Auth.get_user_by_email(String.trim(email)) do
+      %{uuid: uuid} -> uuid
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp resolve_user_uuid(_), do: nil
+
+  defp entitlement_label(%PriceOption{entitlement: "everyone"}), do: gettext("Everyone")
+
+  defp entitlement_label(%PriceOption{entitlement: "users", user_uuids: uuids}),
+    do: ngettext("%{count} chosen account", "%{count} chosen accounts", length(uuids || []))
+
+  defp entitlement_label(%PriceOption{entitlement: "role", role_name: role}),
+    do: gettext("Role: %{role}", role: role)
+
+  defp entitlement_label(%PriceOption{entitlement: "flag", flag_key: key}),
+    do: gettext("Members with flag: %{flag}", flag: key)
+
+  defp entitlement_label(_), do: ""
+
+  defp slot_holder(slot) do
+    Enum.find([slot.customer_name, slot.customer_email], &(&1 not in [nil, ""])) || "—"
+  end
+
+  defp slot_hours(%{start_time: %Time{} = s, end_time: %Time{} = e}),
+    do: "#{Calendar.strftime(s, "%H:%M")}–#{Calendar.strftime(e, "%H:%M")}"
+
+  defp slot_hours(_), do: gettext("whole day")
+
+  defp weekday_label(num), do: Enum.find_value(@weekdays, fn {n, label} -> n == num && label end)
 
   defp save(socket, :new, params) do
     case Policy.create_service(scope(socket), params) do
@@ -310,6 +513,25 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
               placeholder={gettext("auto-generated from the name when left blank")}
             />
             <.textarea field={@form[:description]} label={gettext("Description")} />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <.input
+                field={@form[:host_ref]}
+                type="text"
+                label={gettext("Host reference (optional)")}
+                placeholder={gettext("e.g. machine:42 — links this service to a record of your site")}
+              />
+              <.select
+                :if={@host_profiles != []}
+                field={@form[:host_profile_uuid]}
+                label={gettext("Run by (public host profile)")}
+                prompt={gettext("No host profile")}
+                options={@host_profiles}
+              />
+            </div>
+            <.checkbox
+              field={@form[:bookable_online]}
+              label={gettext("Bookable on the site (off: the public page only shows availability)")}
+            />
           </div>
         </div>
 
@@ -464,6 +686,38 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
           </div>
         </div>
 
+        <div class="card bg-base-100 shadow-lg" id="bookings-ical-card">
+          <div class="card-body gap-4">
+            <h3 class="card-title text-base">{gettext("External calendar (iCal import)")}</h3>
+            <p class="text-sm text-base-content/60">
+              {gettext("Busy times from another calendar (an .ics / webcal link) are imported as bookings marked as imported, synced hourly. A re-sync replaces only imported entries, never bookings made here.")}
+            </p>
+            <.input
+              field={@form[:ical_url]}
+              type="url"
+              label={gettext("Calendar feed URL")}
+              placeholder="https://example.com/calendar.ics"
+            />
+            <div :if={@action == :edit and @service.ical_url} class="flex flex-wrap items-center gap-3 text-sm">
+              <button
+                type="button"
+                class="btn btn-sm"
+                phx-click="sync_ical"
+                disabled={@syncing}
+                id="bookings-sync-ical"
+              >
+                {if @syncing, do: gettext("Syncing…"), else: gettext("Sync now")}
+              </button>
+              <span :if={@service.ical_synced_at} class="text-base-content/60">
+                {gettext("Last sync: %{at}", at: Format.format_instant(@service.ical_synced_at))}
+              </span>
+              <span :if={@service.ical_sync_error} class="text-error">
+                {@service.ical_sync_error}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <div class="flex gap-2">
           <button type="submit" class="btn btn-primary">{gettext("Save")}</button>
           <.link navigate={Paths.admin_services()} class="btn btn-ghost">{gettext("Cancel")}</.link>
@@ -600,6 +854,179 @@ defmodule PhoenixKitBookings.Web.Admin.ServiceFormLive do
               <input type="text" name="unit[name]" class="input input-sm" required />
             </label>
             <button type="submit" class="btn btn-sm btn-primary">{gettext("Add unit")}</button>
+          </form>
+        </div>
+      </div>
+
+      <div :if={@action == :edit} class="card bg-base-100 shadow-lg" id="bookings-price-options">
+        <div class="card-body gap-4">
+          <h3 class="card-title text-base">{gettext("Price options")}</h3>
+          <p class="text-sm text-base-content/60">
+            {gettext("Extra rates beside the standard price — a trainer's solo-lesson rate, a members' price. Each says who may book at it; customers see only the options they are entitled to.")}
+          </p>
+
+          <table :if={@price_options != []} class="table table-sm">
+            <tbody>
+              <tr :for={option <- @price_options} id={"price-option-#{option.uuid}"}>
+                <td class="text-sm">
+                  <div class="font-medium">{option.name}</div>
+                  <div class="text-xs text-base-content/50">
+                    {Pricing.tag(Pricing.apply_option(@service, option))}
+                  </div>
+                </td>
+                <td class="text-sm">{entitlement_label(option)}</td>
+                <td>
+                  <span class={if option.active, do: "badge badge-success", else: "badge badge-ghost"}>
+                    {if option.active, do: gettext("Active"), else: gettext("Inactive")}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="join">
+                    <button
+                      class="btn btn-xs join-item"
+                      phx-click="toggle_price_option"
+                      phx-value-uuid={option.uuid}
+                    >
+                      {if option.active, do: gettext("Deactivate"), else: gettext("Activate")}
+                    </button>
+                    <button
+                      class="btn btn-xs btn-ghost join-item"
+                      phx-click="delete_price_option"
+                      phx-value-uuid={option.uuid}
+                      data-confirm={gettext("Delete this price option? Past bookings keep their total.")}
+                    >
+                      {gettext("Delete")}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <form
+            id="bookings-add-price-option"
+            phx-submit="add_price_option"
+            class="flex flex-col gap-3 border-t border-base-200 pt-4"
+          >
+            <div class="flex flex-wrap items-end gap-3">
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Name")}</span>
+                <input type="text" name="price_option[name]" class="input input-sm" required />
+              </label>
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Price")}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="price_option[price]"
+                  class="input input-sm w-28"
+                  required
+                />
+              </label>
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Per")}</span>
+                <label class="select select-sm">
+                  <select name="price_option[price_per]">
+                    <option value="">{gettext("As the service")}</option>
+                    <option value="booking">{gettext("Booking (flat)")}</option>
+                    <option value="hour">{gettext("Hour")}</option>
+                    <option value="day">{gettext("Day")}</option>
+                    <option value="night">{gettext("Night")}</option>
+                  </select>
+                </label>
+              </label>
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Who may book at it")}</span>
+                <label class="select select-sm">
+                  <select name="price_option[entitlement]">
+                    <option value="everyone">{gettext("Everyone")}</option>
+                    <option value="users">{gettext("Chosen accounts")}</option>
+                    <option value="role">{gettext("A role")}</option>
+                    <option value="flag">{gettext("Members with a flag")}</option>
+                  </select>
+                </label>
+              </label>
+            </div>
+            <div class="flex flex-wrap items-end gap-3">
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Account emails (chosen accounts)")}</span>
+                <input type="text" name="price_option[user_emails]" class="input input-sm" />
+              </label>
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Role name (a role)")}</span>
+                <input type="text" name="price_option[role_name]" class="input input-sm" />
+              </label>
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Account flag (custom field key)")}</span>
+                <input type="text" name="price_option[flag_key]" class="input input-sm" />
+              </label>
+              <label class="fieldset">
+                <span class="fieldset-legend text-xs">{gettext("Description (optional)")}</span>
+                <input type="text" name="price_option[description]" class="input input-sm" />
+              </label>
+              <button type="submit" class="btn btn-sm btn-primary">{gettext("Add price option")}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div :if={@action == :edit} class="card bg-base-100 shadow-lg" id="bookings-regular-slots">
+        <div class="card-body gap-4">
+          <h3 class="card-title text-base">{gettext("Regular slots")}</h3>
+          <p class="text-sm text-base-content/60">
+            {gettext("Who usually has a time. Nobody is blocked: when someone else books into a regular slot, the booking goes through and you are warned.")}
+          </p>
+
+          <table :if={@regular_slots != []} class="table table-sm">
+            <tbody>
+              <tr :for={slot <- @regular_slots} id={"regular-slot-#{slot.uuid}"}>
+                <td class="text-sm">{weekday_label(slot.day_of_week)}</td>
+                <td class="text-sm">{slot_hours(slot)}</td>
+                <td class="text-sm">{slot_holder(slot)}</td>
+                <td class="text-right">
+                  <button
+                    class="btn btn-xs btn-ghost"
+                    phx-click="delete_regular_slot"
+                    phx-value-uuid={slot.uuid}
+                  >
+                    {gettext("Remove")}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <form
+            id="bookings-add-regular-slot"
+            phx-submit="add_regular_slot"
+            class="flex flex-wrap items-end gap-3 border-t border-base-200 pt-4"
+          >
+            <label class="fieldset">
+              <span class="fieldset-legend text-xs">{gettext("Weekday")}</span>
+              <label class="select select-sm">
+                <select name="regular_slot[day_of_week]">
+                  <option :for={{num, label} <- weekdays()} value={num}>{label}</option>
+                </select>
+              </label>
+            </label>
+            <label :if={minutes?(@form)} class="fieldset">
+              <span class="fieldset-legend text-xs">{gettext("From")}</span>
+              <input type="time" name="regular_slot[start_time]" class="input input-sm" />
+            </label>
+            <label :if={minutes?(@form)} class="fieldset">
+              <span class="fieldset-legend text-xs">{gettext("To")}</span>
+              <input type="time" name="regular_slot[end_time]" class="input input-sm" />
+            </label>
+            <label class="fieldset">
+              <span class="fieldset-legend text-xs">{gettext("Regular customer's name")}</span>
+              <input type="text" name="regular_slot[customer_name]" class="input input-sm" />
+            </label>
+            <label class="fieldset">
+              <span class="fieldset-legend text-xs">{gettext("Their email")}</span>
+              <input type="email" name="regular_slot[customer_email]" class="input input-sm" required />
+            </label>
+            <button type="submit" class="btn btn-sm btn-primary">{gettext("Add regular slot")}</button>
           </form>
         </div>
       </div>

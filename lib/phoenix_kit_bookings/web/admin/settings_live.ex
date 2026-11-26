@@ -21,7 +21,8 @@ defmodule PhoenixKitBookings.Web.Admin.SettingsLive do
          page_crumbs: [],
          page_title: gettext("Bookings"),
          user_services_enabled: Policy.user_services_enabled?(),
-         max_services: Policy.max_services_per_user()
+         max_services: Policy.max_services_per_user(),
+         notify_email: Settings.get_setting("bookings_notify_email", "")
        )}
     else
       {:ok,
@@ -49,10 +50,14 @@ defmodule PhoenixKitBookings.Web.Admin.SettingsLive do
         "bookings"
       )
 
+      notify_email = String.trim(params["notify_email"] || "")
+
+      Settings.update_setting_with_module("bookings_notify_email", notify_email, "bookings")
+
       {:noreply,
        socket
        |> put_flash(:info, gettext("Settings saved."))
-       |> assign(user_services_enabled: enabled, max_services: max)}
+       |> assign(user_services_enabled: enabled, max_services: max, notify_email: notify_email)}
     else
       {:noreply, socket}
     end
@@ -103,6 +108,22 @@ defmodule PhoenixKitBookings.Web.Admin.SettingsLive do
               min="0"
               class="input"
             />
+          </label>
+
+          <label class="fieldset max-w-md">
+            <span class="fieldset-legend text-sm">
+              {gettext("Owner notifications go to (site services)")}
+            </span>
+            <input
+              type="email"
+              name="settings[notify_email]"
+              value={@notify_email}
+              class="input"
+              placeholder={gettext("blank = no email")}
+            />
+            <span class="text-xs text-base-content/50">
+              {gettext("Where the warning goes when someone books another customer's regular slot on a service without an owner. A user-owned service warns its owner.")}
+            </span>
           </label>
 
           <p class="text-xs text-base-content/50">
