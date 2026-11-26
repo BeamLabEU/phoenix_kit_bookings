@@ -646,7 +646,11 @@ defmodule PhoenixKitBookings.Bookings do
       repo().rollback({:rejected, :at_capacity, @event_full})
     end
 
-    if service_full_for_event?(locked_service, locked_event) do
+    if service_full_for_event?(
+         locked_service,
+         locked_event,
+         event_seats_taken(locked_event.uuid) + 1
+       ) do
       repo().rollback({:rejected, :at_capacity, @service_full})
     end
 
@@ -654,14 +658,16 @@ defmodule PhoenixKitBookings.Bookings do
   end
 
   @doc """
-  Whether the service's OWN bookings and holds (everything but this event's
-  sign-ups) fill all its seats at some moment of the event — the room is
-  taken, so the event cannot seat anyone. False for an event that ignores
-  the service's capacity (`Event.ignore_service_capacity?/1`) and for a
-  day/night service. Called under the service lock by the sign-up and by
-  `Events.update_event/3` for a moved event.
+  Whether `seats` of the event (its sign-ups after this one, or the
+  bookings a move brings along) do NOT fit beside the service's other
+  bookings and holds at the busiest moment of the event: the event's seats
+  count against the service's capacity like any booking. False for an
+  event that ignores the service's capacity
+  (`Event.ignore_service_capacity?/1`) and for a day/night service. Called
+  under the service lock by the sign-up and by `Events.update_event/3` for
+  a moved event.
   """
-  def service_full_for_event?(%Service{} = service, %Event{} = event) do
+  def service_full_for_event?(%Service{} = service, %Event{} = event, seats_needed) do
     if Event.ignore_service_capacity?(event) or service.time_unit != "minutes" do
       false
     else
@@ -674,7 +680,7 @@ defmodule PhoenixKitBookings.Bookings do
         |> Enum.reject(&(&1.event_uuid == event.uuid))
         |> peak_overlap(window)
 
-      taken >= seats
+      taken + seats_needed > seats
     end
   end
 
@@ -697,6 +703,20 @@ defmodule PhoenixKitBookings.Bookings do
 
   defp event_total(%Event{price: nil}, service, range), do: Pricing.total(service, range)
   defp event_total(%Event{price: price}, _service, _range), do: Decimal.round(price, 2)
+
+  @doc """
+  What one seat at `event` costs on `service`: the event's own price, else
+  the service's for the event's length. `{:ok, total | nil}` or
+  `{:error, :total_too_large}` past the column. Used when a moved event
+  re-prices the bookings it takes along.
+  """
+  def event_seat_total(%Event{} = event, %Service{} = service) do
+    total = event_total(event, service, {event.starts_at, event.ends_at})
+
+    if total && Decimal.compare(total, @max_total) == :gt,
+      do: {:error, :total_too_large},
+      else: {:ok, total}
+  end
 
   defp event_open?(%Event{status: "scheduled", starts_at: starts_at}, now),
     do: DateTime.compare(starts_at, now) == :gt

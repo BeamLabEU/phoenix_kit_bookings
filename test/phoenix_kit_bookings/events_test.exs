@@ -27,7 +27,7 @@ defmodule PhoenixKitBookings.EventsTest do
 
   describe "create_event_booking/3" do
     test "books seats up to the event's capacity, then refuses" do
-      service = slot_service_fixture(%{"price" => "12"})
+      service = slot_service_fixture(%{"price" => "12", "seats" => 5})
       event = event_fixture(service)
 
       {:ok, one} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
@@ -121,6 +121,29 @@ defmodule PhoenixKitBookings.EventsTest do
                Bookings.create_event_booking(event, customer_attrs(), notify: false)
     end
 
+    test "the event's own sign-ups count against the service's seats too" do
+      service = slot_service_fixture(%{"seats" => 2})
+      event = event_fixture(service, %{"capacity" => 5})
+
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      assert {:error, :at_capacity, _} =
+               Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      # One ordinary booking at that time leaves room for one sign-up only.
+      busy = slot_service_fixture(%{"seats" => 2})
+      other = event_fixture(busy, %{"capacity" => 5})
+
+      {:ok, _} =
+        Bookings.create_booking(busy, {at(2, 18), at(2, 19)}, customer_attrs(), notify: false)
+
+      {:ok, _} = Bookings.create_event_booking(other, customer_attrs(), notify: false)
+
+      assert {:error, :at_capacity, _} =
+               Bookings.create_event_booking(other, customer_attrs(), notify: false)
+    end
+
     test "back-to-back bookings that never overlap each other leave a seat" do
       service = slot_service_fixture(%{"seats" => 2})
 
@@ -187,7 +210,7 @@ defmodule PhoenixKitBookings.EventsTest do
     end
 
     test "capacity cannot drop below the seats taken" do
-      event = event_fixture(slot_service_fixture(), %{"capacity" => 2})
+      event = event_fixture(slot_service_fixture(%{"seats" => 5}), %{"capacity" => 2})
       {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
       {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
 
@@ -237,6 +260,43 @@ defmodule PhoenixKitBookings.EventsTest do
                )
     end
 
+    test "a move must fit all the bookings it brings, and lands only on a timed service" do
+      service = slot_service_fixture(%{"seats" => 2})
+      event = event_fixture(service, %{"capacity" => 2})
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+      {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+
+      # One ordinary booking at the new hour: two moving seats do not fit in two.
+      {:ok, _} =
+        Bookings.create_booking(service, {at(3, 9), at(3, 10)}, customer_attrs(), notify: false)
+
+      assert {:error, cs} =
+               Events.update_event(event, %{"starts_at" => at(3, 9), "ends_at" => at(3, 10)})
+
+      assert errors_on(cs)[:starts_at] == ["the service is fully booked at the new time"]
+
+      hotel = hotel_service_fixture()
+      assert {:error, cs} = Events.update_event(event, %{"service_uuid" => hotel.uuid})
+
+      assert errors_on(cs)[:service_uuid] == [
+               "must be a minute-based service while the event has bookings"
+             ]
+    end
+
+    test "moved bookings are re-priced for the new length" do
+      service = slot_service_fixture(%{"price" => "30", "price_per" => "hour"})
+      event = event_fixture(service, %{"capacity" => 1})
+      {:ok, booking} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
+      assert Decimal.equal?(booking.total_price, Decimal.new("30.00"))
+
+      {:ok, _} =
+        Events.update_event(event, %{"starts_at" => at(3, 9), "ends_at" => at(3, 11)},
+          notify: false
+        )
+
+      assert Decimal.equal?(Bookings.get_booking(booking.uuid).total_price, Decimal.new("60.00"))
+    end
+
     test "a move is refused while the service is full at the new time; nothing moves" do
       service = slot_service_fixture()
       event = event_fixture(service)
@@ -253,7 +313,14 @@ defmodule PhoenixKitBookings.EventsTest do
     end
 
     test "a blank capacity falls back to the service's seats, judged against the seats taken" do
-      event = event_fixture(slot_service_fixture(), %{"capacity" => 2})
+      # Two seats sold on a one-seat service: only an event that ignores the
+      # service's capacity gets there.
+      event =
+        event_fixture(slot_service_fixture(), %{
+          "capacity" => 2,
+          "ignore_service_capacity" => "true"
+        })
+
       {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
       {:ok, _} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
 
@@ -271,7 +338,7 @@ defmodule PhoenixKitBookings.EventsTest do
     end
 
     test "saving a cancelled event finishes an interrupted sweep, sparing later sign-ups" do
-      event = event_fixture(slot_service_fixture(), %{"capacity" => 3})
+      event = event_fixture(slot_service_fixture(%{"seats" => 5}), %{"capacity" => 3})
       {:ok, early} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
       {:ok, later} = Bookings.create_event_booking(event, customer_attrs(), notify: false)
 
