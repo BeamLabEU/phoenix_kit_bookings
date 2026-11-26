@@ -43,8 +43,17 @@ defmodule PhoenixKitBookings.Workers.ReminderWorker do
     at = DateTime.add(starts_at, -minutes * 60, :second)
 
     if DateTime.compare(at, DateTime.utc_now()) == :gt do
+      # One pending job per booking and start: an event moved away and back
+      # again must not leave two reminders for the same time.
       %{"booking_uuid" => booking.uuid, "starts_at" => DateTime.to_iso8601(starts_at)}
-      |> new(scheduled_at: at)
+      |> new(
+        scheduled_at: at,
+        unique: [
+          period: :infinity,
+          keys: [:booking_uuid, :starts_at],
+          states: [:available, :scheduled, :retryable]
+        ]
+      )
       |> Oban.insert()
 
       :ok

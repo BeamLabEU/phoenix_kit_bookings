@@ -115,6 +115,19 @@ defmodule PhoenixKitBookings.NotifyTest do
                })
 
       assert_no_email_sent()
+
+      # Moved back: the 10:00 reminder already waiting is not doubled.
+      {:ok, _} =
+        PhoenixKitBookings.Events.update_event(event, %{
+          "starts_at" => tomorrow_at(10),
+          "ends_at" => tomorrow_at(11)
+        })
+
+      jobs =
+        all_enqueued(worker: ReminderWorker)
+        |> Enum.filter(&(&1.args == %{"booking_uuid" => booking.uuid, "starts_at" => old_start}))
+
+      assert length(jobs) == 1
     end
   end
 
