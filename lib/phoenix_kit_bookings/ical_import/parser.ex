@@ -63,6 +63,8 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   @max_length_seconds 100 * 366 * 86_400
   # Candidates walked per rule at most (a daily rule over 270 years).
   @max_steps 100_000
+  # Months a monthly BYDAY/BYMONTHDAY rule walks at most (500 years).
+  @max_months 6_000
 
   @weekdays %{"MO" => 1, "TU" => 2, "WE" => 3, "TH" => 4, "FR" => 5, "SA" => 6, "SU" => 7}
 
@@ -643,7 +645,11 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     {:ok, bydays} = rule |> Map.get("BYDAY") |> split_parts(&parse_byday/1)
     {:ok, monthdays} = rule |> Map.get("BYMONTHDAY") |> monthdays_or_nil()
 
+    # Bounded by months WALKED: a combination no month satisfies
+    # (BYDAY=5FR;BYMONTHDAY=1) yields nothing, and a bound on what is yielded
+    # would never be reached.
     Stream.iterate(0, &(&1 + 1))
+    |> Stream.take(@max_months)
     |> Stream.flat_map(fn n ->
       %Date{year: y, month: m} = shift_months(%{first_date | day: 1}, n * interval)
 
@@ -658,6 +664,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     first_date = start_date(start)
 
     Stream.iterate(0, &(&1 + 1))
+    |> Stream.take(@max_steps)
     |> Stream.map(fn n -> step_date(first_date, freq, n * interval) end)
     |> Stream.reject(&is_nil/1)
     |> Stream.map(&with_date(start, &1))
@@ -868,7 +875,9 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     with "YEARLY" <- rule["FREQ"],
          {month, ""} when month in 1..12 <- Integer.parse(rule["BYMONTH"] || ""),
          {:ok, {n, weekday}} when not is_nil(n) <- parse_byday(rule["BYDAY"] || ""),
-         true <- Enum.all?(Map.keys(rule), &(&1 in ~w(FREQ BYMONTH BYDAY UNTIL INTERVAL))) do
+         # UNTIL / INTERVAL would bound or thin the onsets; not modelled, so
+         # such a zone stays unknown rather than wrong.
+         true <- Enum.all?(Map.keys(rule), &(&1 in ~w(FREQ BYMONTH BYDAY))) do
       {:ok, %{month: month, nth: n, weekday: weekday}}
     else
       _ -> :error

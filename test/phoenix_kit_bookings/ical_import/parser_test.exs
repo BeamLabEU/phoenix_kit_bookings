@@ -559,4 +559,48 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
       assert e == ~U[2026-03-08 16:00:00Z]
     end
   end
+
+  describe "round-4 review fixes" do
+    test "a monthly rule no month satisfies ends instead of spinning" do
+      task =
+        Task.async(fn ->
+          parse("""
+          BEGIN:VEVENT
+          UID:hang
+          DTSTART:20260101T090000Z
+          DURATION:PT1H
+          RRULE:FREQ=MONTHLY;COUNT=1;BYDAY=5FR;BYMONTHDAY=1
+          END:VEVENT
+          BEGIN:VEVENT
+          UID:hang2
+          DTSTART:20260101T090000Z
+          DURATION:PT1H
+          RRULE:FREQ=MONTHLY;BYDAY=5FR;BYMONTHDAY=1
+          END:VEVENT
+          """)
+        end)
+
+      assert %{events: []} = Task.await(task, 10_000)
+    end
+
+    test "a VTIMEZONE observance with UNTIL is not guessed at: the TZID falls back, counted" do
+      %{unsupported: 1} =
+        parse("""
+        BEGIN:VTIMEZONE
+        TZID:Old
+        BEGIN:STANDARD
+        DTSTART:19701025T030000
+        TZOFFSETFROM:+0300
+        TZOFFSETTO:+0200
+        RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU;UNTIL=19901028T010000Z
+        END:STANDARD
+        END:VTIMEZONE
+        BEGIN:VEVENT
+        UID:o
+        DTSTART;TZID=Old:20260310T100000
+        DURATION:PT1H
+        END:VEVENT
+        """)
+    end
+  end
 end
