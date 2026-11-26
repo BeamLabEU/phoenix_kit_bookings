@@ -112,6 +112,27 @@ defmodule PhoenixKitBookings.ImportsTest do
       assert [%{external_id: "a"}] = Imports.list_imported_bookings(service.uuid)
     end
 
+    test "a list read before the one last applied is refused and changes nothing" do
+      service = slot_service_fixture()
+      t1 = ~U[2026-11-26 10:00:00.000000Z]
+      t2 = DateTime.add(t1, 5)
+
+      {:ok, %{inserted: 1}} =
+        Imports.sync_bookings(service, "ical", [entry("new", 1, 10, 11)], fetched_at: t2)
+
+      assert {:error, :stale_result} =
+               Imports.sync_bookings(service, "ical", [], fetched_at: t1)
+
+      assert [%{external_id: "new"}] = Imports.list_imported_bookings(service.uuid)
+
+      # Another source, or the rules of this one, keep their own clock.
+      assert {:ok, _} = Imports.sync_bookings(service, "other", [], fetched_at: t1)
+      assert {:ok, _} = Imports.sync_rules(service, "ical", [], fetched_at: t1)
+
+      assert {:ok, %{deleted: 1}} =
+               Imports.sync_bookings(service, "ical", [], fetched_at: DateTime.add(t2, 1))
+    end
+
     test "a bad entry writes nothing at all" do
       service = slot_service_fixture()
       {:ok, _} = Imports.sync_bookings(service, "ical", [entry("keep", 1, 10, 11)])

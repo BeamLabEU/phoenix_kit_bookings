@@ -44,12 +44,18 @@ defmodule PhoenixKitBookings.Imports do
 
   Returns `{:ok, %{inserted: n, updated: n, deleted: n}}`, or
   `{:error, {external_id, changeset}}` for the first entry that does not fit
-  (nothing is written then). Options: `:actor_uuid`.
+  (nothing is written then). Options: `:actor_uuid`, and `:fetched_at` (a
+  `DateTime`: when the caller read the list from its source). With
+  `:fetched_at`, a list read BEFORE the one last applied for this source is
+  refused as `{:error, :stale_result}` and changes nothing — two syncs that
+  overlap (a cron run and "Sync now") cannot let the older snapshot
+  overwrite the newer. Syncs of one service are serialised by its row lock.
   """
   def sync_bookings(%Service{} = service, external_source, entries, opts \\ [])
       when is_binary(external_source) and is_list(entries) do
     sync(service, external_source, entries, opts, %{
       schema: Booking,
+      kind: "bookings",
       action: "bookings.import_synced",
       build: fn existing, entry ->
         Booking.import_changeset(
@@ -75,6 +81,7 @@ defmodule PhoenixKitBookings.Imports do
       when is_binary(external_source) and is_list(rules) do
     sync(service, external_source, rules, opts, %{
       schema: AvailabilityRule,
+      kind: "rules",
       action: "bookings.import_rules_synced",
       build: fn existing, entry ->
         AvailabilityRule.import_changeset(
@@ -101,6 +108,8 @@ defmodule PhoenixKitBookings.Imports do
         # a service switched to another unit since then would take rows of
         # the wrong shape, so the sync stops and the next one maps afresh.
         if locked.time_unit != service.time_unit, do: repo().rollback(:service_changed)
+
+        claim_fetch!(locked, "#{external_source}/#{spec.kind}", opts[:fetched_at])
 
         existing =
           from(r in spec.schema,
@@ -198,6 +207,31 @@ defmodule PhoenixKitBookings.Imports do
   end
 
   defp stringify(map), do: Map.new(map, fn {k, v} -> {to_string(k), v} end)
+
+  # The newest applied read wins: an older one rolls back untouched; a newer
+  # one is recorded in the service's settings under the lock.
+  defp claim_fetch!(_locked, _key, nil), do: :ok
+
+  defp claim_fetch!(%Service{} = locked, key, %DateTime{} = fetched_at) do
+    applied = get_in(locked.settings || %{}, ["import_fetched_at", key])
+
+    with iso when is_binary(iso) <- applied,
+         {:ok, last, _} <- DateTime.from_iso8601(iso),
+         :lt <- DateTime.compare(fetched_at, last) do
+      repo().rollback(:stale_result)
+    else
+      _ ->
+        settings = locked.settings || %{}
+
+        marks =
+          Map.put(settings["import_fetched_at"] || %{}, key, DateTime.to_iso8601(fetched_at))
+
+        from(s in Service, where: s.uuid == ^locked.uuid)
+        |> repo().update_all(set: [settings: Map.put(settings, "import_fetched_at", marks)])
+
+        :ok
+    end
+  end
 
   defp lock_service!(service) do
     case repo().one(from(s in Service, where: s.uuid == ^service.uuid, lock: "FOR UPDATE")) do

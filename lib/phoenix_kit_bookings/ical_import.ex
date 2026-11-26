@@ -47,7 +47,9 @@ defmodule PhoenixKitBookings.ICalImport do
   `{:error, reason}` (also stamped on the service as `ical_sync_error`).
   A service without a URL returns `{:error, :no_url}` and changes nothing.
 
-  Options: `:actor_uuid`, `:now` (test injection), `:tz` (the site zone).
+  Options: `:actor_uuid`, `:now` (test injection), `:tz` (the site zone),
+  `:fetched_at` (when the read began; default now — a read older than the
+  last applied one returns `{:ok, %{stale: true, …}}` and changes nothing).
   """
   def sync_service(%Service{ical_url: url} = service, opts \\ []) do
     if url in [nil, ""] do
@@ -62,6 +64,9 @@ defmodule PhoenixKitBookings.ICalImport do
   defp do_sync(service, url, opts) do
     now = Keyword.get(opts, :now, DateTime.utc_now())
     tz = Keyword.get(opts, :tz, Engine.site_tz())
+    # When this read began: a slower read that started earlier must not
+    # replace a newer one applied meanwhile (Imports' `:fetched_at`).
+    fetched_at = Keyword.get(opts, :fetched_at, DateTime.utc_now())
 
     with {:ok, body} <- fetch(url),
          {:ok, %{events: events, unsupported: unsupported}} <-
@@ -76,12 +81,19 @@ defmodule PhoenixKitBookings.ICalImport do
              service,
              @external_source,
              entries,
-             Keyword.take(opts, [:actor_uuid])
+             opts |> Keyword.take([:actor_uuid]) |> Keyword.put(:fetched_at, fetched_at)
            ) do
       {:ok, Map.merge(stats, %{events: length(entries), unsupported: unsupported})}
     else
-      {:error, {external_id, %Ecto.Changeset{}}} -> {:error, {:invalid_entry, external_id}}
-      {:error, reason} -> {:error, reason}
+      # A newer read was applied while this one was in flight: nothing to do.
+      {:error, :stale_result} ->
+        {:ok, %{inserted: 0, updated: 0, deleted: 0, events: 0, unsupported: 0, stale: true}}
+
+      {:error, {external_id, %Ecto.Changeset{}}} ->
+        {:error, {:invalid_entry, external_id}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

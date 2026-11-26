@@ -116,6 +116,22 @@ defmodule PhoenixKitBookings.ICalImport.SyncTest do
     assert [_] = Imports.list_imported_bookings(service.uuid)
   end
 
+  test "a read that began before the last applied one is dropped, not applied" do
+    service = slot_service_fixture(%{"ical_url" => "https://cal.example.com/x.ics"})
+    newer = DateTime.utc_now()
+
+    Process.put(:ical_response, feed([{"a", at(1, 10), at(1, 11)}]))
+    {:ok, %{inserted: 1}} = ICalImport.sync_service(service, fetched_at: newer)
+
+    Process.put(:ical_response, feed([]))
+
+    assert {:ok, %{stale: true, deleted: 0}} =
+             ICalImport.sync_service(service, fetched_at: DateTime.add(newer, -30))
+
+    assert [_] = Imports.list_imported_bookings(service.uuid)
+    assert Services.get_service(service.uuid).ical_sync_error == nil
+  end
+
   test "no URL, no sync" do
     assert {:error, :no_url} = ICalImport.sync_service(slot_service_fixture())
     refute_received {:fetched, _}
