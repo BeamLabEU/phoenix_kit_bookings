@@ -51,8 +51,9 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   # Occurrences a whole feed may expand to; more is refused, not truncated,
   # because a truncated list would delete the imported rows past the cut.
   @max_feed_occurrences 20_000
-  # The longest event read (two years): date arithmetic on a DURATION of
-  # 10^20 seconds runs for minutes, so a longer one is skipped as malformed.
+  # The longest event read (two years, longer than the import window):
+  # date arithmetic on a DURATION of 10^20 seconds runs for minutes, so a
+  # longer one is cut to this, still busy across the whole window.
   @max_length_seconds 2 * 366 * 86_400
   # Candidates walked per rule at most (a daily rule over 270 years).
   @max_steps 100_000
@@ -74,7 +75,8 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
 
     # A body cut off in transit still starts like a calendar; read as one it
     # would list fewer events, and the sync would delete the missing ones.
-    if Regex.match?(~r/BEGIN:VCALENDAR/i, text) and Regex.match?(~r/END:VCALENDAR/i, text) do
+    if Regex.match?(~r/^BEGIN:VCALENDAR\s*$/mi, text) and
+         Regex.match?(~r/^END:VCALENDAR\s*$/mi, text) do
       do_parse(text, from, until, tz)
     else
       {:error, :not_a_calendar}
@@ -342,7 +344,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
       [_ | parts] ->
         [w, d, h, m, s] = Enum.map(parts ++ List.duplicate("", 5 - length(parts)), &to_int/1)
         seconds = w * 604_800 + d * 86_400 + h * 3600 + m * 60 + s
-        if seconds > @max_length_seconds, do: 0, else: seconds
+        min(seconds, @max_length_seconds)
 
       _ ->
         0

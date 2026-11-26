@@ -348,6 +348,13 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
 
       assert {:error, :not_a_calendar} =
                Parser.parse(
+                 "BEGIN:VCALENDAR\r\nX-NOTE:END:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a\r\n",
+                 from: @from,
+                 until: @until
+               )
+
+      assert {:error, :not_a_calendar} =
+               Parser.parse(
                  "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a\r\nDTSTART:20260310T090000Z\r\n",
                  from: @from,
                  until: @until
@@ -375,7 +382,7 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
                Parser.parse(cal(body), from: @from, until: ~U[2032-01-01 00:00:00Z])
     end
 
-    test "an absurd DURATION is skipped at once instead of stalling the date arithmetic" do
+    test "an absurd DURATION is cut to two years at once instead of stalling the date arithmetic" do
       task =
         Task.async(fn ->
           parse("""
@@ -392,7 +399,9 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
           """)
         end)
 
-      assert %{events: [%{uid: "ok"}]} = Task.await(task, 5_000)
+      assert %{events: [long, %{uid: "ok"}]} = Task.await(task, 5_000)
+      assert {:datetime, ~U[2026-03-10 09:00:00Z], ends} = long.range
+      assert DateTime.diff(ends, ~U[2026-03-10 09:00:00Z]) == 2 * 366 * 86_400
     end
   end
 end
