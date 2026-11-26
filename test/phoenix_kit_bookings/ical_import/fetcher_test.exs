@@ -174,6 +174,25 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcherTest do
                {:error, :invalid_url}
     end
 
+    test "an interim 1xx response is skipped for the final one" do
+      ref = make_ref()
+      state = %{status: nil, body: [], bytes: 0}
+
+      assert {:done, {:ok, "BEGIN"}} =
+               HTTPFetcher.handle(
+                 [
+                   {:status, ref, 103},
+                   {:headers, ref, [{"link", "</x.css>"}]},
+                   {:status, ref, 200},
+                   {:headers, ref, [{"content-type", "text/calendar"}]},
+                   {:data, ref, "BEGIN"},
+                   {:done, ref}
+                 ],
+                 ref,
+                 state
+               )
+    end
+
     test "cuts a streamed body off at 5 MB" do
       port = start_server()
       Application.put_env(:phoenix_kit_bookings, :ical_allowed_hosts, ["127.0.0.1"])

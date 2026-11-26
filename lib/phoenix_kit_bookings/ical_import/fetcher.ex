@@ -211,6 +211,12 @@ defmodule PhoenixKitBookings.ICalImport.HTTPFetcher do
   def handle([{:status, ref, status} | rest], ref, state),
     do: handle(rest, ref, %{state | status: status})
 
+  # An interim response (100 Continue, 103 Early Hints): its headers carry
+  # nothing wanted, and the final status follows on the same request.
+  def handle([{:headers, ref, _headers} | rest], ref, %{status: status} = state)
+      when status in 100..199,
+      do: handle(rest, ref, %{state | status: nil})
+
   def handle([{:headers, ref, headers} | _rest], ref, %{status: status})
       when status in @redirects do
     case header(headers, "location") do
