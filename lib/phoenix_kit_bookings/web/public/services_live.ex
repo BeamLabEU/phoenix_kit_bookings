@@ -75,7 +75,7 @@ defmodule PhoenixKitBookings.Web.Public.ServicesLive do
               <p class="text-xs text-base-content/50">{Format.mode_summary(service)}</p>
               <div class="card-actions justify-end mt-2">
                 <.link navigate={Paths.public_book(service.slug)} class="btn btn-primary btn-sm">
-                  {gettext("Book")}
+                  {if service.bookable_online, do: gettext("Book"), else: gettext("Availability")}
                 </.link>
               </div>
             </div>

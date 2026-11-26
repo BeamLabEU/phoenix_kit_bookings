@@ -2,7 +2,7 @@ defmodule PhoenixKitBookings.Web.NewPublicLiveTest do
   @moduledoc "Public pages added in V3: price options, availability mode, schedule, hosts, events."
   use PhoenixKitBookings.LiveCase, async: true
 
-  alias PhoenixKitBookings.{Bookings, Events, HostProfiles, Imports, PriceOptions}
+  alias PhoenixKitBookings.{Bookings, Events, HostProfiles, Imports, PriceOptions, Services}
 
   defp tomorrow, do: Date.add(Date.utc_today(), 1)
 
@@ -205,6 +205,14 @@ defmodule PhoenixKitBookings.Web.NewPublicLiveTest do
 
       {:ok, _view, html} = live(conn, "/bookings/events/#{ctx.event.uuid}")
       assert html =~ "This event is fully booked."
+      refute html =~ "event-signup"
+    end
+
+    test "an availability-only service's event offers no sign-up form", %{conn: conn} = ctx do
+      {:ok, _} = Services.update_service(ctx.service, %{"bookable_online" => false})
+      {:ok, _view, html} = live(conn, "/bookings/events/#{ctx.event.uuid}")
+
+      assert html =~ "Sign-up for this event is not taken online."
       refute html =~ "event-signup"
     end
 

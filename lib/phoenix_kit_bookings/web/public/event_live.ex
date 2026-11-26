@@ -181,6 +181,10 @@ defmodule PhoenixKitBookings.Web.Public.EventLive do
 
           <%= cond do %>
             <% @booking -> %>
+            <% @service && @service.bookable_online == false -> %>
+              <div class="alert" id="event-offline">
+                {gettext("Sign-up for this event is not taken online.")}
+              </div>
             <% @seats_left == 0 -> %>
               <div class="alert" id="event-full">{gettext("This event is fully booked.")}</div>
             <% @service && @service.signup_policy == "login_required" && is_nil(@current_user) -> %>
