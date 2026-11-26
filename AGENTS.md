@@ -23,12 +23,17 @@ the admin manages reservations (approval queue, cancel), services
 - **Consumed by:** nothing yet.
 - **Admin surface:** `admin_tabs/0` registers `Bookings` (`/admin/bookings`,
   parent, redirects to its first subtab) with `Reservations`
-  (`/admin/bookings/reservations`), `Services` (`/admin/bookings/services`)
-  and two hidden leaves for the service form
+  (`/admin/bookings/reservations`), `Services` (`/admin/bookings/services`),
+  `Events` (`/admin/bookings/events`), `Hosts` (`/admin/bookings/hosts`,
+  `bookings.manage_all` only) and two hidden leaves for the service form
   (`/admin/bookings/services/new`, `/admin/bookings/services/:uuid/edit`);
   `settings_tabs/0` registers `Bookings` under Admin → Settings
   (`/admin/settings/bookings`). Public routes from `route_module/0`:
-  `/bookings`, `/book/:slug`, `/bookings/manage/:token`.
+  `/bookings`, `/book/:slug`, `/bookings/manage/:token`, `/bookings/schedule`,
+  `/bookings/hosts/:slug`, `/bookings/events/:uuid`.
+- **Oban:** own queue `bookings_sync` (`oban_queues/0`, the iCal import) and
+  an hourly cron of `Workers.ICalSyncWorker` (`oban_crons/0`); reminders stay
+  on core's `default`.
 - **Module key** `"bookings"`; settings prefix `bookings_`.
 
 ## What this module does NOT do
@@ -36,8 +41,9 @@ the admin manages reservations (approval queue, cancel), services
 - No payment collection. Prices and totals are stamped on every booking so a
   billing checkout can plug into `create_booking`'s success path; whether that
   is pay-at-booking, deposit or invoice-later is a product decision pending.
-- No external calendar sync (Google/Outlook OAuth); the `.ics` attachment on
-  confirmation emails covers the import case.
+- No two-way external calendar sync (Google/Outlook OAuth). Inbound only: an
+  iCal feed URL per service is imported as busy time (`ICalImport`), and
+  `Imports` takes any other source's entries.
 - No recurring bookings; the data-model choice (series table vs rrule) is
   undecided.
 - No viewer-timezone display: everything renders in the site frame, because
@@ -104,13 +110,19 @@ Repo-local aliases:
   Phoenix.LiveView`. The routed public pages (`BookLive`, `ManageLive`,
   `Public.ServicesLive`) wrap in `LayoutWrapper.app_layout`; admin LVs and
   the widget never do.
-- Gettext: the LiveViews use core's `PhoenixKitWeb.Gettext` (imported by the
-  macro). `Errors` uses the module's own `PhoenixKitBookings.Gettext`
-  backend, which has no `priv/gettext` catalogue, so engine messages render
-  in English everywhere. Every call is macro-form `gettext/1,2`, so
-  `mix gettext.extract` sees all of them.
-  `BookingFlow` carries its own `use Gettext` on core's backend, since it is a
-  component and not a LiveView; `Format` and `Notifier` are still plain English.
+- Gettext: every user-facing string — pages, components, errors, emails,
+  `Format`, `Pricing.tag/1`, the `.ics` text — goes through the module's own
+  `PhoenixKitBookings.Gettext`, catalogue in `priv/gettext/` (`et`, `ru`;
+  English is the msgid). Every LiveView has `use Gettext, backend:
+  PhoenixKitBookings.Gettext` on the line right after `use PhoenixKitWeb,
+  :live_view` (which binds core's backend); a `gettext` call above that line
+  would bind core's. Tab and permission labels translate through
+  `gettext_backend:` and are anchored by `translatable_labels/0`
+  (`dgettext_noop`). After adding a string: `mix gettext.extract && mix
+  gettext.merge priv/gettext --no-fuzzy`, then fill every `et` (sina, singular
+  imperative) and `ru` («вы») msgstr; `gettext_catalogues_test.exs` fails on an
+  empty or fuzzy entry. `priv` must stay in the package `files:`. Changeset
+  validation messages stay English.
 - JS hooks: none. If one is ever needed, ship it in a prebuilt bundle
   declared by `js_sources/0` under a namespaced global, never from an inline
   `<script>` (morphdom does not execute inserted script tags, so an inline
@@ -356,6 +368,7 @@ lib/phoenix_kit_bookings/
   schemas/unit.ex                       named unit (room, chair) of a service
   schemas/hold.ex                       5-minute slot hold, same either/or time CHECK
   schemas/waitlist_entry.ex             open | notified | removed, per service+email+date
+  schemas/{price_option,host_profile,event,regular_slot}.ex   V3 tables
   engine.ex                             adapter onto phoenix_live_calendar's booking layer + the site frame
   engine/day_engine.ex                  the date-granular path the lib does not cover (day/night)
   services.ex                           services, rules, units; activity + PubSub on every mutation
@@ -371,6 +384,16 @@ lib/phoenix_kit_bookings/
   migrations/schema.ex                  module-owned chain
   web/routes.ex                         public routes (generate/1; locale + bare)
   rate_limit.ex                         per-address and per-peer ceiling on the public mail paths
+  price_options.ex                      per-service rates + entitlement checks
+  regular_slots.ex                      usual weekly holders; conflicts/4 (warn, never block)
+  imports.ex                            replace-own-rows sync of imported bookings and rules
+  ical_import.ex ical_import/           feed sync, Fetcher behaviour (+ ReqFetcher), RFC 5545 Parser
+  workers/ical_sync_worker.ex           Oban, `bookings_sync` queue, hourly cron sweep
+  availability_view.ex                  free / partial / booked / closed per day
+  events.ex host_profiles.ex            the public schedule's data
+  web/components/availability_calendar.ex   display-only month calendar
+  web/public/{schedule,host,event}_live.ex, event_card.ex   public schedule pages
+  web/admin/{events,hosts}_live.ex      admin events and host profiles
   expected_schema.ex                    GENERATED manifest for `mix phoenix_kit.doctor` / `repair`
   web/format.ex                         range and date formatting in the site frame
   web/admin/{services,service_form,bookings,settings}_live.ex
@@ -384,12 +407,16 @@ All `phoenix_kit_bookings_*`, UUIDv7 primary keys, `use PhoenixKit.SchemaPrefix`
 
 | Table | Purpose | Constraints worth knowing |
 |---|---|---|
-| `services` | the bookable offer (shape, buffers, notice, seats, stay bounds, `signup_policy`, `require_approval`, `owner_uuid`, `cancel_notice`, `provider_uuid`, `price`/`price_per`/`currency`, `reminder_minutes`, `settings` JSONB) | unique `slug`; status `active` / `inactive` / `trashed`; `price_per` in `booking` / `hour` / `day` / `night`; `owner_uuid` FK to users `ON DELETE SET NULL` |
-| `availability_rules` | weekly rule (`days_of_week`), date override (`date`), `available: false` = block-out; times only for minute services | cascade from service |
+| `services` | the bookable offer (shape, buffers, notice, seats, stay bounds, `signup_policy`, `require_approval`, `owner_uuid`, `cancel_notice`, `provider_uuid`, `price`/`price_per`/`currency`, `reminder_minutes`, indexed `host_ref`, `bookable_online`, `ical_url`/`ical_synced_at`/`ical_sync_error`, `host_profile_uuid`, `settings` JSONB) | unique `slug`; status `active` / `inactive` / `trashed`; `price_per` in `booking` / `hour` / `day` / `night`; `owner_uuid` FK to users `ON DELETE SET NULL` |
+| `availability_rules` | weekly rule (`days_of_week`), date override (`date`), `available: false` = block-out; times only for minute services; `source` `manual` / `import` + `external_source`/`external_id` | cascade from service; unique `(service_uuid, external_source, external_id)` |
 | `units` | named units, `active` flag | cascade from service |
 | `holds` | timed or dated range + `expires_at` | `bookings_hold_time_shape` |
 | `waitlist` | `date`, customer name/email, status `open` / `notified` / `removed` | cascade from service |
-| `bookings` | timed or dated range, `time_zone`, customer fields, `user_uuid`, `unit_uuid` (`SET NULL`), `total_price`/`currency`, `source` `public` / `admin`, cancellation stamp, `metadata` JSONB | `bookings_time_shape`, `bookings_timed_order`, `bookings_dated_order`, status `pending` / `confirmed` / `cancelled` |
+| `bookings` | timed or dated range, `time_zone`, customer fields, `user_uuid`, `unit_uuid` (`SET NULL`), `total_price`/`currency`, `source` `public` / `admin` / `import`, `external_source`/`external_id`, `price_option_uuid` / `event_uuid` (`SET NULL`), cancellation stamp, `metadata` JSONB (`regular_slot_conflicts`) | `bookings_time_shape`, `bookings_timed_order`, `bookings_dated_order`, status `pending` / `confirmed` / `cancelled`, `bookings_customer_required` (name+email unless `import`), unique `(service_uuid, external_source, external_id)` |
+| `price_options` | per-service rate: `price`, `price_per` (nil = service's), `entitlement` `everyone` / `users` (`user_uuids`) / `role` (`role_name`) / `flag` (`flag_key` in the user's `custom_fields`), `active`, `position` | cascade from service |
+| `host_profiles` | public card: `name`, unique `slug`, `headline`, `bio`, `photo_url`, `user_uuid` (`SET NULL`), loose `provider_uuid`, status `active` / `inactive` | — |
+| `events` | dated occurrence of a service: `starts_at`/`ends_at`, `capacity` (nil = service's), `price` (nil = service's), `host_profile_uuid`, `location`, status `scheduled` / `cancelled`, `public` | cascade from service; `bookings_event_order` |
+| `regular_slots` | weekly usual holder: `day_of_week`, optional `start_time`/`end_time`, `user_uuid` and/or `customer_email` | cascade from service |
 
 ### PubSub
 
@@ -409,6 +436,7 @@ missing server or a failed broadcast is a no-op.
 | `bookings_enabled` | boolean | `false` | module on/off |
 | `bookings_user_services_enabled` | boolean | `false` | base-permission holders may CREATE services (off: they still manage services assigned to them) |
 | `bookings_max_services_per_user` | integer | `1` | per-user creation cap; `0` = unlimited |
+| `bookings_notify_email` | string | `""` | where a regular-slot warning goes for a service without an owner (blank = no mail) |
 
 Core settings read: `"time_zone"` (the site frame), `"from_email"` /
 `"from_name"` (Notifier).
@@ -424,8 +452,12 @@ Core settings read: `"time_zone"` (the site frame), `"from_email"` /
 `service_trashed`, `service_restored`, `service_deleted`,
 `availability_rule_added`, `availability_rule_removed`, `unit_added`,
 `unit_updated`, `unit_removed` (resource `bookings_service`) and
-`bookings.booking_created`, `booking_confirmed`, `booking_cancelled`
-(resource `booking`).
+`price_option_added/updated/removed`, `regular_slot_added/updated/removed`,
+`import_synced`, `import_rules_synced` (resource `bookings_service`),
+`bookings.booking_created`, `booking_confirmed`, `booking_cancelled`,
+`regular_slot_conflict` (resource `booking`), `event_created/updated/cancelled/deleted`
+(resource `bookings_event`), `host_profile_created/updated/deleted`
+(resource `bookings_host_profile`).
 
 ### Widget session contract (host → `live_render/3`)
 
@@ -435,6 +467,7 @@ Core settings read: `"time_zone"` (the site frame), `"from_email"` /
 | `"current_user_uuid"` | no | resolved by core's `assign_embedded_current_user/2` (unknown or deactivated = guest); enables `login_required` services and prefill |
 | `"prefill"` | no | map with `"customer_name"` / `"customer_email"` |
 | `"wrapper_class"` | no | class on the outer `<div>` |
+| `"mode"` | no | `"availability"` = the read-only calendar instead of the booking flow (always so for a service with `bookable_online: false`) |
 
 ### Error vocabulary
 
@@ -443,17 +476,18 @@ contexts return (`:invalid_range`, `:too_short`, `:too_long`, `:in_past`,
 `:insufficient_notice`, `:too_far_ahead`, `:outside_availability`,
 `:overlap`, `:at_capacity`, `:login_required`, `:service_unavailable`,
 `:not_cancellable`, `:not_pending`, `:cancel_window_passed`, `:rate_limited`,
-`:invalid_waitlist`) to a user-facing string; LiveViews never show a raw atom
+`:invalid_waitlist`, `:price_option_unavailable`, `:event_unavailable`) to a user-facing string; LiveViews never show a raw atom
 or engine string.
 
 ## Database & migrations
 
 Owns a versioned chain: `PhoenixKitBookings.Migrations.Schema` via
 `migration_module/0`, marker `bookings_schema:<N>` as a COMMENT ON
-`phoenix_kit_bookings_services`, currently V2. `mix phoenix_kit.update`
+`phoenix_kit_bookings_services`, currently V3 (see the `Migrations.Schema`
+moduledoc for what V3 adds). `mix phoenix_kit.update`
 applies it in hosts; tests run it via `Ecto.Migrator.run` over the
-`Test.SchemaMigration` (V1) and `Test.SchemaMigrationV2` wrappers in
-`test_helper.exs`.
+`Test.SchemaMigration` (V1), `Test.SchemaMigrationV2` and
+`Test.SchemaMigrationV3` wrappers in `test_helper.exs`.
 
 - `up/1` is one idempotent pass: every statement is `IF NOT EXISTS` /
   `ADD COLUMN IF NOT EXISTS`, and the marker is stamped last, after every
@@ -462,7 +496,9 @@ applies it in hosts; tests run it via `Ecto.Migrator.run` over the
 - `migrated_version_runtime/1` reads the marker; a marker-less services
   table reads as 1 (it predates the marker), a missing table or a dead pool as
   0, and an invalid prefix raises.
-- `down/1` with `version: 1` drops only the V2 column and restamps;
+- `down/1` with `version: 2` drops what V3 added (imported bookings are
+  deleted first: V2's CHECK and NOT NULLs refuse them); `version: 1` also the
+  V2 column;
   `version: 0` (the default) drops all six tables; the current version or above
   changes nothing.
 - `expected_schema.ex` is GENERATED by core's
@@ -474,7 +510,8 @@ applies it in hosts; tests run it via `Ecto.Migrator.run` over the
   before interpolation, and `uuid_generate_v7()` is always schema-qualified:
   a bare call breaks every `--prefix` install and works everywhere else.
   `schema_prefix_conformance_test.exs` greps for both.
-- V1 and V2 are released and immutable. A shape change is V3: add its
+- V1 and V2 are released and immutable (V3 once released). A shape change is
+  the next version: add its
   statements to `up/1`, bump `@current_version`, extend `down/1`, mirror the
   V2 wrapper for the test chain, regenerate the manifest, and extend
   `migrations_test.exs`.
@@ -528,7 +565,25 @@ schema (the conformance test enforces it).
 
 ## Feature notes
 
-None. Feature behaviour lives in the `@moduledoc`s (`Engine`, `Bookings`,
+- **Imported entries** (`Imports`): `sync_bookings/4` / `sync_rules/4` take an
+  `external_source` and the full current list; rows of that source are
+  upserted by `external_id` and the missing ones removed, nothing else is
+  touched. Imported bookings skip the engine (facts), need no customer, send
+  no mail and hold one seat each; the admin list cannot cancel them (the next
+  sync would bring them back).
+- **iCal** (`ICalImport` + `ICalImport.Parser`): own small parser (limits in
+  its moduledoc); the fetcher is `config :phoenix_kit_bookings, :ical_fetcher`
+  (default `ReqFetcher`; tests swap it, no real HTTP). The URL is admin input
+  fetched by the server (http/https/webcal only; no private-address guard).
+- **Price options** are re-judged inside the locked create; the public flow
+  offers only entitled ones and drops anything else the client sends.
+- **Regular slots** never block: flag + activity + owner email.
+- **Availability view** (`AvailabilityView`, `AvailabilityCalendar`) shows
+  occupancy, not bookability: notice and max-advance are not applied.
+- **Events** bypass the service's availability rules; their seats still
+  occupy the service for its own picker.
+
+Feature behaviour lives in the `@moduledoc`s (`Engine`, `Bookings`,
 `Policy`, `BookingFlow`, `Migrations.Schema`, `BookingWidgetLive`). The
 product survey behind the one-model/three-shapes decision and the list of
 what `phoenix_live_calendar` already covers is
@@ -563,15 +618,14 @@ publish has succeeded.
 - Payment collection: product decision pending (pay-at-booking vs deposit vs
   invoice-later). Totals are already stored; billing plugs into
   `create_booking`'s success path once decided.
-- External calendar sync (Google/Outlook OAuth): blocked on provider
-  credentials.
+- Two-way calendar sync (Google/Outlook OAuth): blocked on provider
+  credentials. iCal import: `RDATE`, ordinal `BYDAY`, `BYSETPOS` etc. not
+  expanded.
 - Recurring bookings: pick the data model (series table vs rrule) before
   building.
 - Viewer-timezone slot display: unblocks when a service is not a physical
   venue (virtual services).
 - Per-date (seasonal) pricing rules and customer-chosen named units:
   unblocks on a product request.
-- A `priv/gettext` catalogue for `PhoenixKitBookings.Gettext` (or moving
-  `Errors` onto core's backend): unblocks on the first translation pass.
 - Retire `@unbounded_minutes` when `phoenix_live_calendar` ships an explicit
   unbounded-duration semantic.
