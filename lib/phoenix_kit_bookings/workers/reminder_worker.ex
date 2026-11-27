@@ -51,7 +51,7 @@ defmodule PhoenixKitBookings.Workers.ReminderWorker do
         unique: [
           period: :infinity,
           keys: [:booking_uuid, :starts_at],
-          states: [:available, :scheduled, :retryable]
+          states: [:available, :scheduled, :executing, :retryable]
         ]
       )
       |> Oban.insert()
