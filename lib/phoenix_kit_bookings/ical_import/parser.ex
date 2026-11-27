@@ -568,9 +568,15 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     rule_until = rule |> Map.get("UNTIL") |> parse_until(start)
     earliest = Date.add(DateTime.to_date(from), -length_days(length) - 1)
 
+    # An open-ended rule starts walking at the period before the window (its
+    # phase kept), so a DTSTART centuries back neither spends the step
+    # budget before the window nor costs a step per day since then. A
+    # counted rule is walked from DTSTART: COUNT counts from there.
+    skip = if count, do: 0, else: periods_before(rule, start_date(start), earliest, interval)
+
     stream =
       start
-      |> candidates(rule, interval)
+      |> candidates(rule, interval, skip)
       |> Stream.take(@max_steps)
       |> Stream.take_while(fn candidate ->
         before_or_at?(candidate, rule_until) and starts_before?(candidate, until)
@@ -589,6 +595,21 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
         Enum.take(stream, min(count, @max_occurrences))
     end
   end
+
+  # Whole INTERVAL-periods between DTSTART and `earliest`, one held back.
+  defp periods_before(rule, first_date, earliest, interval) do
+    periods =
+      case rule["FREQ"] do
+        "DAILY" -> div(Date.diff(earliest, first_date), interval)
+        "WEEKLY" -> div(Date.diff(earliest, first_date), 7 * interval)
+        "MONTHLY" -> div(months_between(first_date, earliest), interval)
+        "YEARLY" -> div(months_between(first_date, earliest), 12 * interval)
+      end
+
+    max(periods - 1, 0)
+  end
+
+  defp months_between(a, b), do: (b.year - a.year) * 12 + (b.month - a.month)
 
   defp length_days({:days, n}), do: n
   defp length_days({:seconds, n}), do: div(n, 86_400) + 1
@@ -618,9 +639,10 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
   defp start_zone({:local, _, zone}), do: zone
   defp start_zone(_), do: "Etc/UTC"
 
-  # Every candidate start in order, from DTSTART on.
+  # Every candidate start in order, from DTSTART on (from the `skip`-th
+  # period for an open-ended rule).
   # Weeks begin on WKST (Monday by default), which matters once INTERVAL > 1.
-  defp candidates(start, %{"FREQ" => "WEEKLY", "BYDAY" => days} = rule, interval) do
+  defp candidates(start, %{"FREQ" => "WEEKLY", "BYDAY" => days} = rule, interval, skip) do
     wkst = Map.get(@weekdays, Map.get(rule, "WKST", "MO"), 1)
 
     offsets =
@@ -629,7 +651,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     first_date = start_date(start)
     week_start = Date.add(first_date, -Integer.mod(Date.day_of_week(first_date) - wkst, 7))
 
-    Stream.iterate(0, &(&1 + 1))
+    Stream.iterate(skip, &(&1 + 1))
     |> Stream.flat_map(fn week ->
       first = Date.add(week_start, week * 7 * interval)
       Enum.map(offsets, &with_date(start, Date.add(first, &1)))
@@ -639,7 +661,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
 
   # A monthly rule with BYDAY and/or BYMONTHDAY: the matching days of each
   # INTERVAL-th month (both = days matching both), in order.
-  defp candidates(start, %{"FREQ" => "MONTHLY"} = rule, interval)
+  defp candidates(start, %{"FREQ" => "MONTHLY"} = rule, interval, skip)
        when is_map_key(rule, "BYDAY") or is_map_key(rule, "BYMONTHDAY") do
     first_date = start_date(start)
     {:ok, bydays} = rule |> Map.get("BYDAY") |> split_parts(&parse_byday/1)
@@ -648,7 +670,7 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     # Bounded by months WALKED: a combination no month satisfies
     # (BYDAY=5FR;BYMONTHDAY=1) yields nothing, and a bound on what is yielded
     # would never be reached.
-    Stream.iterate(0, &(&1 + 1))
+    Stream.iterate(skip, &(&1 + 1))
     |> Stream.take(@max_months)
     |> Stream.flat_map(fn n ->
       %Date{year: y, month: m} = shift_months(%{first_date | day: 1}, n * interval)
@@ -660,10 +682,10 @@ defmodule PhoenixKitBookings.ICalImport.Parser do
     |> Stream.reject(&(Date.compare(start_date(&1), first_date) == :lt))
   end
 
-  defp candidates(start, %{"FREQ" => freq}, interval) do
+  defp candidates(start, %{"FREQ" => freq}, interval, skip) do
     first_date = start_date(start)
 
-    Stream.iterate(0, &(&1 + 1))
+    Stream.iterate(skip, &(&1 + 1))
     |> Stream.take(@max_steps)
     |> Stream.map(fn n -> step_date(first_date, freq, n * interval) end)
     |> Stream.reject(&is_nil/1)

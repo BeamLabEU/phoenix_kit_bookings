@@ -603,4 +603,50 @@ defmodule PhoenixKitBookings.ICalImport.ParserTest do
         """)
     end
   end
+
+  describe "round-5 review fixes" do
+    test "an open-ended rule from centuries back still reaches the window, quickly" do
+      task =
+        Task.async(fn ->
+          parse("""
+          BEGIN:VEVENT
+          UID:old-daily
+          DTSTART:17500101T090000Z
+          DURATION:PT1H
+          RRULE:FREQ=DAILY
+          END:VEVENT
+          BEGIN:VEVENT
+          UID:old-monthly
+          DTSTART:16010101T090000Z
+          DURATION:PT1H
+          RRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR,SA,SU
+          END:VEVENT
+          BEGIN:VEVENT
+          UID:old-weekly
+          DTSTART:16010102T090000Z
+          DURATION:PT1H
+          RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TU
+          END:VEVENT
+          """)
+        end)
+
+      %{events: events} = Task.await(task, 5_000)
+      by_uid = Enum.group_by(events, & &1.uid)
+
+      # Each covers the window (the whole of 2026 here).
+      assert length(by_uid["old-daily"]) >= 364
+      assert length(by_uid["old-monthly"]) >= 364
+
+      # The fortnightly phase from 1601 is kept: every start is a Tuesday,
+      # 14 days apart.
+      [a, b | _] = by_uid["old-weekly"] |> Enum.map(fn %{range: {:datetime, s, _}} -> s end)
+      assert Date.day_of_week(a) == 2
+      assert DateTime.diff(b, a, :day) == 14
+
+      first_tuesday =
+        Enum.find(Date.range(~D[1601-01-02], ~D[1601-01-08]), &(Date.day_of_week(&1) == 2))
+
+      assert rem(Date.diff(DateTime.to_date(a), first_tuesday), 14) == 0
+    end
+  end
 end
