@@ -141,8 +141,8 @@ defmodule PhoenixKitBookings.Events do
   - its capacity — its own, or the service's when set to blank — cannot drop
     below those seats;
   - new times or another service MOVE its active bookings in the same
-    transaction (a unit of the old service is released, the total is
-    re-priced), unless the service is full at the new time
+    transaction (a unit of the old service is released; the total the
+    customer agreed to is kept), unless the service is full at the new time
     (`Bookings.service_full_for_event?/3`) or is a day/night service;
     each moved customer is emailed the new times with an updated `.ics`
     and their reminder is rescheduled (both skipped with `notify: false`);
@@ -274,7 +274,7 @@ defmodule PhoenixKitBookings.Events do
   end
 
   # Timed bookings cannot move onto a day/night service (its capacity reads
-  # dates), must fit beside its other bookings, and must still be priceable.
+  # dates), and must fit beside its other bookings.
   defp refuse_destination(changeset, %Service{time_unit: unit}, _event, _taken)
        when unit != "minutes",
        do:
@@ -285,20 +285,14 @@ defmodule PhoenixKitBookings.Events do
          )
 
   defp refuse_destination(changeset, service, event, taken) do
-    cond do
-      Bookings.service_full_for_event?(service, event, taken) ->
+    if Bookings.service_full_for_event?(service, event, taken),
+      do:
         Ecto.Changeset.add_error(
           changeset,
           :starts_at,
           "the service is fully booked at the new time"
-        )
-
-      Bookings.event_seat_total(event, service) == {:error, :total_too_large} ->
-        Ecto.Changeset.add_error(changeset, :price, "makes the bookings' total too large")
-
-      true ->
-        changeset
-    end
+        ),
+      else: changeset
   end
 
   defp moves?(changeset),
@@ -319,10 +313,6 @@ defmodule PhoenixKitBookings.Events do
       unit_reset = if before.service_uuid != now.service_uuid, do: [unit_uuid: nil], else: []
       stamp = DateTime.truncate(DateTime.utc_now(), :second)
 
-      # Re-priced for the new length / service (checked to fit beforehand).
-      service = Services.get_service(now.service_uuid)
-      {:ok, total} = Bookings.event_seat_total(now, service)
-
       {_n, moved} =
         from(b in Booking, where: b.uuid in ^Enum.map(rows, & &1.uuid), select: b)
         |> repo().update_all(
@@ -331,8 +321,6 @@ defmodule PhoenixKitBookings.Events do
               starts_at: DateTime.truncate(now.starts_at, :second),
               ends_at: DateTime.truncate(now.ends_at, :second),
               service_uuid: now.service_uuid,
-              total_price: total,
-              currency: if(total, do: service.currency),
               updated_at: stamp
             ] ++ unit_reset
         )

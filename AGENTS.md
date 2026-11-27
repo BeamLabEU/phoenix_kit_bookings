@@ -598,12 +598,14 @@ schema (the conformance test enforces it).
   price from the event row under lock, and its seats count against the
   service's: a sign-up is refused unless the event's seats taken plus this
   one fit beside the service's other bookings and holds at the busiest
-  moment (`Bookings.service_full_for_event?/3`), unless the event has
-  `ignore_service_capacity` (kept in its `settings`). `update_event/3`
+  moment (`Bookings.service_full_for_event?/3`), unless the event's own
+  capacity is larger than the service's seats (it brings its own room) or
+  it has `ignore_service_capacity` (kept in its `settings`). `update_event/3`
   locks the service rows, then the event row (a sign-up's order), and
   judges the stored row: its (effective) capacity cannot drop below the
   seats taken; new times or another service MOVE its active bookings in the
-  same transaction, re-priced (refused if they do not all fit there, or the
+  same transaction, keeping the total each customer agreed to (refused if
+  they do not all fit there, or the
   destination is a day/night service), mailing each
   customer a "Booking moved" `.ics` and rescheduling the reminder (a
   reminder job carries the start it was made for; an outdated one sends

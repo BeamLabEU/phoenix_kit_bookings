@@ -663,16 +663,20 @@ defmodule PhoenixKitBookings.Bookings do
   bookings and holds at the busiest moment of the event: the event's seats
   count against the service's capacity like any booking. False for an
   event that ignores the service's capacity
-  (`Event.ignore_service_capacity?/1`) and for a day/night service. Called
+  (`Event.ignore_service_capacity?/1`), for one whose own capacity is
+  larger than the service's seats (it plainly brings its own room), and for
+  a day/night service. Called
   under the service lock by the sign-up and by `Events.update_event/3` for
   a moved event.
   """
   def service_full_for_event?(%Service{} = service, %Event{} = event, seats_needed) do
-    if Event.ignore_service_capacity?(event) or service.time_unit != "minutes" do
+    seats = Services.effective_seats(service)
+
+    if Event.ignore_service_capacity?(event) or service.time_unit != "minutes" or
+         own_room?(event, seats) do
       false
     else
       window = conflict_window(service, {event.starts_at, event.ends_at})
-      seats = Services.effective_seats(service)
 
       taken =
         service.uuid
@@ -683,6 +687,8 @@ defmodule PhoenixKitBookings.Bookings do
       taken + seats_needed > seats
     end
   end
+
+  defp own_room?(%Event{capacity: capacity}, seats), do: is_integer(capacity) and capacity > seats
 
   # The most rows that overlap one instant of the window.
   defp peak_overlap(rows, {from, until}) do
@@ -703,20 +709,6 @@ defmodule PhoenixKitBookings.Bookings do
 
   defp event_total(%Event{price: nil}, service, range), do: Pricing.total(service, range)
   defp event_total(%Event{price: price}, _service, _range), do: Decimal.round(price, 2)
-
-  @doc """
-  What one seat at `event` costs on `service`: the event's own price, else
-  the service's for the event's length. `{:ok, total | nil}` or
-  `{:error, :total_too_large}` past the column. Used when a moved event
-  re-prices the bookings it takes along.
-  """
-  def event_seat_total(%Event{} = event, %Service{} = service) do
-    total = event_total(event, service, {event.starts_at, event.ends_at})
-
-    if total && Decimal.compare(total, @max_total) == :gt,
-      do: {:error, :total_too_large},
-      else: {:ok, total}
-  end
 
   defp event_open?(%Event{status: "scheduled", starts_at: starts_at}, now),
     do: DateTime.compare(starts_at, now) == :gt
