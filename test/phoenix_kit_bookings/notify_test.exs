@@ -70,6 +70,67 @@ defmodule PhoenixKitBookings.NotifyTest do
     end
   end
 
+  describe "an event moved with its bookings" do
+    test "the reminder is rescheduled and the old job sends nothing" do
+      service = reminding_service()
+
+      {:ok, event} =
+        PhoenixKitBookings.Events.create_event(%{
+          "service_uuid" => service.uuid,
+          "title" => "Class",
+          "starts_at" => tomorrow_at(10),
+          "ends_at" => tomorrow_at(11)
+        })
+
+      {:ok, booking} = Bookings.create_event_booking(event, customer_attrs())
+      assert_email_sent(fn email -> assert email.subject =~ "Booking confirmed" end)
+
+      old_start = DateTime.to_iso8601(tomorrow_at(10))
+
+      assert_enqueued(
+        worker: ReminderWorker,
+        args: %{"booking_uuid" => booking.uuid, "starts_at" => old_start}
+      )
+
+      {:ok, _} =
+        PhoenixKitBookings.Events.update_event(event, %{
+          "starts_at" => tomorrow_at(14),
+          "ends_at" => tomorrow_at(15)
+        })
+
+      assert_email_sent(fn email -> assert email.subject =~ "Booking moved" end)
+
+      assert_enqueued(
+        worker: ReminderWorker,
+        args: %{
+          "booking_uuid" => booking.uuid,
+          "starts_at" => DateTime.to_iso8601(tomorrow_at(14))
+        }
+      )
+
+      assert :ok =
+               perform_job(ReminderWorker, %{
+                 "booking_uuid" => booking.uuid,
+                 "starts_at" => old_start
+               })
+
+      assert_no_email_sent()
+
+      # Moved back: the 10:00 reminder already waiting is not doubled.
+      {:ok, _} =
+        PhoenixKitBookings.Events.update_event(event, %{
+          "starts_at" => tomorrow_at(10),
+          "ends_at" => tomorrow_at(11)
+        })
+
+      jobs =
+        all_enqueued(worker: ReminderWorker)
+        |> Enum.filter(&(&1.args == %{"booking_uuid" => booking.uuid, "starts_at" => old_start}))
+
+      assert length(jobs) == 1
+    end
+  end
+
   describe "confirm_booking/2" do
     test "notify: false approves without the approval email" do
       service = reminding_service(%{"require_approval" => true})

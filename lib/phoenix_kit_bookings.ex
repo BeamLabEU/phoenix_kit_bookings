@@ -24,9 +24,11 @@ defmodule PhoenixKitBookings do
   1. `use PhoenixKit.Module` marks this module as a plugin.
   2. PhoenixKit discovers it by `.beam` scanning — no config line needed.
   3. `migration_module/0` points at `PhoenixKitBookings.Migrations.Schema`;
-     `mix phoenix_kit.update` creates the six tables — no core PR needed.
+     `mix phoenix_kit.update` creates the tables — no core PR needed.
   4. Admin pages ride on `admin_tabs/0`; the public booking pages
-     (`/bookings`, `/book/:slug`, `/bookings/manage/:token`) come from
+     (`/bookings`, `/book/:slug`, `/bookings/manage/:token`, the schedule
+     `/bookings/schedule`, `/bookings/hosts/:slug`, `/bookings/events/:uuid`)
+     come from
      `PhoenixKitBookings.Web.Routes.generate/1`.
 
   ## Installation
@@ -55,6 +57,8 @@ defmodule PhoenixKitBookings do
   # ===========================================================================
   # Required callbacks
   # ===========================================================================
+
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   @impl PhoenixKit.Module
   @doc "Unique key for this module. Used in settings, permissions, and PubSub events."
@@ -123,14 +127,16 @@ defmodule PhoenixKitBookings do
           description:
             "Site-wide: every service and reservation (not just own), plus the Bookings settings page"
         }
-      ]
+      ],
+      gettext_backend: PhoenixKitBookings.Gettext,
+      gettext_domain: "default"
     }
   end
 
   @impl PhoenixKit.Module
   @doc """
-  Admin sidebar tabs: a parent tab plus visible Reservations + Services
-  lists and hidden leaf tabs for the service form. Static `/new` is
+  Admin sidebar tabs: a parent tab plus visible Reservations, Services,
+  Events and Hosts lists and hidden leaf tabs for the service form. Static `/new` is
   ordered before the `:uuid` wildcard tab so route generation (list
   order) doesn't let the wildcard shadow it.
   """
@@ -143,6 +149,7 @@ defmodule PhoenixKitBookings do
         path: "bookings",
         priority: 650,
         level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
         permission: module_key(),
         match: :prefix,
         group: :admin_modules,
@@ -157,6 +164,7 @@ defmodule PhoenixKitBookings do
         path: "bookings/reservations",
         priority: 651,
         level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
         permission: module_key(),
         parent: :admin_bookings,
         live_view: {PhoenixKitBookings.Web.Admin.BookingsLive, :index}
@@ -168,9 +176,34 @@ defmodule PhoenixKitBookings do
         path: "bookings/services",
         priority: 652,
         level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
         permission: module_key(),
         parent: :admin_bookings,
         live_view: {PhoenixKitBookings.Web.Admin.ServicesLive, :index}
+      },
+      %Tab{
+        id: :admin_bookings_events,
+        label: "Events",
+        icon: "hero-calendar-days",
+        path: "bookings/events",
+        priority: 655,
+        level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
+        permission: module_key(),
+        parent: :admin_bookings,
+        live_view: {PhoenixKitBookings.Web.Admin.EventsLive, :index}
+      },
+      %Tab{
+        id: :admin_bookings_hosts,
+        label: "Hosts",
+        icon: "hero-user-group",
+        path: "bookings/hosts",
+        priority: 656,
+        level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
+        permission: module_key(),
+        parent: :admin_bookings,
+        live_view: {PhoenixKitBookings.Web.Admin.HostsLive, :index}
       },
       %Tab{
         id: :admin_bookings_service_new,
@@ -178,6 +211,7 @@ defmodule PhoenixKitBookings do
         path: "bookings/services/new",
         priority: 653,
         level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
         permission: module_key(),
         parent: :admin_bookings_services,
         visible: false,
@@ -189,6 +223,7 @@ defmodule PhoenixKitBookings do
         path: "bookings/services/:uuid/edit",
         priority: 654,
         level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
         permission: module_key(),
         parent: :admin_bookings_services,
         visible: false,
@@ -208,6 +243,7 @@ defmodule PhoenixKitBookings do
         path: "bookings",
         priority: 650,
         level: :admin,
+        gettext_backend: PhoenixKitBookings.Gettext,
         permission: module_key(),
         parent: :admin_settings,
         live_view: {PhoenixKitBookings.Web.Admin.SettingsLive, :index}
@@ -228,6 +264,18 @@ defmodule PhoenixKitBookings do
   def reserved_route_prefixes, do: ["book", "bookings"]
 
   @impl PhoenixKit.Module
+  @doc """
+  The module's own Oban queue: `bookings_sync` runs the iCal feed imports
+  (`Workers.ICalSyncWorker`), batch work nobody waits on. Reminders stay on
+  core's `default` queue.
+  """
+  def oban_queues, do: [bookings_sync: [limit: 2, kind: :batch]]
+
+  @impl PhoenixKit.Module
+  @doc "Hourly sweep of every service with an iCal feed (does nothing while disabled)."
+  def oban_crons, do: [{"17 * * * *", PhoenixKitBookings.Workers.ICalSyncWorker}]
+
+  @impl PhoenixKit.Module
   @doc "The manifest `mix phoenix_kit.doctor` and `repair` check these tables against."
   def expected_schema, do: PhoenixKitBookings.ExpectedSchema
 
@@ -238,4 +286,31 @@ defmodule PhoenixKitBookings do
   core `phoenix_kit`'s own migration chain.
   """
   def migration_module, do: PhoenixKitBookings.Migrations.Schema
+
+  @doc """
+  Anchors the labels declared as plain literals in `admin_tabs/0`,
+  `settings_tabs/0` and `permission_metadata/0`, so `mix gettext.extract`
+  keeps them in the catalogue the tabs translate through (`gettext_backend:`).
+  Renaming a tab or a permission means renaming its msgid here too.
+  """
+  def translatable_labels do
+    [
+      dgettext_noop("default", "Bookings"),
+      dgettext_noop("default", "Reservations"),
+      dgettext_noop("default", "Services"),
+      dgettext_noop("default", "Events"),
+      dgettext_noop("default", "Hosts"),
+      dgettext_noop("default", "New Service"),
+      dgettext_noop("default", "Edit Service"),
+      dgettext_noop("default", "Manage all bookings"),
+      dgettext_noop(
+        "default",
+        "Universal booking management — day/night stays, fixed slots, and free-form reservations. The base permission covers only services the user owns."
+      ),
+      dgettext_noop(
+        "default",
+        "Site-wide: every service and reservation (not just own), plus the Bookings settings page"
+      )
+    ]
+  end
 end

@@ -112,6 +112,21 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
 
       assert Services.list_rules(service.uuid) == []
     end
+
+    test "crafted weekday values are refused with a message, not a crash", %{conn: conn} do
+      service = slot_service_fixture()
+
+      {:ok, view, _html} =
+        live(admin_conn(conn), "/en/admin/bookings/services/#{service.uuid}/edit")
+
+      for days <- [["1.5"], ["abc"], ["9"], "1"] do
+        html = render_submit(view, "add_rule", %{"rule" => %{"days_of_week" => days}})
+        assert html =~ "Pick the weekdays from the list."
+      end
+
+      assert Process.alive?(view.pid)
+      assert Services.list_rules(service.uuid) == []
+    end
   end
 
   describe "admin header trail" do
@@ -329,6 +344,49 @@ defmodule PhoenixKitBookings.Web.AdminLiveTest do
       render_click(view, "confirm", %{"uuid" => booking.uuid})
 
       assert PhoenixKitBookings.Bookings.get_booking(booking.uuid).status == "cancelled"
+    end
+  end
+
+  describe "owner notifications for site services" do
+    import Swoosh.TestAssertions
+
+    test "the settings page stores the address and a regular-slot conflict is mailed to it",
+         %{conn: conn} do
+      {:ok, view, _} = live(admin_conn(conn), "/en/admin/settings/bookings")
+
+      view
+      |> element("form")
+      |> render_submit(%{
+        "settings" => %{
+          "user_services_enabled" => "false",
+          "max_services_per_user" => "1",
+          "notify_email" => "  desk@example.com "
+        }
+      })
+
+      assert PhoenixKit.Settings.get_setting("bookings_notify_email", "") == "desk@example.com"
+
+      service = slot_service_fixture()
+      tuesday = next_weekday(2)
+
+      {:ok, _} =
+        PhoenixKitBookings.RegularSlots.create_slot(service, %{
+          "day_of_week" => 2,
+          "start_time" => "10:00:00",
+          "end_time" => "11:00:00",
+          "customer_email" => "usual@example.com"
+        })
+
+      {:ok, _} =
+        Bookings.create_booking(
+          service,
+          {DateTime.new!(tuesday, ~T[10:00:00], "Etc/UTC"),
+           DateTime.new!(tuesday, ~T[11:00:00], "Etc/UTC")},
+          customer_attrs(),
+          notify: false
+        )
+
+      assert_email_sent(fn email -> assert [{_, "desk@example.com"}] = email.to end)
     end
   end
 end

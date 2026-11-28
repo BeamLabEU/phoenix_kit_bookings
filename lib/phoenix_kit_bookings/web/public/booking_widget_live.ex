@@ -20,9 +20,14 @@ defmodule PhoenixKitBookings.Web.Public.BookingWidgetLive do
   (`login_required` services, prefill). Core resolves it
   (`assign_embedded_current_user/2`): an unknown or deactivated account is a
   guest here.
+
+  `"mode" => "availability"` mounts the read-only availability calendar
+  instead of the booking flow (free / partly booked / booked per day); a
+  service with `bookable_online: false` always shows that.
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   alias PhoenixKitBookings.Web.Public.BookingFlow
   alias PhoenixKitWeb.Users.Auth
@@ -52,9 +57,15 @@ defmodule PhoenixKitBookings.Web.Public.BookingWidgetLive do
         socket = Auth.assign_embedded_current_user(socket, session)
         user = socket.assigns[:phoenix_kit_current_user]
 
-        {:ok, BookingFlow.assign_flow(socket, service, user, session["prefill"] || %{})}
+        {:ok,
+         BookingFlow.assign_flow(socket, service, user, session["prefill"] || %{},
+           mode: widget_mode(session["mode"])
+         )}
     end
   end
+
+  defp widget_mode("availability"), do: :availability
+  defp widget_mode(_), do: :book
 
   @impl true
   def handle_event(event, params, socket), do: BookingFlow.handle_event(event, params, socket)
@@ -90,6 +101,11 @@ defmodule PhoenixKitBookings.Web.Public.BookingWidgetLive do
         flow_error_reason={@flow_error_reason}
         waitlist_done={@waitlist_done}
         current_user={@current_user}
+        view_mode={@view_mode}
+        avail_month={@avail_month}
+        avail_statuses={@avail_statuses}
+        price_options={@price_options}
+        price_option_uuid={@price_option_uuid}
       />
     </div>
     """

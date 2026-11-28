@@ -32,3 +32,16 @@ defmodule PhoenixKitBookings.Test.SchemaMigrationV2 do
   def up, do: Schema.up(prefix: "public")
   def down, do: Schema.down(prefix: "public", version: 1)
 end
+
+defmodule PhoenixKitBookings.Test.SchemaMigrationV3 do
+  @moduledoc """
+  The V3 wrapper — replays the idempotent `Schema.up/1` over a V2 database,
+  adding only what V3 adds; `down/0` goes back to V2.
+  """
+  use Ecto.Migration
+
+  alias PhoenixKitBookings.Migrations.Schema
+
+  def up, do: Schema.up(prefix: "public")
+  def down, do: Schema.down(prefix: "public", version: 2)
+end

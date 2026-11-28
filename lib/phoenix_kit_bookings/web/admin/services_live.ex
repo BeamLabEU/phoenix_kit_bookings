@@ -6,6 +6,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   require Logger
 
@@ -86,7 +87,10 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
        socket
        |> put_flash(
          :info,
-         gettext("%{name} is now %{status}.", name: updated.name, status: status)
+         gettext("%{name} is now %{status}.",
+           name: updated.name,
+           status: Format.service_status_label(status)
+         )
        )
        |> load_services()}
     else
@@ -209,7 +213,7 @@ defmodule PhoenixKitBookings.Web.Admin.ServicesLive do
               <td class="text-sm">
                 {signup_label(service)}
               </td>
-              <td><span class={Format.service_badge(service.status)}>{service.status}</span></td>
+              <td><span class={Format.service_badge(service.status)}>{Format.service_status_label(service.status)}</span></td>
               <td class="text-right">
                 <div class="join">
                   <button

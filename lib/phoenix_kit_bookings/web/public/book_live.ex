@@ -5,6 +5,7 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   alias PhoenixKitBookings.{Paths, Policy}
   alias PhoenixKitBookings.Web.Public.BookingFlow
@@ -103,6 +104,11 @@ defmodule PhoenixKitBookings.Web.Public.BookLive do
               flow_error_reason={@flow_error_reason}
               waitlist_done={@waitlist_done}
               current_user={@current_user}
+              view_mode={@view_mode}
+              avail_month={@avail_month}
+              avail_statuses={@avail_statuses}
+              price_options={@price_options}
+              price_option_uuid={@price_option_uuid}
             />
           </div>
         </div>

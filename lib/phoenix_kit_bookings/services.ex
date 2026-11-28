@@ -25,7 +25,8 @@ defmodule PhoenixKitBookings.Services do
   Lists services. Trashed rows are excluded unless `status: "trashed"` or
   `include_trashed: true` is passed. Options: `:status`,
   `:include_trashed`, `:owner_uuid` (only services owned by that user —
-  `Policy.visible_services/2` uses this for base-permission holders).
+  `Policy.visible_services/2` uses this for base-permission holders),
+  `:host_ref` (services linked to that host record).
   """
   def list_services(opts \\ []) do
     base = from(s in Service, order_by: [asc: s.name])
@@ -41,6 +42,12 @@ defmodule PhoenixKitBookings.Services do
       case opts[:owner_uuid] do
         nil -> query
         owner_uuid -> from(s in query, where: s.owner_uuid == ^owner_uuid)
+      end
+
+    query =
+      case opts[:host_ref] do
+        nil -> query
+        host_ref -> from(s in query, where: s.host_ref == ^host_ref)
       end
 
     repo().all(query)
@@ -59,6 +66,11 @@ defmodule PhoenixKitBookings.Services do
     [status: "active"] |> list_services() |> with_effective_seats()
   end
 
+  @doc "Active services referenced by public event cards."
+  def list_active_by_uuid(uuids) do
+    repo().all(from(s in Service, where: s.uuid in ^uuids and s.status == "active"))
+  end
+
   @doc "Fetches a service by UUID; nil on miss or forged id."
   def get_service(uuid) do
     repo().get(Service, uuid)
@@ -72,6 +84,22 @@ defmodule PhoenixKitBookings.Services do
   def get_active_service_by_slug(slug) when is_binary(slug) do
     repo().get_by(Service, slug: slug, status: "active")
   end
+
+  @doc """
+  The non-trashed service linked to a host record (`host_ref`, e.g. a
+  machine's id in the host app); nil when none. When several share the ref,
+  the oldest wins — a host that links one service per record never sees that.
+  """
+  def get_service_by_host_ref(host_ref) when is_binary(host_ref) do
+    from(s in Service,
+      where: s.host_ref == ^host_ref and s.status != "trashed",
+      order_by: [asc: s.inserted_at, asc: s.uuid],
+      limit: 1
+    )
+    |> repo().one()
+  end
+
+  def get_service_by_host_ref(_), do: nil
 
   @doc "Counts services per status — powers the admin tabs."
   def count_by_status do
@@ -318,7 +346,9 @@ defmodule PhoenixKitBookings.Services do
 
   defp tap_broadcast_service(result, _service_uuid), do: result
 
-  defp broadcast_changed(service_uuid) do
+  @doc false
+  # Shared with the sibling contexts (price options, regular slots, imports).
+  def broadcast_changed(service_uuid) do
     case PhoenixKit.Config.pubsub_server() do
       nil ->
         :ok

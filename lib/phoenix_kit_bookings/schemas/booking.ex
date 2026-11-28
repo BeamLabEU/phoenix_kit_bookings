@@ -30,7 +30,7 @@ defmodule PhoenixKitBookings.Schemas.Booking do
   alias PhoenixKitBookings.Engine
 
   @statuses ~w(pending confirmed cancelled)
-  @sources ~w(public admin)
+  @sources ~w(public admin import)
 
   @primary_key {:uuid, UUIDv7, autogenerate: true}
   @foreign_key_type UUIDv7
@@ -62,6 +62,15 @@ defmodule PhoenixKitBookings.Schemas.Booking do
     field(:cancelled_at, :utc_datetime)
     field(:cancel_reason, :string)
     field(:metadata, :map, default: %{})
+
+    # Imported rows (`source: "import"`): which feed they came from and their
+    # id there. A re-sync replaces only rows of its own `external_source`.
+    field(:external_source, :string)
+    field(:external_id, :string)
+    # The rate the customer booked at (nil = the service's own price).
+    field(:price_option_uuid, UUIDv7)
+    # Set when the booking is a seat at a scheduled event.
+    field(:event_uuid, UUIDv7)
 
     timestamps(type: :utc_datetime)
   end
@@ -136,6 +145,42 @@ defmodule PhoenixKitBookings.Schemas.Booking do
   end
 
   defp cancellation_stamp(_status, _opts), do: []
+
+  @doc """
+  Changeset for an imported busy entry: no customer is required, the range,
+  `source: "import"` and the external ref are stamped. `attrs` may carry
+  `customer_name`, `notes` and `metadata` (a feed's summary, say).
+  """
+  def import_changeset(booking, service_uuid, range, external_source, external_id, attrs) do
+    booking
+    |> cast(attrs, [:customer_name, :customer_email, :notes, :metadata])
+    |> validate_length(:customer_name, max: 255)
+    |> validate_length(:customer_email, max: 255)
+    |> put_change(:service_uuid, service_uuid)
+    |> clear_range()
+    |> put_range(range)
+    |> put_change(:status, "confirmed")
+    |> put_change(:source, "import")
+    |> put_change(:external_source, external_source)
+    |> put_change(:external_id, external_id)
+    |> validate_required([:external_source, :external_id])
+    |> validate_length(:external_source, max: 64)
+    |> validate_length(:external_id, max: 255)
+    |> check_constraint(:starts_at, name: :bookings_time_shape)
+    |> check_constraint(:starts_at, name: :bookings_timed_order)
+    |> check_constraint(:starts_on, name: :bookings_dated_order)
+    |> unique_constraint(:external_id, name: :phoenix_kit_bookings_bookings_external_index)
+  end
+
+  # An imported row can change shape between syncs (a feed's all-day entry
+  # turned timed), so the other pair is cleared before the new one is put.
+  defp clear_range(changeset) do
+    changeset
+    |> put_change(:starts_at, nil)
+    |> put_change(:ends_at, nil)
+    |> put_change(:starts_on, nil)
+    |> put_change(:ends_on, nil)
+  end
 
   @doc "True when the booking still occupies capacity."
   def active?(%__MODULE__{status: status}), do: status in ["pending", "confirmed"]

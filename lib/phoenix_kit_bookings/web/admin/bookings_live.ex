@@ -5,6 +5,7 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
   """
 
   use PhoenixKitWeb, :live_view
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   require Logger
 
@@ -195,13 +196,26 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
                 </div>
               </td>
               <td class="text-sm">
-                <div>{booking.customer_name}</div>
+                <div>{booking.customer_name || "—"}</div>
                 <div class="text-xs text-base-content/50">{booking.customer_email}</div>
+                <div
+                  :if={regular_slot_conflict?(booking)}
+                  class="badge badge-warning badge-sm mt-1"
+                  title={regular_slot_title(booking)}
+                >
+                  {gettext("in a regular slot")}
+                </div>
               </td>
               <td>
-                <span class={Format.status_badge(booking.status)}>{booking.status}</span>
+                <span class={Format.status_badge(booking.status)}>{Format.status_label(booking.status)}</span>
                 <div :if={booking.source == "admin"} class="text-xs text-base-content/50">
                   {gettext("by admin")}
+                </div>
+                <div :if={booking.source == "import"} class="text-xs text-base-content/50">
+                  {gettext("imported (%{source})", source: booking.external_source)}
+                </div>
+                <div :if={booking.event_uuid} class="text-xs text-base-content/50">
+                  {gettext("event seat")}
                 </div>
               </td>
               <td class="text-right">
@@ -215,7 +229,7 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
                     {gettext("Approve")}
                   </button>
                   <button
-                    :if={booking.status in ["pending", "confirmed"]}
+                    :if={booking.status in ["pending", "confirmed"] and booking.source != "import"}
                     class="btn btn-xs btn-ghost join-item"
                     phx-click="cancel"
                     phx-value-uuid={booking.uuid}
@@ -246,6 +260,16 @@ defmodule PhoenixKitBookings.Web.Admin.BookingsLive do
 
   defp filter_patch(filter),
     do: PhoenixKitBookings.Paths.admin_reservations() <> "?filter=#{filter}"
+
+  defp regular_slot_conflict?(%{metadata: %{"regular_slot_conflicts" => [_ | _]}}), do: true
+  defp regular_slot_conflict?(_booking), do: false
+
+  defp regular_slot_title(%{metadata: %{"regular_slot_conflicts" => conflicts}}) do
+    holders =
+      Enum.map_join(conflicts, ", ", fn c -> c["holder_name"] || c["holder_email"] || "—" end)
+
+    gettext("Usually %{holders}'s time", holders: holders)
+  end
 
   defp service_name(services, uuid) do
     case services[uuid] do

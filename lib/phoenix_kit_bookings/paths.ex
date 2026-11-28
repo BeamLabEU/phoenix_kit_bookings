@@ -13,6 +13,9 @@ defmodule PhoenixKitBookings.Paths do
   def admin_services, do: Routes.path("/admin/bookings/services")
   def admin_service_new, do: Routes.path("/admin/bookings/services/new")
   def admin_service_edit(uuid), do: Routes.path("/admin/bookings/services/#{uuid}/edit")
+  def admin_reservations_url, do: Routes.url("/admin/bookings/reservations")
+  def admin_events, do: Routes.path("/admin/bookings/events")
+  def admin_hosts, do: Routes.path("/admin/bookings/hosts")
 
   # ── Public ───────────────────────────────────────────────────────────
 
@@ -21,4 +24,7 @@ defmodule PhoenixKitBookings.Paths do
   def public_book_url(slug), do: Routes.url("/book/#{slug}")
   def public_manage(token), do: Routes.path("/bookings/manage/#{token}")
   def public_manage_url(token), do: Routes.url("/bookings/manage/#{token}")
+  def public_schedule, do: Routes.path("/bookings/schedule")
+  def public_host(slug), do: Routes.path("/bookings/hosts/#{slug}")
+  def public_event(uuid), do: Routes.path("/bookings/events/#{uuid}")
 end

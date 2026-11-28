@@ -21,7 +21,7 @@ defmodule PhoenixKitBookings.MixProject do
       package: package(),
 
       # Dialyzer
-      dialyzer: [plt_add_apps: [:phoenix_kit]],
+      dialyzer: [plt_add_apps: [:phoenix_kit], ignore_warnings: ".dialyzer_ignore.exs"],
 
       # Docs
       name: "PhoenixKitBookings",
@@ -96,6 +96,10 @@ defmodule PhoenixKitBookings.MixProject do
       # TimeSlots) and calendar UI components.
       pk_dep(:phoenix_live_calendar, "~> 0.5"),
 
+      # The iCal feed fetch (ICalImport.HTTPFetcher) connects to the address it
+      # checked; core already depends on it.
+      {:mint, "~> 1.6"},
+
       # LiveView is needed for the admin and public pages.
       {:phoenix_live_view, "~> 1.1"},
 
@@ -115,7 +119,7 @@ defmodule PhoenixKitBookings.MixProject do
     [
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
-      files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md LICENSE)
+      files: ~w(lib priv .formatter.exs mix.exs README.md CHANGELOG.md LICENSE)
     ]
   end
 

@@ -41,7 +41,8 @@ defmodule PhoenixKitBookings.Web.Routes do
   no other PhoenixKit public page does.
 
   These paths are specific (`/bookings`, `/book/:slug`,
-  `/bookings/manage/:token`), not catch-alls, so they cannot bind
+  `/bookings/manage/:token`, `/bookings/schedule`, `/bookings/hosts/:slug`,
+  `/bookings/events/:uuid`), not catch-alls, so they cannot bind
   `/<prefix>/admin/bookings` as `locale = "admin"` — that URL is already
   claimed by the admin bare route, which `phoenix_kit_routes/0` declares
   first. Do not add a catch-all here.
@@ -103,6 +104,18 @@ defmodule PhoenixKitBookings.Web.Routes do
 
       live("/bookings/manage/:token", PhoenixKitBookings.Web.Public.ManageLive, :manage,
         as: :bookings_public_manage
+      )
+
+      live("/bookings/schedule", PhoenixKitBookings.Web.Public.ScheduleLive, :index,
+        as: :bookings_public_schedule
+      )
+
+      live("/bookings/hosts/:slug", PhoenixKitBookings.Web.Public.HostLive, :show,
+        as: :bookings_public_host
+      )
+
+      live("/bookings/events/:uuid", PhoenixKitBookings.Web.Public.EventLive, :show,
+        as: :bookings_public_event
       )
     end
   end

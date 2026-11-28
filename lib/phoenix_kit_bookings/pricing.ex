@@ -11,7 +11,26 @@ defmodule PhoenixKitBookings.Pricing do
   Returns `nil` for unpriced services — bookings then carry no total.
   """
 
-  alias PhoenixKitBookings.Schemas.Service
+  use Gettext, backend: PhoenixKitBookings.Gettext
+
+  alias PhoenixKitBookings.Schemas.{PriceOption, Service}
+
+  @doc """
+  Total at a price option: the option's price, per the option's `price_per`
+  (nil = the service's). A nil option is the service's own price.
+  """
+  def total(service, range, nil), do: total(service, range)
+
+  def total(%Service{} = service, range, %PriceOption{} = option) do
+    total(apply_option(service, option), range)
+  end
+
+  @doc "The service as priced by `option` (nil = unchanged)."
+  def apply_option(%Service{} = service, nil), do: service
+
+  def apply_option(%Service{} = service, %PriceOption{price: price, price_per: per}) do
+    %{service | price: price, price_per: per || service.price_per}
+  end
 
   @doc "Total for the validated range, or nil when the service is unpriced."
   def total(%Service{price: nil}, _range), do: nil
@@ -49,12 +68,13 @@ defmodule PhoenixKitBookings.Pricing do
   def tag(%Service{price: nil}), do: nil
 
   def tag(%Service{} = service) do
-    per =
-      case service.price_per do
-        "booking" -> ""
-        per -> " / #{per}"
-      end
+    amount = "#{Decimal.to_string(Decimal.round(service.price, 2))} #{service.currency}"
 
-    "#{Decimal.to_string(Decimal.round(service.price, 2))} #{service.currency}#{per}"
+    case service.price_per do
+      "hour" -> gettext("%{amount} / hour", amount: amount)
+      "day" -> gettext("%{amount} / day", amount: amount)
+      "night" -> gettext("%{amount} / night", amount: amount)
+      _ -> amount
+    end
   end
 end

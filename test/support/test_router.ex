@@ -31,6 +31,8 @@ defmodule PhoenixKitBookings.Test.Router do
       live("/services", ServicesLive, :index)
       live("/services/new", ServiceFormLive, :new)
       live("/services/:uuid/edit", ServiceFormLive, :edit)
+      live("/events", EventsLive, :index)
+      live("/hosts", HostsLive, :index)
     end
   end
 
@@ -53,6 +55,9 @@ defmodule PhoenixKitBookings.Test.Router do
       live("/bookings", ServicesLive, :index)
       live("/book/:slug", BookLive, :book)
       live("/bookings/manage/:token", ManageLive, :manage)
+      live("/bookings/schedule", ScheduleLive, :index)
+      live("/bookings/hosts/:slug", HostLive, :show)
+      live("/bookings/events/:uuid", EventLive, :show)
     end
   end
 end

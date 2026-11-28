@@ -17,6 +17,20 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   - free-form — date + start/end time inputs, validated server-side
   - day/night — check-in/check-out date inputs + remaining-capacity note
 
+  ## Availability mode
+
+  A service with `bookable_online: false`, or a flow mounted with
+  `mode: :availability` (the widget's `"mode" => "availability"`), shows
+  `AvailabilityCalendar` — free / partly booked / booked per day — and no
+  picker: nothing can be booked from it.
+
+  ## Price options
+
+  The details step offers the service's active `PriceOption`s the viewer is
+  entitled to (`PriceOptions.entitled_options/2`) beside the standard price;
+  the choice travels as `price_option_uuid` and the locked create re-checks
+  the entitlement.
+
   ## Live updates
 
   Mounting flows subscribe to the service's PubSub topic; any booking
@@ -25,12 +39,14 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   """
 
   use Phoenix.Component
-  use Gettext, backend: PhoenixKitWeb.Gettext
+  use Gettext, backend: PhoenixKitBookings.Gettext
 
   import Phoenix.LiveView
 
-  alias PhoenixKitBookings.{Bookings, Engine, Errors, Paths, Pricing, RateLimit, Services}
-  alias PhoenixKitBookings.Schemas.{Booking, Service}
+  alias PhoenixKitBookings.{AvailabilityView, Bookings, Engine, Errors, Paths, PriceOptions}
+  alias PhoenixKitBookings.{Pricing, RateLimit, Services}
+  alias PhoenixKitBookings.Schemas.{Booking, PriceOption, Service}
+  alias PhoenixKitBookings.Web.Components.AvailabilityCalendar
   alias PhoenixKitBookings.Web.Format
 
   # ── Mount-side setup ─────────────────────────────────────────────────
@@ -40,7 +56,7 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   `%{uuid, email}`-shaped struct or nil; `prefill` optionally seeds the
   customer form (embed contract).
   """
-  def assign_flow(socket, %Service{} = service, user, prefill \\ %{}) do
+  def assign_flow(socket, %Service{} = service, user, prefill \\ %{}, opts \\ []) do
     if connected?(socket) do
       case PhoenixKit.Config.pubsub_server() do
         nil -> :ok
@@ -65,10 +81,19 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
       hold_uuid: nil,
       waitlist_done: false,
       current_user: user,
-      customer_form: customer_form(user, prefill)
+      customer_form: customer_form(user, prefill),
+      view_mode: view_mode(service, opts[:mode]),
+      avail_month: Date.beginning_of_month(Engine.today()),
+      avail_statuses: %{},
+      price_options: PriceOptions.entitled_options(service, user),
+      price_option_uuid: nil
     )
     |> refresh_pick()
   end
+
+  defp view_mode(%Service{bookable_online: false}, _mode), do: :availability
+  defp view_mode(_service, :availability), do: :availability
+  defp view_mode(_service, _mode), do: :book
 
   @doc """
   Releases the current hold and service subscription before replacing a flow,
@@ -126,7 +151,21 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
   # ── Picker data refresh (also runs on PubSub pings) ──────────────────
 
-  @doc "Re-queries the data behind the current picker panel."
+  @doc "Re-queries the data behind the current picker panel (or calendar)."
+  def refresh_pick(
+        %{assigns: %{view_mode: :availability, service: %Service{} = service}} = socket
+      ) do
+    month = socket.assigns.avail_month
+    from = Date.beginning_of_month(month)
+    until = Date.end_of_month(month)
+
+    assign(socket,
+      slots: [],
+      day_capacity: %{},
+      avail_statuses: AvailabilityView.day_statuses(service, from, until)
+    )
+  end
+
   def refresh_pick(%{assigns: %{service: %Service{time_unit: "minutes"} = service}} = socket) do
     date = socket.assigns.pick_date
     day_start = Engine.frame_to_utc(date, ~T[00:00:00])
@@ -168,6 +207,26 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   # ── Events (LiveViews delegate their handle_event/3 here) ────────────
 
   def handle_event(_event, _params, %{assigns: %{service: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("availability_month", %{"month" => iso}, socket) do
+    case Date.from_iso8601(iso || "") do
+      {:ok, date} ->
+        # Never before the current month: the calendar shows what is ahead.
+        month =
+          if Date.compare(date, Date.beginning_of_month(Engine.today())) == :lt,
+            do: Date.beginning_of_month(Engine.today()),
+            else: Date.beginning_of_month(date)
+
+        {:noreply, socket |> assign(avail_month: month) |> refresh_pick()}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  # Availability mode shows; it never books, whatever the client sends.
+  def handle_event(_event, _params, %{assigns: %{view_mode: :availability}} = socket),
     do: {:noreply, socket}
 
   def handle_event("pick_date", %{"picker" => %{"date" => date_str}}, socket) do
@@ -254,7 +313,12 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
 
   def handle_event("validate_details", %{"booking" => params}, socket) do
     changeset = Booking.customer_changeset(%Booking{}, params)
-    {:noreply, assign(socket, customer_form: to_form(changeset, action: :validate))}
+
+    {:noreply,
+     assign(socket,
+       customer_form: to_form(changeset, action: :validate),
+       price_option_uuid: chosen_option_uuid(socket, params)
+     )}
   end
 
   # Only the details step has a form to submit. Replayed after `:done`, the
@@ -274,13 +338,23 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     assign(socket, flow_error: Errors.message(:rate_limited), flow_error_reason: nil)
   end
 
+  # Only an option the page offered; anything else is the standard price
+  # (and the locked create judges the entitlement again anyway).
+  defp chosen_option_uuid(socket, params) do
+    uuid = params["price_option_uuid"]
+
+    if Enum.any?(socket.assigns[:price_options] || [], &(&1.uuid == uuid)), do: uuid, else: nil
+  end
+
   defp submit_details(socket, params) do
     %{service: service, selected_range: range, current_user: user} = socket.assigns
+    option_uuid = chosen_option_uuid(socket, params)
 
     case Bookings.create_booking(service, range, params,
            user_uuid: user && user.uuid,
            source: "public",
-           hold_uuid: socket.assigns[:hold_uuid]
+           hold_uuid: socket.assigns[:hold_uuid],
+           price_option_uuid: option_uuid
          ) do
       {:ok, booking} ->
         {:noreply, assign(socket, booking: booking, step: :done, flow_error: nil, hold_uuid: nil)}
@@ -411,6 +485,34 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
   attr(:flow_error_reason, :any, default: nil)
   attr(:waitlist_done, :boolean, default: false)
   attr(:current_user, :any, required: true)
+  attr(:view_mode, :atom, default: :book)
+  attr(:avail_month, Date, default: nil)
+  attr(:avail_statuses, :map, default: %{})
+  attr(:price_options, :list, default: [])
+  attr(:price_option_uuid, :string, default: nil)
+
+  def flow(%{view_mode: :availability} = assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4" id={"booking-flow-#{@service.uuid}"}>
+      <div>
+        <h3 class="text-xl font-bold">{@service.name}</h3>
+        <p :if={@service.description} class="text-sm text-base-content/70 mt-1">
+          {@service.description}
+        </p>
+        <p :if={!@service.bookable_online} class="text-xs text-base-content/50 mt-1">
+          {gettext("Availability only — this service is not booked on this site.")}
+        </p>
+      </div>
+      <AvailabilityCalendar.month
+        id={"availability-#{@service.uuid}"}
+        month={@avail_month || Engine.today()}
+        statuses={@avail_statuses}
+        nav_event="availability_month"
+        min_month={Engine.today()}
+      />
+    </div>
+    """
+  end
 
   def flow(assigns) do
     ~H"""
@@ -456,6 +558,8 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
             selected_range={@selected_range}
             customer_form={@customer_form}
             current_user={@current_user}
+            price_options={@price_options}
+            price_option_uuid={@price_option_uuid}
           />
         <% :done -> %>
           <.done service={@service} booking={@booking} />
@@ -664,8 +768,41 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
           field={@customer_form[:notes]}
           label={gettext("Notes (optional)")}
         />
-        <p :if={Pricing.total(@service, @selected_range)} class="text-sm font-medium">
-          {gettext("Total:")} {Pricing.format(Pricing.total(@service, @selected_range), @service.currency)}
+        <fieldset :if={@price_options != []} class="fieldset" id={"booking-price-options-#{@service.uuid}"}>
+          <legend class="fieldset-legend">{gettext("Rate")}</legend>
+          <label class="label cursor-pointer gap-2 justify-start">
+            <input
+              type="radio"
+              name="booking[price_option_uuid]"
+              value=""
+              class="radio radio-sm"
+              checked={is_nil(@price_option_uuid)}
+            />
+            <span>{gettext("Standard")}</span>
+            <span :if={Pricing.tag(@service)} class="text-base-content/60">
+              {Pricing.tag(@service)}
+            </span>
+          </label>
+          <label :for={option <- @price_options} class="label cursor-pointer gap-2 justify-start">
+            <input
+              type="radio"
+              name="booking[price_option_uuid]"
+              value={option.uuid}
+              class="radio radio-sm"
+              checked={@price_option_uuid == option.uuid}
+            />
+            <span>{option.name}</span>
+            <span class="text-base-content/60">{Pricing.tag(Pricing.apply_option(@service, option))}</span>
+            <span :if={option.description} class="text-xs text-base-content/50">
+              {option.description}
+            </span>
+          </label>
+        </fieldset>
+        <p :if={selected_total(@service, @selected_range, @price_options, @price_option_uuid)} class="text-sm font-medium">
+          {gettext("Total:")} {Pricing.format(
+            selected_total(@service, @selected_range, @price_options, @price_option_uuid),
+            @service.currency
+          )}
         </p>
         <div class="flex gap-2">
           <button type="submit" class="btn btn-primary">
@@ -710,6 +847,11 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
     """
   end
 
+  defp selected_total(service, range, options, option_uuid) do
+    option = Enum.find(options, fn %PriceOption{uuid: uuid} -> uuid == option_uuid end)
+    Pricing.total(service, range, option)
+  end
+
   defp unit_line(%Booking{unit_uuid: nil}), do: nil
 
   defp unit_line(%Booking{unit_uuid: unit_uuid}) do
@@ -731,14 +873,14 @@ defmodule PhoenixKitBookings.Web.Public.BookingFlow do
         do: ngettext("%{count} night", "%{count} nights", n),
         else: ngettext("%{count} day", "%{count} days", n)
 
-    "#{Calendar.strftime(starts_on, "%d %b %Y")} → #{Calendar.strftime(ends_on, "%d %b %Y")} · #{length} · #{service.name}"
+    "#{Format.strftime(starts_on, "%d %b %Y")} → #{Format.strftime(ends_on, "%d %b %Y")} · #{length} · #{service.name}"
   end
 
   defp selected_label(_service, {starts_at, ends_at}) do
     start_f = Engine.utc_to_frame(starts_at)
     end_f = Engine.utc_to_frame(ends_at)
 
-    "#{Calendar.strftime(start_f, "%d %b %Y %H:%M")} – #{Calendar.strftime(end_f, "%H:%M")}"
+    "#{Format.strftime(start_f, "%d %b %Y %H:%M")} – #{Calendar.strftime(end_f, "%H:%M")}"
   end
 
   defp selected_label(_service, _), do: ""
